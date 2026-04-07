@@ -1,0 +1,10 @@
+psutil
+requests
+rich
+fastapi
+uvicorn
+python-multipart
+pyttsx3
+SpeechRecognition
+edge-tts
+scapy==2.5.0

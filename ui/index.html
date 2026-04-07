@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VOID - Offline AI Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- BOOT OVERLAY -->
+  <div id="bootOverlay" class="boot-overlay">
+    <div class="boot-content">
+      <div class="boot-logo">VOID</div>
+      <div class="boot-text">SYSTEM INITIALIZING...</div>
+      <div class="boot-progress">
+        <div class="boot-progress-bar"></div>
+      </div>
+      <div class="boot-logs">
+        <div class="boot-log">> Loading neural pathways...</div>
+        <div class="boot-log">> Initializing quantum processors...</div>
+        <div class="boot-log">> Connecting to local matrix...</div>
+        <div class="boot-log">> Calibrating voice synthesis...</div>
+        <div class="boot-log">> System ready.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WELCOME OVERLAY -->
+  <div id="welcomeOverlay" class="welcome-overlay hidden">
+    <div class="welcome-content">
+      <div class="welcome-logo">VOID</div>
+      <div class="welcome-message">Welcome, Mridul.</div>
+      <div class="welcome-subtitle">Your AI assistant is online and ready.</div>
+    </div>
+  </div>
+
+  <!-- FACE LOCK MODAL -->
+  <div id="faceLockModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>FACE AUTHENTICATION</h2>
+        <button class="modal-close" id="closeFaceLock">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="face-preview">
+          <video id="faceVideo" class="face-video" autoplay></video>
+          <div class="scan-line"></div>
+          <div class="scan-overlay">
+            <div class="scan-corner tl"></div>
+            <div class="scan-corner tr"></div>
+            <div class="scan-corner bl"></div>
+            <div class="scan-corner br"></div>
+          </div>
+          <div id="scanStatus" class="scan-status">Ready to scan</div>
+        </div>
+        <div class="face-controls">
+          <button class="btn-primary" id="startScan">Start Scan</button>
+          <button class="btn-secondary" id="retryScan">Retry</button>
+          <button class="btn-success" id="continueScan">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN HUD -->
+  <div class="hud-container">
+    
+    <!-- LEFT PANEL - SYSTEM MONITOR -->
+    <div class="panel panel-left">
+      <div class="panel-header">
+        <div class="panel-title">SYSTEM MONITOR</div>
+      </div>
+        <div class="panel-body">
+          
+          <!-- SYSTEM SETUP STATUS (NEW) -->
+          <div class="setup-status">
+            <div class="setup-header">
+              <div class="setup-title">SYSTEM SETUP STATUS</div>
+              <button class="setup-refresh" id="setupRefresh" title="Refresh">⟳</button>
+            </div>
+            <div class="setup-checks" id="setupChecks">
+              <div class="setup-item">
+                <span class="setup-label">Python</span>
+                <span class="setup-status-icon" id="setupPython">⏳</span>
+              </div>
+              <div class="setup-item">
+                <span class="setup-label">Requirements</span>
+                <span class="setup-status-icon" id="setupRequirements">⏳</span>
+              </div>
+              <div class="setup-item">
+                <span class="setup-label">Ollama</span>
+                <span class="setup-status-icon" id="setupOllama">⏳</span>
+              </div>
+              <div class="setup-item">
+                <span class="setup-label">Model</span>
+                <span class="setup-status-icon" id="setupModel">⏳</span>
+              </div>
+            </div>
+            <div class="setup-instructions hidden" id="setupInstructions">
+              <div class="instruction">
+                <strong>Ollama Missing:</strong> Download from <a href="https://ollama.com" target="_blank">ollama.com</a>
+              </div>
+              <div class="instruction">
+                <strong>Model Missing:</strong> Run <code>ollama pull llama3.2:3b</code>
+              </div>
+            </div>
+          </div>
+          <div class="panel-divider"></div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="2" width="14" height="14" rx="2"/>
+              <path d="M5 9h8M9 5v8"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">CPU Usage</div>
+            <div class="stat-value" id="statCPU">--</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" id="barCPU"></div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="1" y="1" width="16" height="12" rx="2"/>
+              <path d="M5 16h8"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">RAM Usage</div>
+            <div class="stat-value" id="statRAM">--</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" id="barRAM"></div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="4" width="14" height="10" rx="2"/>
+              <path d="M5 14h8"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">GPU Usage</div>
+            <div class="stat-value" id="statGPU">--</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" id="barGPU"></div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 1v2M9 15v2M1 9h2M15 9h2"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">CPU Temperature</div>
+            <div class="stat-value" id="statCPUTemp">--</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" id="barCPUTemp"></div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 1v2M9 15v2M1 9h2M15 9h2"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">GPU Temperature</div>
+            <div class="stat-value" id="statGPUTemp">--</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" id="barGPUTemp"></div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="1" y="1" width="16" height="12" rx="2"/>
+              <path d="M5 16h8"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">GPU Usage</div>
+            <div class="stat-value" id="statGPU">--</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" id="barGPU"></div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 1v2M9 15v2M1 9h2M15 9h2"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">GPU Temp</div>
+            <div class="stat-value" id="statGPUTemp">--</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" id="barGPUTemp"></div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="4" width="14" height="10" rx="2"/>
+              <path d="M5 14h8"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">RAM Usage</div>
+            <div class="stat-value" id="statRAM">--</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" id="barRAM"></div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="9" r="7"/>
+              <circle cx="9" cy="9" r="3"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">Storage</div>
+            <div class="stat-value" id="statStorage">--</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" id="barStorage"></div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="7" width="14" height="9" rx="2"/>
+              <path d="M6 4h6"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">Battery</div>
+            <div class="stat-value" id="statBattery">--</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" id="barBattery"></div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="9" r="6"/>
+              <path d="M9 5v4l3 2"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">Network</div>
+            <div class="stat-value" id="statNetwork">--</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="9" r="7"/>
+              <path d="M9 4v5l3 2"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">Uptime</div>
+            <div class="stat-value" id="statUptime">--</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M2 14l5-5 3 3 6-8"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">FPS</div>
+            <div class="stat-value" id="statFPS">--</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="9" r="7"/>
+              <path d="M9 4v5l3 2"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">VOID Level</div>
+            <div class="stat-value" id="statVoidLevel">--</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CENTER PANEL - VOID CORE + CHAT -->
+    <div class="panel panel-center">
+      
+      <!-- HEADER -->
+      <div class="center-header">
+        <div class="void-logo">VOID</div>
+        <div class="status-pill" id="statusPill">
+          <div class="status-dot" id="statusDot"></div>
+          <div class="status-text" id="statusText">Offline</div>
+        </div>
+      </div>
+
+      <!-- VOID CORE ORB -->
+      <div class="void-core">
+        <div class="orb-container">
+          <div class="orb-core"></div>
+          <div class="orb-ring ring1"></div>
+          <div class="orb-ring ring2"></div>
+          <div class="orb-ring ring3"></div>
+          <div class="orb-glow"></div>
+        </div>
+      </div>
+
+      <!-- CHAT AREA -->
+      <div class="chat-container">
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="typing-indicator hidden" id="typingIndicator">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-text">VOID is thinking</span>
+        </div>
+      </div>
+
+      <!-- INPUT BAR -->
+      <div class="input-bar">
+        <input type="text" id="chatInput" class="chat-input" placeholder="Type your message..." autocomplete="off">
+        <button class="input-btn" id="sendBtn" title="Send">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 9l12-7-5 2-2 5z"/>
+          </svg>
+        </button>
+        <button class="input-btn mic-btn" id="micBtn" title="Voice Input">
+          <svg class="mic-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="6" y="2" width="6" height="8" rx="3"/>
+            <path d="M3 8v2c0 3 2 5 6 5s6-2 6-5V8"/>
+            <path d="M9 15v2"/>
+          </svg>
+        </button>
+        <button class="input-btn voice-toggle" id="voiceToggle" title="Toggle Voice">
+          <svg class="voice-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M4 8h2M12 8h2M6 5v4c0 1.5 1 2.5 3 2.5s3-1 3-2.5V5"/>
+            <path d="M9 13v2M7 15h4"/>
+          </svg>
+        </button>
+        <button class="input-btn" id="clearBtn" title="Clear Chat">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 5h12M6 5V3h6v2M5 5v10a1 1 0 001 1h6a1 1 0 001-1V5"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL - TIME + WEATHER + TASKS -->
+    <div class="panel panel-right">
+      
+      <div class="panel-header">
+        <div class="panel-title">SYSTEM INFO</div>
+      </div>
+
+      <div class="panel-body">
+        
+        <!-- TIME -->
+        <div class="time-widget">
+          <div class="time-display" id="timeDisplay">00:00:00</div>
+          <div class="date-display" id="dateDisplay">Loading...</div>
+        </div>
+
+        <div id="system-info-text">Loading...</div>
+
+        <div class="panel-divider"></div>
+
+        <!-- WEATHER -->
+        <div class="weather-widget">
+          <div class="weather-header">WEATHER</div>
+          <div class="weather-content">
+            <div class="weather-main">
+              <div class="weather-temp" id="weatherTemp">--°C</div>
+              <div class="weather-condition" id="weatherCondition">--</div>
+            </div>
+            <div class="weather-city" id="weatherCity">--</div>
+          </div>
+        </div>
+
+        <div class="panel-divider"></div>
+
+        <!-- MESSAGE OF THE DAY -->
+        <div class="motd-widget">
+          <div class="motd-header">MESSAGE OF THE DAY</div>
+          <div class="motd-text" id="motdText">VOID is your ultimate offline AI companion.</div>
+        </div>
+
+        <div class="panel-divider"></div>
+
+        <!-- QUICK TASKS -->
+        <div class="tasks-widget">
+          <div class="tasks-header">QUICK TASKS</div>
+          <div class="task-list" id="taskList">
+            <div class="task-item">
+              <div class="task-checkbox">☐</div>
+              <div class="task-text">Initialize system diagnostics</div>
+            </div>
+            <div class="task-item">
+              <div class="task-checkbox">☐</div>
+              <div class="task-text">Check voice synthesis</div>
+            </div>
+            <div class="task-item">
+              <div class="task-checkbox">☐</div>
+              <div class="task-text">Review memory banks</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-divider"></div>
+
+        <!-- CONTROLS -->
+        <div class="controls-widget">
+          <button class="control-btn" id="faceLockBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="8" cy="5" r="3"/>
+              <path d="M3 14c0-3 2-5 5-5s5 2 5 5"/>
+            </svg>
+            <span>Face Lock</span>
+          </button>
+          <button class="control-btn" id="fileStatusBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M2 3h5l3 3h4v8H2z"/>
+            </svg>
+            <span>File Status</span>
+          </button>
+          <button class="control-btn" id="soundToggleBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h2M11 5h2M5 5v6M11 5v2c0 2-1 3-3 3"/>
+            </svg>
+            <span>Sound: OFF</span>
+          </button>
+          <div class="mode-selector">
+            <div class="mode-label">VOID MODE</div>
+            <select id="voidModeSelect" class="mode-select">
+              <option value="normal">Normal</option>
+              <option value="focus">Focus</option>
+              <option value="stealth">Stealth</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- MEMORY CONTROLS -->
+        <div class="panel-divider"></div>
+        <div class="memory-widget">
+          <div class="memory-header">MEMORY</div>
+          <div class="memory-stats">
+            <div class="memory-stat">
+              <span class="memory-stat-label">Facts:</span>
+              <span class="memory-stat-value" id="statMemoryFacts">0</span>
+            </div>
+            <div class="memory-stat">
+              <span class="memory-stat-label">Messages:</span>
+              <span class="memory-stat-value" id="statMessages">0</span>
+            </div>
+            <div class="memory-stat">
+              <span class="memory-stat-label">Tools:</span>
+              <span class="memory-stat-value" id="statToolCalls">0</span>
+            </div>
+          </div>
+          <div class="memory-buttons">
+            <button class="control-btn" id="showMemoryBtn">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="8" cy="8" r="3"/>
+                <path d="M8 11v3M8 5v1"/>
+              </svg>
+              <span>Show Memory</span>
+            </button>
+            <button class="control-btn" id="clearMemoryBtn">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 5h12M6 5V3h6v2M5 5v10a1 1 0 001 1h6a1 1 0 001-1V5"/>
+              </svg>
+              <span>Clear Memory</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SYSTEM TOOLS -->
+        <div class="panel-divider"></div>
+        <div class="system-tools-widget">
+          <div class="system-tools-header">SYSTEM TOOLS</div>
+          <div class="system-tools-buttons">
+            <button class="control-btn" id="repairBtn">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 8a6 6 0 1011 3.5M14 2v4h-4"/>
+              </svg>
+              <span>Repair</span>
+            </button>
+            <button class="control-btn" id="diagnosticsBtn">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="2" y="2" width="12" height="12" rx="2"/>
+                <path d="M5 8h6M8 5v6"/>
+              </svg>
+              <span>Diagnostics</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- FILE STATUS PANEL -->
+  <div id="fileStatusPanel" class="file-status-panel hidden">
+    <div class="file-status-header">
+      <h2>FILE STATUS / DIRECTORY SCAN</h2>
+      <button class="modal-close" id="closeFileStatus">&times;</button>
+    </div>
+    <div class="file-status-controls">
+      <select id="scopeSelect" class="scope-select">
+        <option value="root">VOID Root</option>
+        <option value="ui">UI Folder</option>
+        <option value="backend">Backend Folder</option>
+        <option value="logs">Logs Folder</option>
+      </select>
+      <button class="btn-primary" id="scanBtn">Scan Now</button>
+      <input type="text" id="fileSearchInput" class="file-search" placeholder="Search files...">
+    </div>
+    <div class="file-status-body">
+      <table class="file-table">
+        <thead>
+          <tr>
+            <th>File Name</th>
+            <th>Size</th>
+            <th>Last Modified</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="fileTableBody">
+          <tr>
+            <td colspan="4" class="no-data">Click "Scan Now" to load files</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "id": "void_self_repair",
+  "name": "VOID Self-Repair Workflow",
+  "description": "Full system diagnostics, repair, and verification",
+  "steps": [
+    {
+      "step": 1,
+      "action": "diagnostics",
+      "description": "Run full system diagnostics"
+    },
+    {
+      "step": 2, 
+      "action": "generate_plan",
+      "description": "Create repair plan from issues"
+    },
+    {
+      "step": 3,
+      "action": "execute_plan", 
+      "description": "Execute repair actions"
+    },
+    {
+      "step": 4,
+      "action": "verify",
+      "description": "Run diagnostics again to verify fixes"
+    }
+  ]
+}

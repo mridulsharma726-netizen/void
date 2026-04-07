@@ -1,0 +1,17 @@
+{
+  "name": "void",
+  "version": "1.0.0",
+  "description": "VOID - Offline AI Desktop Assistant powered by Ollama.",
+  "main": "desktop/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^32.3.3"
+  }
+}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VOID Desktop</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body data-backend-ready="false">
+  <!-- BOOT SCREEN -->
+  <div id="bootScreen" class="boot">
+    <div class="logo">VOID</div>
+    <div class="progress-bar">
+      <div class="progress-fill"></div>
+    </div>
+    <div class="boot-status">Initializing backend...</div>
+  </div>
+
+  <!-- MAIN HUD (hidden until ready) -->
+  <div id="hud" class="hud hidden">
+    <!-- Left: Stats -->
+    <div class="panel stats-panel">
+      <h3>📊 STATS</h3>
+      <div class="stat">
+        <span>CPU</span>
+        <div class="bar"><div class="fill" id="cpu-bar"></div></div>
+      </div>
+      <div class="stat">
+        <span>RAM</span>
+        <div class="bar"><div class="fill" id="ram-bar"></div></div>
+      </div>
+      <div class="stat">
+        <span>Backend</span>
+        <span id="backend-status" class="offline">OFFLINE</span>
+      </div>
+    </div>
+
+    <!-- Center: Core + Chat -->
+    <div class="panel core-panel">
+      <div class="core-orb" id="coreOrb"></div>
+      <div class="chat-area" id="chatArea"></div>
+      <div class="input-row">
+        <input id="chatInput" placeholder="Command or chat...">
+        <button id="sendBtn">Send</button>
+        <button id="micBtn">🎤</button>
+      </div>
+    </div>
+
+    <!-- Right: Controls -->
+    <div class="panel control-panel">
+      <h3>⚙️ CONTROLS</h3>
+      <button id="restartBtn">Restart Backend</button>
+      <button id="diagnosticsBtn">Diagnostics</button>
+      <div class="status">
+        <span>Mode: <select id="modeSelect"><option>Normal</option></select></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
