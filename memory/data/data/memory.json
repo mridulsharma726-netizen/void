@@ -1,0 +1,85 @@
+{
+  "facts": [],
+  "history": [
+    {
+      "role": "user",
+      "content": "show memory"
+    },
+    {
+      "role": "assistant",
+      "content": "Current memory:\n\nNo data available."
+    },
+    {
+      "role": "user",
+      "content": "No speech detected"
+    },
+    {
+      "role": "assistant",
+      "content": "Please rephrase or ask a question for assistance."
+    },
+    {
+      "role": "user",
+      "content": "hi"
+    },
+    {
+      "role": "assistant",
+      "content": "How can I assist you today?"
+    },
+    {
+      "role": "user",
+      "content": "what can you do"
+    },
+    {
+      "role": "assistant",
+      "content": "LLM unavailable."
+    },
+    {
+      "role": "user",
+      "content": "hi"
+    },
+    {
+      "role": "assistant",
+      "content": "How can I assist you today?"
+    },
+    {
+      "role": "user",
+      "content": "what features do you have"
+    },
+    {
+      "role": "assistant",
+      "content": "LLM unavailable."
+    },
+    {
+      "role": "user",
+      "content": "hi"
+    },
+    {
+      "role": "assistant",
+      "content": "How can I assist you today?"
+    },
+    {
+      "role": "user",
+      "content": "am thinking to start of business  give me idea"
+    },
+    {
+      "role": "assistant",
+      "content": "LLM unavailable."
+    },
+    {
+      "role": "user",
+      "content": "hi"
+    },
+    {
+      "role": "assistant",
+      "content": "How can I assist you?"
+    },
+    {
+      "role": "user",
+      "content": "what can you do"
+    },
+    {
+      "role": "assistant",
+      "content": "LLM unavailable."
+    }
+  ]
+}

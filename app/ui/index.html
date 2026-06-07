@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:8002 http://localhost:8002 http://127.0.0.1:11434; img-src 'self' data: file: http://127.0.0.1:8002;">
+  <title>VOID Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Boot splash -->
+  <div id="bootOverlay" class="boot-overlay" role="status" aria-label="Loading VOID">
+    <div class="boot-card">
+      <div class="boot-title">VOID</div>
+      <div class="boot-subtitle">Initializing VOID Protocol v2.0.4</div>
+      <div class="boot-bar"><div class="boot-bar-fill"></div></div>
+    </div>
+  </div>
+
+  <div class="scan-line"></div>
+  <main class="hud-container" role="main">
+
+    <!-- ── LEFT: System Monitor ── -->
+    <section class="panel panel-left" aria-label="System Monitor">
+      <div class="panel-title">System Monitor</div>
+
+      <div class="card">
+        <div class="card-title">System Status</div>
+        <div class="status-row">
+          <span>Backend</span>
+          <span id="statusText" class="status-chip">Offline</span>
+        </div>
+        <div class="status-row">
+          <span>Uptime</span>
+          <span id="statUptime">--</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Performance Monitor</div>
+        <div class="metric-row">
+          <span>CPU: <strong id="statCPU" style="color: #00e5ff;">--</strong></span>
+          <span>RAM: <strong id="statRAM" style="color: #ff007f;">--</strong></span>
+        </div>
+        <div class="chart-container" style="height: 100px; margin-top: 8px;">
+          <svg id="perfChart" viewBox="0 0 300 100" class="svg-chart"></svg>
+        </div>
+        <div class="status-row" style="margin-top: 8px; font-size: 11px;">
+          <span>CPU Temp: <strong id="statCPUTemp">--</strong></span>
+          <span>Uptime: <strong id="statUptime">--</strong></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Storage &amp; Power</div>
+        <div class="metric-row"><span>Storage</span><span id="statStorage">--</span></div>
+        <div class="metric-bar"><div id="barStorage" class="metric-fill"></div></div>
+        <div class="metric-row"><span>Battery</span><span id="statBattery">--</span></div>
+        <div class="metric-bar"><div id="barBattery" class="metric-fill"></div></div>
+        <div class="metric-row"><span>Network</span><span id="statNetwork">--</span></div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title" style="color: #ff007f;">Emotional Diagnostics</div>
+        <div class="status-row"><span>Mood</span><span id="moodLabel" style="color: #ff007f;">Calm (85%)</span></div>
+        <div class="status-row"><span>Speech Rate</span><span id="moodWPM">-- WPM</span></div>
+        <div class="status-row"><span>Energy RMS</span><span id="moodEnergy">Normal</span></div>
+        <div class="status-row"><span>Adapt Mode</span><span id="adaptState" style="color: #39ff14;">Standard</span></div>
+        <div class="metric-bar"><div id="moodBar" class="metric-fill" style="width: 85%; background: #ff007f;"></div></div>
+      </div>
+
+      <div class="card" id="voiceInputCard">
+        <div class="card-title" style="color: #00e5ff;">Voice Input</div>
+        <div class="status-row">
+          <span>Mic Status</span>
+          <span id="micStatusWrapper" style="display: flex; align-items: center; gap: 6px;">
+            <span id="micStatusDot" class="mic-status-dot"></span>
+            <span id="micStatusLabel" style="color: #888;">Inactive</span>
+          </span>
+        </div>
+        <div class="status-row">
+          <span>Input Level</span>
+          <span id="micLevelPct">0%</span>
+        </div>
+        <div class="metric-bar">
+          <div id="micLevelBar" class="metric-fill mic-level-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CENTER: Chat ── -->
+    <section class="panel panel-center" aria-label="VOID Chat Interface">
+      <header class="center-header">
+        <div class="logo" aria-label="VOID">VOID</div>
+        <div class="status-pill" role="status" aria-live="polite">
+          <span id="statusDot" class="status-dot" aria-hidden="true"></span>
+          <span id="statusLabel">Offline</span>
+        </div>
+      </header>
+
+      <!-- Global Search Console -->
+      <div class="search-bar-wrap">
+        <input type="text" id="hudSearchInput" placeholder="Search memory, chats, and academic syllabus..." class="hud-search-input">
+        <button id="hudSearchBtn" class="btn btn-search">Search</button>
+        <button id="hudSearchCloseBtn" class="btn btn-search-close hidden">&times;</button>
+      </div>
+      <div id="searchResults" class="search-results-panel hidden"></div>
+
+      <div class="orb-wrap" aria-hidden="true">
+        <div class="orb"></div>
+      </div>
+
+      <div id="chatMessages" class="chat-messages" role="log" aria-label="Chat messages" aria-live="polite"></div>
+
+      <div id="typingIndicator" class="typing hidden" role="status" aria-label="VOID is thinking">
+        <span class="typing-dots" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span>VOID is analyzing</span>
+      </div>
+
+      <div class="input-row">
+        <input
+          id="chatInput"
+          class="chat-input"
+          type="text"
+          placeholder="Ask VOID anything..."
+          autocomplete="off"
+          aria-label="Message input"
+          spellcheck="false"
+        >
+        <button id="sendBtn" class="btn btn-primary" aria-label="Send message">Send</button>
+        <button id="callBtn" class="btn" aria-label="Toggle voice call mode">Call</button>
+        <button id="micBtn"      class="btn" aria-label="Voice input">Mic</button>
+        <button id="voiceToggle" class="btn" aria-label="Toggle voice output">Voice</button>
+        <button id="clearBtn"    class="btn" aria-label="Clear chat">Clear</button>
+      </div>
+    </section>
+
+    <!-- ── RIGHT: Assistant Panel ── -->
+    <section class="panel panel-right" aria-label="Assistant Panel">
+      <div class="panel-title">Assistant Panel</div>
+
+      <div class="card center">
+        <div id="timeDisplay" class="clock" aria-live="off">00:00:00</div>
+        <div id="dateDisplay" class="date">Loading date...</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">System Info</div>
+        <div id="system-info-text">Loading system info...</div>
+      </div>
+
+      <div class="card" id="academicDashboardCard" style="cursor: pointer;">
+        <div class="card-title" style="color: #00e5ff; display: flex; justify-content: space-between; align-items: center;">
+          <span>Academic Dashboard</span>
+          <div style="display: flex; gap: 5px;">
+            <button id="uploadDocBtn" class="btn" style="padding: 2px 6px; font-size: 10px; margin: 0; line-height: 1.2;">Upload</button>
+            <button id="openAcadDashboardBtn" class="btn" style="padding: 2px 6px; font-size: 10px; margin: 0; line-height: 1.2;">Open</button>
+          </div>
+        </div>
+        <input type="file" id="academicFileInput" accept=".pdf,.txt,.md" style="display: none;">
+        <div class="status-row"><span>Subject</span><span id="acadSubject" style="color: #00e5ff;">Loading...</span></div>
+        <div class="status-row"><span>Chapter</span><span id="acadChapter" style="color: #39ff14;">Loading...</span></div>
+        <div class="status-row"><span>Completed</span><span id="acadCompleted">--</span></div>
+        <div class="status-row"><span>Gaps</span><span id="acadGaps" style="color: #ff003c;">--</span></div>
+        <div class="status-row"><span>Avg Score</span><span id="acadAvgScore" style="color: #ffb300;">--</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="color: #39ff14; display: flex; justify-content: space-between; align-items: center;">
+          <span>CV &amp; Computer Control</span>
+          <span id="cvcsActiveMonitor" style="font-size: 10px; color: #888;">Mon 1</span>
+        </div>
+        <div class="status-row">
+          <span>Active Window</span>
+          <span id="cvcsActiveWin" style="color: #39ff14; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; display: inline-block;">--</span>
+        </div>
+        <div class="status-row">
+          <span>Permissions</span>
+          <select id="cvcsPermissionSelect" style="background: #111; color: #39ff14; border: 1px solid #333; font-size: 11px; padding: 2px; border-radius: 4px; outline: none; cursor: pointer;">
+            <option value="1.0">L1: View Only</option>
+            <option value="2.0" selected>L2: Assisted</option>
+            <option value="3.0">L3: Authorized</option>
+            <option value="3.5">L3.5: Dev Session</option>
+            <option value="4.0">L4: Automated</option>
+          </select>
+        </div>
+        <div class="status-row" id="cvcsTimerRow" style="display: none;">
+          <span>Session Timer</span>
+          <span id="cvcsTimerLabel" style="color: #ff007f; font-weight: bold;">30:00</span>
+        </div>
+        <div class="status-row">
+          <span>Watch Screen</span>
+          <button id="cvcsWatchToggleBtn" class="btn" style="padding: 2px 8px; font-size: 10px; margin: 0; line-height: 1.2;">OFF</button>
+        </div>
+        <div class="status-row">
+          <span>Last Action</span>
+          <span id="cvcsLastAction" style="font-size: 10px; color: #888;">Idle</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Message of the Day</div>
+        <div id="motdText">Stay focused. Build fast. Keep it local.</div>
+      </div>
+
+      <div class="card" id="recommendationsCard">
+        <div class="card-title" style="color: #ffb300;">Personalized AI Recommendations</div>
+        <div id="recommendationsList" class="recommendations-list">
+          <!-- Populated dynamically -->
+          <div class="recommendation-item empty">All systems operational.</div>
+        </div>
+      </div>
+
+      <div class="card" id="integrationsCard">
+        <div class="card-title" style="color: #00e5ff;">Connected Services</div>
+        <div class="integrations-grid">
+          <div class="integration-item active" id="integrationOllama" title="Local LLM client configuration">
+            <span class="integration-name">Local LLM</span>
+            <span class="integration-status">Online</span>
+          </div>
+          <div class="integration-item active" id="integrationGoogle" title="Google Search services status">
+            <span class="integration-name">Web Search</span>
+            <span class="integration-status">Connected</span>
+          </div>
+          <div class="integration-item active" id="integrationWhatsapp" title="WhatsApp control interface">
+            <span class="integration-name">WhatsApp</span>
+            <span class="integration-status">Operational</span>
+          </div>
+          <div class="integration-item active" id="integrationEmail" title="Professional Email/Calendar sync status">
+            <span class="integration-name">Email/Cal</span>
+            <span class="integration-status">Synced</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Quick Actions</div>
+        <div class="button-grid">
+          <button id="soundToggleBtn" class="btn" aria-label="Toggle sound">Sound: OFF</button>
+          <button id="showMemoryBtn"  class="btn" aria-label="Show memory">Show Memory</button>
+          <button id="clearMemoryBtn" class="btn" aria-label="Clear memory">Clear Memory</button>
+          <button id="repairBtn"      class="btn" aria-label="Repair VOID">Repair</button>
+          <button id="diagnosticsBtn" class="btn" aria-label="Run diagnostics">Diagnostics</button>
+          <button id="faceLockBtn"    class="btn" aria-label="Biometric Login">Face Lock</button>
+        </div>
+      </div>
+    </section>
+
+  <!-- Academic Dashboard Modal -->
+  <div id="academicDashboardModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content academic-modal-content" style="max-width: 900px; width: 90%; height: 85vh; display: flex; flex-direction: column; text-align: left; padding: 25px; border-color: #00e5ff; box-shadow: 0 0 25px rgba(0, 229, 255, 0.25);">
+      <div class="panel-title" style="color: #00e5ff; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 18px;">
+        <span>VOID Academic Command Center</span>
+        <button id="closeAcadDashboardBtn" class="btn" style="font-size: 11px; padding: 4px 10px;">Close</button>
+      </div>
+      
+      <div class="academic-modal-body" style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; flex-grow: 1; overflow: hidden;">
+        
+        <!-- Left Column: Subjects list -->
+        <div class="subjects-sidebar" style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 5px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 12px; color: #a47070; letter-spacing: 2px; text-transform: uppercase; margin: 0;">Subjects</h3>
+            <button id="addSubjectBtn" class="btn" style="padding: 2px 6px; font-size: 9px; line-height: 1.2;">+ Add</button>
+          </div>
+          <div id="acadSubjectsList" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+        
+        <!-- Right Column: Subject details, syllabus and action console -->
+        <div class="subject-workspace" style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-left: 10px; border-left: 1px solid rgba(0, 229, 255, 0.1);">
+          
+          <div id="noSubjectSelectedView" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #a47070; text-align: center; gap: 10px;">
+            <div style="font-size: 36px;">📚</div>
+            <p>Select a subject from the left panel to start studying with VOID.</p>
+          </div>
+          
+          <div id="subjectActiveView" class="hidden" style="display: flex; flex-direction: column; gap: 15px; height: 100%;">
+            <!-- Header with Title, streak & progress -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 10px;">
+              <div>
+                <h2 id="activeSubjectTitle" style="font-family: 'Orbitron', sans-serif; font-size: 20px; color: #00e5ff;">--</h2>
+                <div style="display: flex; gap: 15px; margin-top: 5px; font-size: 11px; color: #a47070;">
+                  <span>Level: <strong id="activeSubjectLevel" style="color: #39ff14;">Novice</strong></span>
+                  <span>Streak: <strong id="activeSubjectStreak" style="color: #ffb300;">0 days 🔥</strong></span>
+                  <span>Avg Score: <strong id="activeSubjectAvg" style="color: #ff007f;">--</strong></span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="donut-chart-wrap" style="width: 46px; height: 46px;">
+                  <svg id="academicDonutChart" viewBox="0 0 36 36" class="donut-chart"></svg>
+                </div>
+                <div style="width: 120px; text-align: right;">
+                  <div style="font-size: 11px; margin-bottom: 3px; color: #a47070;">Progress: <span id="activeSubjectProgressText">0%</span></div>
+                  <div class="metric-bar" style="height: 6px;"><div id="activeSubjectProgressBar" class="metric-fill" style="width: 0%; background: #00e5ff; box-shadow: 0 0 8px #00e5ff;"></div></div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Research Status Warning if not researched -->
+            <div id="subjectResearchRequiredCard" class="hidden card" style="border-color: #ffb300; background: rgba(255, 179, 0, 0.03); padding: 15px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center;">
+              <div style="color: #ffb300; font-weight: bold; font-size: 14px;">⚠️ Research Needed</div>
+              <p style="font-size: 12px; line-height: 1.4; color: #ccc; max-width: 400px;">
+                VOID has not mapped the syllabus for this subject yet. Start the Deep Research phase to generate a custom curriculum, textbooks, and quizzes.
+              </p>
+              <button id="startResearchBtn" class="btn" style="border-color: #ffb300; color: #ffb300;">Start Deep Research</button>
+            </div>
+            
+            <!-- Researching loading state -->
+            <div id="subjectResearchingCard" class="hidden card" style="border-color: #ff007f; padding: 15px; text-align: center; display: flex; flex-direction: column; gap: 10px;">
+              <div style="color: #ff007f; font-family: 'Orbitron', sans-serif;" id="researchStatusText">Performing Deep Research...</div>
+              <div class="boot-bar" style="width: 100%; margin: 5px 0;"><div id="researchProgressBar" class="boot-bar-fill" style="background: #ff007f; box-shadow: 0 0 10px #ff007f; animation: none; width: 0%;"></div></div>
+              <div id="researchLogsContainer" style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; text-align: left; color: #a47070;">
+                <!-- Logs rendered here -->
+              </div>
+            </div>
+            
+            <!-- Active Subject content layout -->
+            <div id="subjectResearchedContent" class="hidden" style="display: grid; grid-template-columns: 1fr 240px; gap: 15px; flex-grow: 1; overflow: hidden;">
+              <!-- Left: Accordion curriculum tree -->
+              <div style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 5px;">
+                <h4 style="font-family: 'Orbitron', sans-serif; font-size: 12px; color: #a47070; text-transform: uppercase;">Curriculum Index</h4>
+                <div id="curriculumAccordion" style="display: flex; flex-direction: column; gap: 8px;">
+                  <!-- Collapsible Units -->
+                </div>
+              </div>
+              
+              <!-- Right: Actions/Quizzes/Tutors console -->
+              <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="card">
+                  <div class="card-title">Study Actions</div>
+                  <div style="font-size: 11px; color: #a47070; margin-bottom: 5px;">Active Topic: <br><strong id="activeStudyTopicLabel" style="color: #00e5ff;">--</strong></div>
+                  
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button id="actionTeachBtn" class="btn" style="justify-content: flex-start; gap: 8px;">📖 Teach Me</button>
+                    <button id="actionPracticeBtn" class="btn" style="justify-content: flex-start; gap: 8px;">✏️ Practice Mode</button>
+                    <button id="actionVivaBtn" class="btn" style="justify-content: flex-start; gap: 8px;">🎙️ Take a Viva</button>
+                    <button id="actionExamBtn" class="btn" style="justify-content: flex-start; gap: 8px;">🏆 Exam Prep</button>
+                  </div>
+                </div>
+                
+                <div class="card" style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px; overflow-y: auto;">
+                  <div class="card-title">Struggles &amp; Strengths</div>
+                  <div style="font-size: 11px; font-weight: bold; color: #ff003c; margin-top: 5px;">Weak Areas:</div>
+                  <ul id="activeSubjectWeakList" style="font-size: 11px; padding-left: 15px; color: #ccc; display: flex; flex-direction: column; gap: 3px;">
+                    <!-- Weak topics -->
+                  </ul>
+                  <div style="font-size: 11px; font-weight: bold; color: #39ff14; margin-top: 5px;">Strong Areas:</div>
+                  <ul id="activeSubjectStrongList" style="font-size: 11px; padding-left: 15px; color: #ccc; display: flex; flex-direction: column; gap: 3px;">
+                    <!-- Strong topics -->
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+  
+  <!-- Dynamic Test Screen Overlay Modal -->
+  <div id="academicTestModal" class="modal hidden" role="dialog" aria-modal="true" style="z-index: 5100;">
+    <div class="modal-content" style="max-width: 650px; text-align: left; border-color: #ffb300; box-shadow: 0 0 25px rgba(255, 179, 0, 0.25);">
+      <div class="panel-title" style="color: #ffb300; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <span id="testModalTitle">Adaptive Topic Assessment</span>
+        <span id="testModalTimer" style="font-family: monospace; font-size: 14px; color: #ff007f;">00:00</span>
+      </div>
+      
+      <div id="testQuestionContainer" style="min-height: 180px; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+        <!-- Question text & options rendered here -->
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 12px; color: #a47070;">Question <span id="currentQuestionNum">1</span> of <span id="totalQuestionsNum">5</span></div>
+        <button id="testNextBtn" class="btn" style="border-color: #ffb300; color: #ffb300;">Next Question</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Viva Voice Dialog Box Modal -->
+  <div id="vivaModal" class="modal hidden" role="dialog" aria-modal="true" style="z-index: 5200;">
+    <div class="modal-content" style="max-width: 500px; text-align: center; border-color: #39ff14; box-shadow: 0 0 25px rgba(57, 255, 20, 0.25);">
+      <div class="panel-title" style="color: #39ff14; margin-bottom: 15px;">Interactive Examiner Session</div>
+      <p id="vivaQuestionText" style="font-size: 14px; line-height: 1.5; color: #fff; margin-bottom: 20px; font-style: italic;">
+        --
+      </p>
+      
+      <div id="vivaAnswerContainer" style="margin-bottom: 20px;">
+        <textarea id="vivaAnswerInput" style="width: 100%; height: 80px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 6px; padding: 10px; color: #fff; outline: none; font-size: 13px; resize: none;" placeholder="Type your answer, or click mic to speak it..."></textarea>
+      </div>
+      
+      <div id="vivaFeedbackBox" class="hidden" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(57, 255, 20, 0.2); padding: 12px; border-radius: 6px; text-align: left; margin-bottom: 20px; font-size: 12px; line-height: 1.4;">
+        <div style="font-weight: bold; color: #39ff14; margin-bottom: 5px;" id="vivaFeedbackScore">Score: --</div>
+        <div id="vivaFeedbackText" style="color: #ccc;">--</div>
+      </div>
+      
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button id="vivaMicBtn" class="btn" style="border-color: #39ff14; color: #39ff14;">🎤 Mic Input</button>
+        <button id="vivaSubmitBtn" class="btn btn-primary" style="background: #39ff14; color: #000; border-color: #39ff14;">Submit Answer</button>
+        <button id="vivaNextBtn" class="btn hidden" style="border-color: #39ff14; color: #39ff14;">Next Question</button>
+        <button id="vivaCloseBtn" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  </main>
+
+  <!-- Hidden compatibility stubs — do not remove -->
+  <div id="welcomeOverlay"    class="hidden"></div>
+  <!-- Face Lock Modal -->
+  <div id="faceLockModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content face-scan-container">
+      <div class="panel-title">Biometric Authentication</div>
+      <div class="face-scanner" style="position: relative;">
+        <video id="faceLockVideo" autoplay playsinline muted class="hidden" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; position: absolute; top: 0; left: 0; transform: scaleX(-1);"></video>
+        <canvas id="faceLockCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;"></canvas>
+        <div class="scan-grid"></div>
+        <div class="scan-bar"></div>
+        <div id="faceLockPlaceholder" class="face-placeholder">
+          <div class="eye left"></div>
+          <div class="eye right"></div>
+          <div class="mouth"></div>
+        </div>
+      </div>
+      <div id="faceScanStatus" class="scan-status">Scanning for authorized user...</div>
+      <button id="closeFaceLock" class="btn btn-secondary">Abort Access</button>
+    </div>
+  </div>
+
+  <!-- CVCS Confirmation Modal -->
+  <div id="cvcsConfirmModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 400px; text-align: center; border: 1px solid #39ff14; box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);">
+      <div class="panel-title" style="color: #39ff14; margin-bottom: 15px;">Safety Action Request</div>
+      <p style="font-size: 14px; margin-bottom: 10px; line-height: 1.4; color: #ccc;">
+        VOID is requesting permission to perform the following action:
+      </p>
+      <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid #222; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 13px; text-align: left; margin-bottom: 20px; color: #fff;">
+        <div style="margin-bottom: 5px;"><strong>Action:</strong> <span id="cvcsConfirmAction" style="color: #39ff14;">--</span></div>
+        <div style="margin-bottom: 5px;"><strong>Target:</strong> <span id="cvcsConfirmTarget" style="color: #00e5ff;">--</span></div>
+        <div id="cvcsConfirmCoordsRow" style="margin-bottom: 5px;"><strong>Coords:</strong> <span id="cvcsConfirmCoords">--</span></div>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button id="cvcsConfirmApproveBtn" class="btn btn-primary" style="background: #39ff14; color: #000; border-color: #39ff14;">Approve</button>
+        <button id="cvcsConfirmDenyBtn" class="btn btn-secondary">Deny</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="fileStatusPanel"   class="hidden"></div>
+  <button id="setupRefresh"   class="hidden">Refresh</button>
+  <div id="setupInstructions" class="hidden"></div>
+  <span id="setupPython"      class="hidden"></span>
+  <span id="setupRequirements" class="hidden"></span>
+  <span id="setupOllama"      class="hidden"></span>
+  <span id="setupModel"       class="hidden"></span>
+  <button id="fileStatusBtn"  class="hidden"></button>
+  <button id="closeFileStatus" class="hidden"></button>
+  <button id="scanBtn"        class="hidden"></button>
+  <input  id="fileSearchInput" class="hidden">
+  <select id="scopeSelect"    class="hidden"><option value="root">root</option></select>
+  <tbody  id="fileTableBody"  class="hidden"></tbody>
+  <button id="networkToolsBtn"    class="hidden"></button>
+  <button id="closeNetworkTools"  class="hidden"></button>
+  <select id="voidModeSelect"     class="hidden"><option value="normal">normal</option></select>
+
+  <script src="app.js"></script>
+</body>
+</html>

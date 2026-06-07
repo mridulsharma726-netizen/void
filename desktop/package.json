@@ -1,0 +1,29 @@
+{
+  "name": "void-desktop",
+  "version": "1.0.0",
+  "description": "VOID Desktop Assistant",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^32.3.3"
+  },
+  "build": {
+    "appId": "com.void.desktop",
+    "productName": "VOID",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "../ui/**/*",
+      "../backend/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}

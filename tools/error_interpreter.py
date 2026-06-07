@@ -139,6 +139,24 @@ ERROR_MAPPINGS: Dict[str, Dict[str, str]] = {
         "action": "Check your internet connection or try again later.",
         "severity": "medium"
     },
+    "CancelledError": {
+        "title": "Operation Cancelled",
+        "message": "The asynchronous operation was cancelled before completion.",
+        "action": "Try requesting the action again.",
+        "severity": "medium"
+    },
+    "AsyncTimeoutError": {
+        "title": "Operation Timed Out",
+        "message": "The asynchronous task timed out waiting for a response.",
+        "action": "Ensure the underlying service (like Ollama) is responding and try again.",
+        "severity": "high"
+    },
+    "RequestException": {
+        "title": "Network Request Failed",
+        "message": "An error occurred while making a network request via requests library.",
+        "action": "Check the service URL, status, and network connection.",
+        "severity": "high"
+    },
     "ConnectionRefusedError": {
         "title": "Connection Refused",
         "message": "The service is not accepting connections.",
@@ -528,7 +546,7 @@ def interpret_error(error_msg: str) -> str:
         )
     
     # File not found
-    if "file" in error_lower and "not found" in error_lower:
+    if "file" in error_lower and ("not found" in error_lower or "notfound" in error_lower):
         return (
             "System Error Detected.\n\n"
             "A required file could not be found.\n\n"
@@ -538,6 +556,38 @@ def interpret_error(error_msg: str) -> str:
     
     # Generic fallback
     return "An unknown system error occurred. Try running diagnostics with 'scan project'."
+
+
+def interpret_complex_error(exc: Exception) -> str:
+    """
+    Chains exception causes (__cause__ and __context__) and produces multi-level explanations.
+    """
+    explanations = []
+    current = exc
+    level = 1
+    
+    while current is not None:
+        friendly = translate_exception(current)
+        title = friendly.get("title", type(current).__name__)
+        msg = friendly.get("message", str(current))
+        action = friendly.get("action", "")
+        
+        step_explanation = f"Level {level}: {title} — {msg}"
+        if action:
+            step_explanation += f" (Recommendation: {action})"
+        explanations.append(step_explanation)
+        
+        # Traverse cause chain (__cause__ is explicit 'raise from', __context__ is implicit active exception)
+        if getattr(current, "__cause__", None) is not None:
+            current = current.__cause__
+        elif getattr(current, "__context__", None) is not None:
+            current = current.__context__
+        else:
+            current = None
+            
+        level += 1
+        
+    return "\n\n".join(explanations)
 
 
 # ============================================================================

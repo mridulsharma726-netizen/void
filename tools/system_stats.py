@@ -28,8 +28,17 @@ class SystemStats:
     
     def __init__(self):
         self._stats_cache: Dict[str, Any] = {}
-        self._cache_duration = 1.0  # seconds
+        self._cache_duration = 2.0  # seconds (increased from 1.0 to reduce CPU overhead)
         self._last_update = 0.0
+        
+        # Resolve processor info once to prevent heavy CPU overhead on stats refresh
+        self._processor_info = platform.processor()
+        if CPUINFO_AVAILABLE:
+            try:
+                info = cpuinfo.get_cpu_info()
+                self._processor_info = info.get("brand_raw", platform.processor())
+            except Exception:
+                pass
     
     def _should_refresh(self) -> bool:
         """Check if cache should be refreshed."""
@@ -40,18 +49,11 @@ class SystemStats:
         cpu_stats = {
             "cpu_usage": 0,
             "cpu_temp": None,
-            "processor": platform.processor(),
+            "processor": self._processor_info,
         }
         
-        # Try to get better CPU info from py-cpuinfo
-        if CPUINFO_AVAILABLE:
-            try:
-                info = cpuinfo.get_cpu_info()
-                cpu_stats["processor"] = info.get("brand_raw", platform.processor())
-            except Exception:
-                pass  # Keep default processor
-        
-        cpu_stats["cpu_usage"] = psutil.cpu_percent(interval=1) if psutil else 0.0
+        # Non-blocking CPU usage
+        cpu_stats["cpu_usage"] = psutil.cpu_percent(interval=None) if psutil else 0.0
         cpu_stats["cpu_temp"] = None
         # CPU temperature (might not be available on all systems)
         if psutil and hasattr(psutil, "sensors_temperatures"):
@@ -93,7 +95,7 @@ class SystemStats:
             # Get disk usage for the root partition (works on Windows and Linux)
             if platform.system() == "Windows":
                 # On Windows, try C: drive
-drive = r"C:\\"
+                drive = r"C:\\"
             else:
                 drive = "/"
             

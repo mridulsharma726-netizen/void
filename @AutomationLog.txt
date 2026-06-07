@@ -1,0 +1,6 @@
+
+[WinError -2147221008] CoInitialize has not been called
+Can not load UIAutomationCore.dll.
+1, You may need to install Windows Update KB971513 if your OS is Windows XP, see https://github.com/yinkaisheng/WindowsUpdateKB971513ForIUIAutomation
+2, You need to use an UIAutomationInitializerInThread object if use uiautomation in a thread, see demos/uiautomation_in_thread.py
+2026-06-02 14:04:03.681 find_all_pill.py[51] find_and_click_all -> Can not move cursor. ButtonControl's BoundingRectangle is (0,0,0,0)[0x0]. SearchProperties: {ControlType: ButtonControl}

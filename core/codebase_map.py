@@ -1,241 +1,117 @@
 """
-VOID Codebase Map Generator
-===========================
+VOID Core Codebase Map Module
+==============================
 
-Generates and maintains a map of the project architecture.
+Provides module path resolution and protected path checking
+for the self-modification system.
 
-Features:
-- generate_codebase_map() - Scan and generate module map
-- load_codebase_map() - Load existing map
-- save_codebase_map() - Save map to file
-- get_module_path() - Get module path from map
-
-Map is saved to: data/codebase_map.json
-
+Used by: tools/self_modifier.py
 """
 
 import os
 import json
 from typing import Dict, Any, Optional, List
+from pathlib import Path
 from datetime import datetime
 
-# ============================================================================
-# CONSTANTS
-# ============================================================================
+# Project root
+ROOT_DIR = Path(__file__).parent.parent
 
-# Project root directory
-VOID_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Map file location
+MAP_FILE = ROOT_DIR / "data" / "codebase_map.json"
 
-# Directories to scan
-SCAN_DIRECTORIES = [
-    "tools",
-    "core",
-    "modules",
-    "agent",
-    "workflows",
-    "data",
-    "ui",
-]
+# Protected directories — cannot be modified by self-modifier
+PROTECTED_DIRS = {
+    "venv", ".git", "node_modules", "__pycache__",
+    ".vscode", ".qodo", ".zencoder", ".zenflow",
+    "desktop",  # Electron app — modify carefully
+}
 
-# Directories to exclude from scanning (protected)
-PROTECTED_DIRECTORIES = [
-    "venv",
-    "node_modules",
-    ".git",
-    "__pycache__",
-    ".venv",
-    "env",
-]
+# Protected files — never modify these
+PROTECTED_FILES = {
+    "requirements.txt", "package.json", "package-lock.json",
+    ".gitignore", "setup.py", "setup_done.flag",
+}
 
-# File extensions to include
-ALLOWED_EXTENSIONS = [
-    ".py",
-    ".js",
-    ".json",
-    ".html",
-    ".css",
-    ".md",
-    ".txt",
-]
-
-# Map file path
-MAP_FILE = os.path.join(VOID_ROOT, "data", "codebase_map.json")
+# Allowed directories for self-modification
+ALLOWED_DIRS = {"tools", "core", "workflows", "server", "app"}
 
 
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-def _should_include_file(filepath: str) -> bool:
+def generate_codebase_map() -> Dict[str, str]:
     """
-    Check if file should be included in the map.
+    Scan the project and generate a map of module names to file paths.
     
-    Args:
-        filepath: Path to file
-        
     Returns:
-        True if should include, False otherwise
+        Dict mapping module/file names to their relative paths
     """
-    # Check extension
-    _, ext = os.path.splitext(filepath)
-    if ext.lower() not in ALLOWED_EXTENSIONS:
-        return False
+    module_map = {}
     
-    # Check if in protected directory
-    filepath_lower = filepath.lower()
-    for protected in PROTECTED_DIRECTORIES:
-        if protected in filepath_lower:
-            return False
-    
-    return True
-
-
-def _get_module_name(filepath: str, root: str) -> str:
-    """
-    Get module name from file path.
-    
-    Args:
-        filepath: Full file path
-        root: Root directory
-        
-    Returns:
-        Module name (without extension)
-    """
-    # Get relative path
-    rel_path = os.path.relpath(filepath, root)
-    
-    # Remove extension
-    name_without_ext = os.path.splitext(rel_path)[0]
-    
-    # Convert path separator to dots for Python modules
-    # e.g., "tools/voice_tts" -> "voice_tts"
-    # But "core/agent" -> "agent" (since agent is a directory)
-    
-    # Get just the filename without path
-    filename = os.path.basename(name_without_ext)
-    
-    return filename
-
-
-# ============================================================================
-# MAIN FUNCTIONS
-# ============================================================================
-
-def generate_codebase_map(force_refresh: bool = False) -> Dict[str, Any]:
-    """
-    Scan the project and generate a codebase map.
-    
-    Args:
-        force_refresh: Force regeneration even if map exists
-        
-    Returns:
-        Dictionary with map data and statistics
-    """
-    # Check if we already have a map and don't need to refresh
-    if not force_refresh and os.path.exists(MAP_FILE):
-        try:
-            with open(MAP_FILE, 'r', encoding='utf-8') as f:
-                existing_map = json.load(f)
-            if existing_map and len(existing_map) > 0:
-                return {
-                    "status": "ok",
-                    "message": "Using existing codebase map",
-                    "map": existing_map,
-                    "total_modules": len(existing_map)
-                }
-        except:
-            pass
-    
-    # Generate new map
-    module_map: Dict[str, str] = {}
-    scan_results: List[Dict[str, Any]] = []
-    
-    for directory in SCAN_DIRECTORIES:
-        dir_path = os.path.join(VOID_ROOT, directory)
-        
-        if not os.path.exists(dir_path):
+    for allowed_dir in ALLOWED_DIRS:
+        dir_path = ROOT_DIR / allowed_dir
+        if not dir_path.exists():
             continue
         
-        # Walk through directory
         for root, dirs, files in os.walk(dir_path):
-            # Filter out protected directories
-            dirs[:] = [d for d in dirs if d not in PROTECTED_DIRECTORIES]
+            # Skip protected subdirectories
+            dirs[:] = [d for d in dirs if d not in PROTECTED_DIRS]
             
             for filename in files:
-                if not _should_include_file(filename):
+                if not filename.endswith(".py"):
+                    continue
+                if filename.startswith("__"):
                     continue
                 
-                filepath = os.path.join(root, filename)
-                rel_path = os.path.relpath(filepath, VOID_ROOT)
+                full_path = Path(root) / filename
+                rel_path = str(full_path.relative_to(ROOT_DIR)).replace("\\", "/")
                 
-                # Get module name
-                module_name = _get_module_name(filepath, VOID_ROOT)
+                # Register by various name patterns
+                module_name = filename[:-3]  # strip .py
+                module_map[module_name] = rel_path
                 
-                # Add to map (only if not already present)
-                if module_name not in module_map:
-                    module_map[module_name] = rel_path
-                    
-                    scan_results.append({
-                        "module": module_name,
-                        "path": rel_path,
-                        "directory": directory
-                    })
+                # Also register with directory prefix
+                dir_name = Path(root).name
+                if dir_name != allowed_dir:
+                    module_map[f"{dir_name}/{module_name}"] = rel_path
+                module_map[f"{allowed_dir}/{module_name}"] = rel_path
+                
+                # Full dotted module path
+                dotted = rel_path.replace("/", ".").replace("\\", ".")[:-3]
+                module_map[dotted] = rel_path
     
-    # Ensure data directory exists
-    os.makedirs(os.path.dirname(MAP_FILE), exist_ok=True)
-    
-    # Save map to file
+    # Save to file
     try:
-        with open(MAP_FILE, 'w', encoding='utf-8') as f:
-            json.dump(module_map, f, indent=2, ensure_ascii=False)
-        save_status = "ok"
-    except Exception as e:
-        save_status = str(e)
+        MAP_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(MAP_FILE, "w", encoding="utf-8") as f:
+            json.dump({
+                "map": module_map,
+                "generated_at": datetime.now().isoformat(),
+                "total_modules": len(module_map),
+            }, f, indent=2)
+    except Exception:
+        pass
     
-    return {
-        "status": "ok",
-        "message": f"Generated codebase map with {len(module_map)} modules",
-        "map": module_map,
-        "total_modules": len(module_map),
-        "scan_results": scan_results,
-        "saved": save_status
-    }
+    return module_map
 
 
 def load_codebase_map() -> Dict[str, str]:
     """
-    Load existing codebase map from file.
+    Load the codebase map from disk, or generate if missing.
     
     Returns:
-        Dictionary mapping module names to file paths
-    """
-    if not os.path.exists(MAP_FILE):
-        return {}
-    
-    try:
-        with open(MAP_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except:
-        return {}
-
-
-def save_codebase_map(module_map: Dict[str, str]) -> bool:
-    """
-    Save codebase map to file.
-    
-    Args:
-        module_map: Dictionary mapping module names to paths
-        
-    Returns:
-        True if successful
+        Dict mapping module names to file paths
     """
     try:
-        os.makedirs(os.path.dirname(MAP_FILE), exist_ok=True)
-        with open(MAP_FILE, 'w', encoding='utf-8') as f:
-            json.dump(module_map, f, indent=2, ensure_ascii=False)
-        return True
-    except:
-        return False
+        if MAP_FILE.exists():
+            with open(MAP_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            module_map = data.get("map", {})
+            if module_map:
+                return module_map
+    except Exception:
+        pass
+    
+    # Generate fresh
+    return generate_codebase_map()
 
 
 def get_module_path(module_name: str) -> Optional[str]:
@@ -243,133 +119,121 @@ def get_module_path(module_name: str) -> Optional[str]:
     Get the file path for a module name.
     
     Args:
-        module_name: Name of the module (e.g., "voice_tts")
+        module_name: Module name (e.g., "voice_tts", "tools/voice_tts", "tools.voice_tts")
         
     Returns:
-        Full file path if found, None otherwise
+        Relative file path or None
     """
-    # First try loading from map
     module_map = load_codebase_map()
-    
-    if module_name in module_map:
-        path = module_map[module_name]
-        full_path = os.path.join(VOID_ROOT, path)
-        if os.path.exists(full_path):
-            return path
-    
-    # If not in map, try to resolve directly
-    return resolve_module_path(module_name)
+    return module_map.get(module_name)
 
 
 def resolve_module_path(module_name: str) -> Optional[str]:
     """
-    Resolve a module name to its file path.
+    Resolve a module name to an absolute file path.
     
-    Searches in these directories:
-    - tools/
-    - core/
-    - modules/
-    - agent/
-    - workflows/
-    - data/
+    Tries multiple resolution strategies:
+    1. Direct map lookup
+    2. Common directory prefixes (tools/, core/, server/, workflows/)
+    3. Direct file path check
     
     Args:
-        module_name: Name of the module (e.g., "voice_tts")
+        module_name: Module name or path
         
     Returns:
-        Relative path if found, None otherwise
+        Absolute file path or None
     """
-    # Clean the module name
-    module_name = module_name.strip()
+    # Strategy 1: Map lookup
+    rel_path = get_module_path(module_name)
+    if rel_path:
+        abs_path = ROOT_DIR / rel_path
+        if abs_path.exists():
+            return str(abs_path)
     
-    # Remove .py extension if provided
-    if module_name.endswith('.py'):
-        module_name = module_name[:-3]
-    
-    # Possible paths to check
-    possible_paths = [
-        f"tools/{module_name}.py",
-        f"core/{module_name}.py",
-        f"core/agents/{module_name}.py",
-        f"modules/{module_name}.py",
-        f"agent/{module_name}.py",
-        f"workflows/{module_name}.py",
-        f"data/{module_name}.json",
-        f"data/{module_name}.py",
+    # Strategy 2: Try common directory prefixes
+    name = module_name.replace(".", "/")
+    candidates = [
+        ROOT_DIR / f"{name}.py",
+        ROOT_DIR / "tools" / f"{name}.py",
+        ROOT_DIR / "core" / f"{name}.py",
+        ROOT_DIR / "server" / f"{name}.py",
+        ROOT_DIR / "server" / "backend" / f"{name}.py",
+        ROOT_DIR / "workflows" / f"{name}.py",
     ]
     
-    # Also check without directory prefix (in case it's a top-level file)
-    possible_paths.extend([
-        f"tools/{module_name}.py",
-        f"core/{module_name}.py",
-    ])
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
     
-    # Check each possible path
-    for rel_path in possible_paths:
-        full_path = os.path.join(VOID_ROOT, rel_path)
-        if os.path.exists(full_path) and os.path.isfile(full_path):
-            return rel_path
+    # Strategy 3: Direct path
+    direct = Path(module_name)
+    if direct.exists():
+        return str(direct)
     
     return None
 
 
 def is_protected_path(path: str) -> bool:
     """
-    Check if a path is in a protected directory.
+    Check if a file path is in a protected location.
     
     Args:
-        path: File path to check
+        path: File path (relative or absolute)
         
     Returns:
-        True if protected
+        True if the path is protected and should not be modified
     """
-    path_lower = path.lower()
+    # Normalize
+    path_str = str(path).replace("\\", "/")
     
-    for protected in PROTECTED_DIRECTORIES:
-        if protected in path_lower:
+    # Check protected directories
+    for protected_dir in PROTECTED_DIRS:
+        if f"/{protected_dir}/" in path_str or path_str.startswith(f"{protected_dir}/"):
             return True
+    
+    # Check protected files
+    filename = os.path.basename(path_str)
+    if filename in PROTECTED_FILES:
+        return True
+    
+    # Check if in allowed directory
+    rel_path = path_str
+    if str(ROOT_DIR) in path_str:
+        try:
+            rel_path = str(Path(path_str).relative_to(ROOT_DIR))
+        except ValueError:
+            pass
+    
+    # If not in any allowed directory, it's protected
+    rel_path = rel_path.replace("\\", "/")
+    parts = rel_path.split("/")
+    if parts and parts[0] not in ALLOWED_DIRS:
+        return True
     
     return False
 
 
-def get_all_modules() -> List[str]:
+def list_modules(directory: str = None) -> List[Dict[str, str]]:
     """
-    Get list of all available module names.
+    List all known modules, optionally filtered by directory.
     
+    Args:
+        directory: Optional directory filter (e.g., "tools", "core")
+        
     Returns:
-        List of module names
+        List of dicts with 'name' and 'path' keys
     """
     module_map = load_codebase_map()
-    return sorted(module_map.keys())
-
-
-# ============================================================================
-# TEST
-# ============================================================================
-
-if __name__ == "__main__":
-    print("VOID Codebase Map Test")
-    print("=" * 50)
+    results = []
+    seen_paths = set()
     
-    # Generate map
-    result = generate_codebase_map(force_refresh=True)
-    print(f"Status: {result['status']}")
-    print(f"Modules: {result['total_modules']}")
+    for name, path in module_map.items():
+        if path in seen_paths:
+            continue
+        if directory and not path.startswith(f"{directory}/"):
+            continue
+        
+        seen_paths.add(path)
+        results.append({"name": name, "path": path})
     
-    # Test resolve_module_path
-    print("\nTesting resolve_module_path:")
-    test_modules = ["voice_tts", "voice_stt", "brain", "memory", "agent_loop"]
-    
-    for mod in test_modules:
-        path = resolve_module_path(mod)
-        print(f"  {mod} -> {path}")
-    
-    # Test get_module_path
-    print("\nTesting get_module_path:")
-    for mod in test_modules:
-        path = get_module_path(mod)
-        print(f"  {mod} -> {path}")
-    
-    # Get all modules
-    print(f"\nAll modules: {len(get_all_modules())}")
-
+    return sorted(results, key=lambda x: x["path"])

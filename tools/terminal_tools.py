@@ -155,12 +155,37 @@ def run_command(cmd: str, timeout: int = MAX_TIMEOUT, capture_output: bool = Tru
     logger.info(f"[TERMINAL] Executing: {cmd}")
     
     try:
-        # Execute command
-        # Note: We use shell=True on Windows for compatibility with commands like "pip install"
-        # but the command whitelist provides security
+        import shlex
+        import shutil
+        
+        try:
+            cmd_args = shlex.split(cmd, posix=False)
+        except Exception:
+            cmd_args = cmd.split()
+            
+        if not cmd_args:
+            return {
+                "status": "error",
+                "cmd": cmd,
+                "output": "",
+                "error": "Empty command string",
+                "exit_code": -1,
+                "success": False
+            }
+            
+        base_cmd = cmd_args[0]
+        base_cmd_lower = base_cmd.lower().strip()
+        if base_cmd_lower in COMMAND_ALIASES:
+            alias_args = COMMAND_ALIASES[base_cmd_lower]
+            cmd_args = alias_args + cmd_args[1:]
+        else:
+            resolved_exe = shutil.which(base_cmd)
+            if resolved_exe:
+                cmd_args[0] = resolved_exe
+
         result = subprocess.run(
-            cmd,
-            shell=True,
+            cmd_args,
+            shell=False,
             capture_output=capture_output,
             text=True,
             timeout=timeout,
@@ -291,11 +316,12 @@ def check_command_available(command: str) -> bool:
     Returns:
         True if available, False otherwise
     """
+    import shutil
     try:
-        # Try to run command --version or --help
+        resolved = shutil.which(command) or command
         result = subprocess.run(
-            f"{command} --version",
-            shell=True,
+            [resolved, "--version"],
+            shell=False,
             capture_output=True,
             text=True,
             timeout=5
@@ -335,7 +361,7 @@ if __name__ == "__main__":
     print(f"\nPython version: {result.get('output', result.get('error', 'N/A'))}")
     
     # Test blocked command
-result = run_command(r"del /f /s /q C:\\*")
+    result = run_command(r"del /f /s /q C:\\*")
     print(f"\nBlocked command test: {result.get('message')}")
     
     # Check available commands

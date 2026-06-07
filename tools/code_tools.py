@@ -37,10 +37,9 @@ VOID_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ALLOWED_DIRECTORIES = [
     "tools",
     "core", 
-    "modules",
     "ui",
     "workflows",
-    "agent",
+    "server",
     "data",
 ]
 
@@ -262,6 +261,9 @@ def write_file(path: str, content: str, create_backup: bool = True) -> Dict[str,
                 "message": f"Access denied. Cannot write to files outside allowed directories: {ALLOWED_DIRECTORIES}"
             }
         
+        if is_protected(safe_path):
+            return {"status": "error", "message": f"Cannot write to protected file: {safe_path}"}
+        
         # Check extension
         if not is_extension_allowed(safe_path):
             return {
@@ -424,6 +426,7 @@ def get_file_diff(path: str, new_content: str) -> Dict[str, Any]:
     Returns:
         Dictionary with diff information
     """
+    import difflib
     try:
         # Get current content
         current = read_file(path)
@@ -433,15 +436,24 @@ def get_file_diff(path: str, new_content: str) -> Dict[str, Any]:
         
         old_content = current["content"]
         
-        # Simple line-by-line diff
-        old_lines = old_content.splitlines()
-        new_lines = new_content.splitlines()
+        old_lines = old_content.splitlines(keepends=True)
+        new_lines = new_content.splitlines(keepends=True)
+        
+        diff_lines = list(difflib.unified_diff(
+            old_lines, 
+            new_lines, 
+            fromfile=f"a/{path}", 
+            tofile=f"b/{path}", 
+            lineterm=""
+        ))
+        
+        has_changes = len(diff_lines) > 0
         
         diff = {
-            "added": len(new_lines) - len(old_lines),
-            "total_old": len(old_lines),
-            "total_new": len(new_lines),
-            "has_changes": old_content != new_content
+            "has_changes": has_changes,
+            "diff_text": "\n".join(diff_lines),
+            "additions": sum(1 for l in diff_lines if l.startswith("+") and not l.startswith("+++")),
+            "deletions": sum(1 for l in diff_lines if l.startswith("-") and not l.startswith("---")),
         }
         
         return {

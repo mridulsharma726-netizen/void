@@ -5,9 +5,14 @@ Tests all key functionality of the VOID AI Assistant
 
 import sys
 import os
+from pathlib import Path
 
-# Add VOID to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add VOID root to path
+VOID_ROOT = Path(__file__).parent.absolute()
+sys.path.insert(0, str(VOID_ROOT))
+
+# Add server to path
+sys.path.insert(0, str(VOID_ROOT / "server"))
 
 def test_imports():
     """Test all critical imports"""
@@ -34,27 +39,27 @@ def test_imports():
     
     try:
         from tools.self_repair import repair_system
-        results.append(("SelfRepair", "OK"))
+        results.append(("SelfRepair (Bridge)", "OK"))
     except Exception as e:
-        results.append(("SelfRepair", f"FAIL: {e}"))
+        results.append(("SelfRepair (Bridge)", f"FAIL: {e}"))
     
     try:
         from tools.diagnostics import run_full_diagnostics
-        results.append(("Diagnostics", "OK"))
+        results.append(("Diagnostics (Bridge)", "OK"))
     except Exception as e:
-        results.append(("Diagnostics", f"FAIL: {e}"))
+        results.append(("Diagnostics (Bridge)", f"FAIL: {e}"))
     
     try:
-        from core.brain import ask_llm
-        results.append(("Brain", "OK"))
+        from backend.llm_client import OllamaClient
+        results.append(("OllamaClient", "OK"))
     except Exception as e:
-        results.append(("Brain", f"FAIL: {e}"))
+        results.append(("OllamaClient", f"FAIL: {e}"))
     
     try:
-        from core.command_interpreter import interpret_command
-        results.append(("CommandInterpreter", "OK"))
+        from backend.intent_router import IntentRouter
+        results.append(("IntentRouter", "OK"))
     except Exception as e:
-        results.append(("CommandInterpreter", f"FAIL: {e}"))
+        results.append(("IntentRouter", f"FAIL: {e}"))
     
     for name, status in results:
         print(f"  {name}: {status}")
@@ -85,19 +90,21 @@ def test_memory_system():
     """Test memory functions"""
     print("\n=== TEST 3: Memory System ===")
     try:
-        from main import add_fact, forget_keyword, clear_memory, memory_as_text
+        from backend.memory_manager import MemoryManager
+        DATA_DIR = VOID_ROOT / "memory" / "data"
+        memory = MemoryManager(DATA_DIR)
         
         # Add test fact
-        add_fact("test fact for VOID")
+        memory.add_fact("test fact for VOID")
         print("  add_fact: OK")
         
         # Check memory
-        mem = memory_as_text()
-        print(f"  memory_as_text: OK ({len(mem)} chars)")
+        mem = memory.get_summary()
+        print(f"  memory summary: OK ({len(mem)} chars)")
         
         # Remove test fact
-        forget_keyword("test")
-        print("  forget_keyword: OK")
+        memory.clear()
+        print("  clear_memory: OK")
         
         return True
     except Exception as e:
@@ -109,29 +116,33 @@ def test_command_interpreter():
     """Test command parsing"""
     print("\n=== TEST 4: Command Interpreter ===")
     try:
-        from core.command_interpreter import interpret_command, is_void_command
+        import asyncio
+        from backend.intent_router import IntentRouter
         
-        # Test VOID commands
+        router = IntentRouter(use_llm_fallback=False)
+        
+        # Run async classification using event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Test command patterns
         tests = [
-            ("VOID open chrome", True),
-            ("hello", False),
-            ("what time is it", False),
-            ("open notepad", False),
+            ("open chrome", "command", "open_app"),
+            ("what time is it", "command", "time"),
+            ("repair yourself", "system", "repair"),
         ]
         
-        for cmd, expected in tests:
-            result = is_void_command(cmd)
-            status = "OK" if result == expected else "FAIL"
-            print(f"  is_void_command('{cmd}'): {status}")
-        
-        # Test parsing
-        parsed = interpret_command("VOID open chrome")
-        if parsed and parsed.get("command") == "open_app":
-            print("  interpret_command: OK")
-        else:
-            print("  interpret_command: FAIL")
-        
-        return True
+        all_ok = True
+        for cmd, expected_intent, expected_action in tests:
+            result = loop.run_until_complete(router.classify(cmd))
+            is_ok = result.intent == expected_intent and result.action == expected_action
+            if not is_ok:
+                all_ok = False
+            status = "OK" if is_ok else "FAIL"
+            print(f"  classify('{cmd}'): {status} (got intent={result.intent}, action={result.action})")
+            
+        loop.close()
+        return all_ok
     except Exception as e:
         print(f"  FAIL: {e}")
         return False
@@ -141,7 +152,7 @@ def test_fastapi_app():
     """Test FastAPI app"""
     print("\n=== TEST 5: FastAPI App ===")
     try:
-        from main import app
+        from server.main import app
         from fastapi.testclient import TestClient
         
         client = TestClient(app)
@@ -168,23 +179,28 @@ def test_conversation_routing():
     """Test conversation vs tool routing"""
     print("\n=== TEST 6: Conversation Routing ===")
     try:
-        from main import detect_intent
+        import asyncio
+        from backend.intent_router import IntentRouter
+        
+        router = IntentRouter(use_llm_fallback=False)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         
         tests = [
-            ("hello", "conversation"),
-            ("hi there", "conversation"),
-            ("what can you do", "conversation"),
-            ("open chrome", "tool"),
-            ("what time is it", "tool"),
-            ("cpu usage", "tool"),
-            ("remember my name", "tool"),
+            ("hello", "chat"),
+            ("hi there", "chat"),
+            ("what can you do", "chat"),
+            ("open chrome", "command"),
+            ("what time is it", "command"),
+            ("cpu status", "command"),
         ]
         
         for prompt, expected in tests:
-            result = detect_intent(prompt)
-            status = "OK" if result == expected else "FAIL"
-            print(f"  detect_intent('{prompt}'): {status} (got {result})")
+            result = loop.run_until_complete(router.classify(prompt))
+            status = "OK" if result.intent == expected else "FAIL"
+            print(f"  classify('{prompt}'): {status} (got {result.intent})")
         
+        loop.close()
         return True
     except Exception as e:
         print(f"  FAIL: {e}")
@@ -194,7 +210,7 @@ def test_conversation_routing():
 def run_all_tests():
     """Run all tests"""
     print("=" * 50)
-    print("VOID SYSTEM TEST SUITE")
+    print("VOID SYSTEM TEST SUITE (ALIGNED & STABILIZED)")
     print("=" * 50)
     
     results = []
@@ -211,7 +227,7 @@ def run_all_tests():
     print("=" * 50)
     
     for name, passed in results:
-        status = "✓ PASS" if passed else "✗ FAIL"
+        status = "[PASS]" if passed else "[FAIL]"
         print(f"  {status}: {name}")
     
     all_passed = all(p for _, p in results)
@@ -222,4 +238,3 @@ def run_all_tests():
 
 if __name__ == "__main__":
     run_all_tests()
-

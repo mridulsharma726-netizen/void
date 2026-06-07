@@ -61,25 +61,38 @@ def _normalize_path(path: str) -> str:
 
 
 def _is_path_allowed(path: str) -> bool:
-    """Check if path is allowed for operations."""
-    normalized = _normalize_path(path)
+    """Check if path is allowed for operations, validating absolute bounds."""
+    # Resolve absolute path
+    try:
+        abs_path = os.path.abspath(path) if not os.path.isabs(path) else path
+        abs_path = os.path.normpath(abs_path)
+    except Exception:
+        return False
+        
+    # Check if within PROJECT_ROOT
+    try:
+        common = os.path.commonpath([abs_path, PROJECT_ROOT])
+        if os.path.normcase(common) != os.path.normcase(PROJECT_ROOT):
+            return False
+    except ValueError:
+        # Path is on a different drive, etc.
+        return False
+
+    # Get relative path from PROJECT_ROOT for ALLOWED_PATHS and BLOCKED_PATTERNS checks
+    rel_path = os.path.relpath(abs_path, PROJECT_ROOT)
+    normalized = _normalize_path(rel_path)
     
     # Check blocked patterns
     normalized_lower = normalized.lower()
     for pattern in BLOCKED_PATTERNS:
         if pattern in normalized_lower:
             return False
+            
+    # Check if it goes outside the directory structure
+    if ".." in normalized or normalized.startswith("../"):
+        return False
     
-    # Check allowed paths
-    for allowed in ALLOWED_PATHS:
-        if normalized.startswith(allowed) or normalized.startswith("/" + allowed):
-            return True
-    
-    # Special case: allow direct project root files
-    if normalized.startswith("VOID/") or normalized.startswith("/VOID/"):
-        return True
-    
-    return False
+    return True
 
 
 def _ensure_backup_dir():
@@ -233,7 +246,12 @@ def apply_patch(path: str, diff: str) -> Dict[str, Any]:
         
         # Simple patch application - replace with new content from diff
         # This is a simplified implementation
-        new_content = diff
+        import ast
+        try:
+            ast.parse(diff)
+            new_content = diff  # It's valid Python, use as replacement
+        except SyntaxError:
+            return {"status": "error", "error": "Patch content is not valid Python code. Cannot apply."}
         
         # Write with backup
         write_result = write_file(path, new_content, create_diff=False)

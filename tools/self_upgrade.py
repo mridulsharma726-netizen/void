@@ -232,7 +232,7 @@ def verify_installation() -> Dict[str, Any]:
     # Check backend
     try:
         import requests
-        r = requests.get("http://127.0.0.1:8000/health", timeout=3)
+        r = requests.get("http://127.0.0.1:8002/health", timeout=3)
         results["backend"] = r.status_code == 200
     except:
         pass

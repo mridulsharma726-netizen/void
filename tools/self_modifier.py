@@ -73,8 +73,14 @@ except ImportError:
 
 # Ollama settings
 OLLAMA_URL = "http://127.0.0.1:11434/api/chat"
-OLLAMA_MODEL = "llama3.2:3b"
 OLLAMA_TIMEOUT = 90
+
+try:
+    from server.backend.llm_client import OllamaClient
+    _client = OllamaClient()
+    OLLAMA_MODEL = _client.model
+except Exception:
+    OLLAMA_MODEL = "llama3.2:3b"
 
 # Project root
 VOID_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -83,6 +89,20 @@ VOID_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
+
+def _strip_code_fences(text: str) -> str:
+    """Strip markdown code fences from LLM output."""
+    if not text:
+        return text
+    lines = text.strip().splitlines()
+    # Remove opening fence (```python, ```py, ```)
+    if lines and lines[0].strip().startswith("```"):
+        lines = lines[1:]
+    # Remove closing fence
+    if lines and lines[-1].strip() == "```":
+        lines = lines[:-1]
+    return "\n".join(lines)
+
 
 def _call_llm(prompt: str, system_prompt: str = None) -> Optional[str]:
     """
@@ -120,7 +140,7 @@ Only output the code, no explanations unless asked."""
         if isinstance(data, dict):
             message = data.get("message", {})
             if isinstance(message, dict):
-                return message.get("content", "").strip()
+                return _strip_code_fences(message.get("content", "").strip())
         
         return None
         
@@ -283,6 +303,9 @@ Provide improved code with your fixes and improvements applied. Only output the 
     # Call LLM
     improved_code = _call_llm(prompt)
     
+    if improved_code is not None:
+        improved_code = _strip_code_fences(improved_code)
+    
     if improved_code is None:
         return {
             "status": "error",
@@ -310,6 +333,14 @@ def apply_improvement(file_path: str, improved_code: str, create_backup: bool = 
     Returns:
         Dictionary with result
     """
+    # Enforce strict location locks to prevent overwriting core system files
+    if is_protected_path and is_protected_path(file_path):
+        return {
+            "status": "error",
+            "message": f"Security violation: Overwriting protected path '{file_path}' is strictly blocked.",
+            "error_type": "protected"
+        }
+
     # Get diff first
     diff_result = get_file_diff(file_path, improved_code)
     
@@ -322,8 +353,9 @@ def apply_improvement(file_path: str, improved_code: str, create_backup: bool = 
             "message": "No changes to apply - code is identical"
         }
     
-    # Write the improved code
-    result = write_file(file_path, improved_code, create_backup=create_backup)
+    # Write the improved code (safe write with syntax validation)
+    from tools.code_tools import safe_write_file
+    result = safe_write_file(file_path, improved_code, create_backup=create_backup)
     
     if result["status"] == "ok":
         return {

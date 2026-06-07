@@ -18,6 +18,20 @@ def detect_intent(message: str) -> dict:
     """
     msg = message.lower().strip()
     
+    # Common websites definitions
+    common_sites = {
+        "youtube": "https://www.youtube.com",
+        "google": "https://www.google.com",
+        "github": "https://github.com",
+        "reddit": "https://www.reddit.com",
+        "twitter": "https://twitter.com",
+        "x": "https://x.com",
+        "x.com": "https://x.com",
+        "facebook": "https://www.facebook.com",
+        "instagram": "https://www.instagram.com",
+        "bing": "https://www.bing.com",
+    }
+    
     # REPAIR & DIAGNOSTICS INTENT (PRIORITY HIGH)
     repair_keywords = ["repair", "fix", "diagnostics", "diagnose", "scan system", "system health", "check system"]
     if any(kw in msg for kw in repair_keywords):
@@ -52,19 +66,6 @@ def detect_intent(message: str) -> dict:
         if url_match:
             return {"intent": "open_url", "params": {"url": url_match.group(1)}}
     
-    # Check for common websites
-    common_sites = {
-        "youtube": "https://www.youtube.com",
-        "google": "https://www.google.com",
-        "github": "https://github.com",
-        "reddit": "https://www.reddit.com",
-        "twitter": "https://twitter.com",
-        "x": "https://x.com",
-        "x.com": "https://x.com",
-        "facebook": "https://www.facebook.com",
-        "instagram": "https://www.instagram.com",
-        "bing": "https://www.bing.com",
-    }
     # Check for common websites anywhere in message
     for site, url in common_sites.items():
         if site in msg:
@@ -109,11 +110,11 @@ def detect_intent(message: str) -> dict:
     for intent, keywords in scapy_keywords.items():
         if any(kw in msg for kw in keywords):
             # Extract host/param
-            host_match = re.search(r'(?:to|for|on)?\\s*([a-z0-9.-]+(?:\\.[a-z]{2,})?)', msg)
+            host_match = re.search(r'(?:to|for|on)?\s*([a-z0-9.-]+(?:\.[a-z]{2,})?)', msg)
             host = host_match.group(1) if host_match else ""
-            ports_match = re.search(r'ports?\\s*([0-9, -]+)', msg)
+            ports_match = re.search(r'ports?\s*([0-9, -]+)', msg)
             ports = ports_match.group(1) if ports_match else ""
-            count_match = re.search(r'(\\d+)', msg)
+            count_match = re.search(r'(\d+)', msg)
             count = int(count_match.group(1)) if count_match else ""
             return {"intent": intent, "params": {"host": host, "ports": ports, "count": count}}
     

@@ -37,7 +37,7 @@ def run_setup():
         result = subprocess.run([sys.executable, "setup.py"], cwd=VOID_ROOT, 
                                capture_output=True, text=True, timeout=300)
         if result.returncode == 0:
-            print("[LAUNCHER] ✅ Setup complete")
+            print("[LAUNCHER] [OK] Setup complete")
             return True
         else:
             print(f"[LAUNCHER] Setup warning: {result.stderr[:200]}")
@@ -49,9 +49,9 @@ def start_server():
     """Start uvicorn VOID.main:app"""
     cmd = [
         sys.executable, "-m", "uvicorn",
-        "main:app", 
+        "server.main:app", 
         "--host", "127.0.0.1",
-        "--port", "8000",
+        "--port", "8002",
         "--reload"
     ]
     print(f"[LAUNCHER] Starting server: {' '.join(cmd)}")
@@ -59,7 +59,7 @@ def start_server():
 
 def open_ui():
     """Open UI in default browser"""
-    ui_path = os.path.join(VOID_ROOT, "ui", "index.html")
+    ui_path = os.path.join(VOID_ROOT, "app", "ui", "index.html")
     url = f"file:///{ui_path.replace(chr(92), '/').replace(':', '%3A')}"
     print(f"[LAUNCHER] Opening UI: {url}")
     webbrowser.open(url)
@@ -82,7 +82,7 @@ def main():
     
     # 2. Ollama check
     ollama_ok = check_ollama()
-    print(f"[LAUNCHER] Ollama: {'✅ ONLINE' if ollama_ok else '⚠️ OFFLINE (chat limited)' }")
+    print(f"[LAUNCHER] Ollama: {'[OK] ONLINE' if ollama_ok else '[WARN] OFFLINE (chat limited)' }")
     if not ollama_ok:
         print("  Tip: 'ollama serve' then 'ollama pull llama3.2:3b'")
     
@@ -95,18 +95,18 @@ def main():
     
     # 5. Health check
     try:
-        r = requests.get("http://127.0.0.1:8000/health", timeout=2)
-        print(f"[LAUNCHER] Backend health: {'✅ OK' if r.status_code == 200 else f'❌ {r.status_code}'}")
+        r = requests.get("http://127.0.0.1:8002/health", timeout=2)
+        print(f"[LAUNCHER] Backend health: {'[OK] OK' if r.status_code == 200 else f'[FAIL] {r.status_code}'}")
     except Exception as e:
         print(f"[LAUNCHER] Backend health check failed: {e}")
     
     # 6. Open UI
     open_ui()
     
-    print("\n🎉 VOID FULLY ONLINE!")
-    print("• Backend: http://127.0.0.1:8000")
-    print("• UI open in browser")
-    print("• Ctrl+C to shutdown")
+    print("\n[SUCCESS] VOID FULLY ONLINE!")
+    print("- Backend: http://127.0.0.1:8002")
+    print("- UI open in browser")
+    print("- Ctrl+C to shutdown")
     print("=V=O=I=D= =" * 3)
     
     # Keep alive

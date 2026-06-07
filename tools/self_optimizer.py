@@ -45,35 +45,16 @@ _last_optimization_time = None
 def repair_voice() -> Dict[str, Any]:
     """
     Attempt to repair TTS voice module.
-    
-    Returns:
-        Dict with repair status
     """
     logger.info("[OPTIMIZER] Attempting voice module repair...")
-    
     try:
-        # Try to reimport and reinitialize
-        if 'tools.voice_tts' in sys.modules:
-            # Force reload
-            importlib.reload(sys.modules['tools.voice_tts'])
-        
-        # Try to initialize
-        from tools.voice_tts import _get_engine
-        engine = _get_engine()
-        
-        if engine:
-            return {
-                "status": "ok",
-                "module": "voice",
-                "message": "Voice module repaired successfully"
-            }
-        else:
-            return {
-                "status": "error",
-                "module": "voice",
-                "message": "Voice module initialization failed"
-            }
-            
+        from server.backend.repair_system import _reinit_tts
+        res = _reinit_tts()
+        return {
+            "status": "ok" if res.get("success") else "error",
+            "module": "voice",
+            "message": res.get("message", "Voice repair complete")
+        }
     except Exception as e:
         logger.error(f"[OPTIMIZER] Voice repair failed: {e}")
         return {
@@ -85,28 +66,17 @@ def repair_voice() -> Dict[str, Any]:
 
 def repair_stt() -> Dict[str, Any]:
     """
-    Attempt to repair STT (speech-to-text) module.
-    
-    Returns:
-        Dict with repair status
+    Attempt to repair STT module.
     """
     logger.info("[OPTIMIZER] Attempting STT module repair...")
-    
     try:
-        # Force reload module
-        if 'tools.voice_stt' in sys.modules:
-            importlib.reload(sys.modules['tools.voice_stt'])
-        
-        # Try to reinitialize
-        from tools.voice_stt import VoiceSTT
-        stt = VoiceSTT()
-        
+        from server.backend.repair_system import _reinit_stt
+        res = _reinit_stt()
         return {
-            "status": "ok",
+            "status": "ok" if res.get("success") else "error",
             "module": "stt",
-            "message": "STT module repaired successfully"
+            "message": res.get("message", "STT repair complete")
         }
-        
     except Exception as e:
         logger.error(f"[OPTIMIZER] STT repair failed: {e}")
         return {
@@ -119,61 +89,18 @@ def repair_stt() -> Dict[str, Any]:
 def repair_memory() -> Dict[str, Any]:
     """
     Attempt to repair corrupted memory file.
-    
-    Returns:
-        Dict with repair status
     """
     logger.info("[OPTIMIZER] Attempting memory repair...")
-    
-    import json
-    
     try:
-        memory_file = "data/memory.json"
-        
-        # Ensure directory exists
-        os.makedirs("data", exist_ok=True)
-        
-        # Check if file exists
-        if not os.path.exists(memory_file):
-            # Create new
-            with open(memory_file, "w") as f:
-                json.dump({"facts": []}, f)
-            return {
-                "status": "ok",
-                "module": "memory",
-                "message": "Memory file created"
-            }
-        
-        # Try to validate
-        try:
-            with open(memory_file, "r") as f:
-                data = json.load(f)
-            
-            # Validate structure
-            if isinstance(data, dict) and "facts" in data:
-                if isinstance(data["facts"], list):
-                    return {
-                        "status": "ok",
-                        "module": "memory",
-                        "message": f"Memory valid with {len(data['facts'])} facts"
-                    }
-        except json.JSONDecodeError:
-            # Reset corrupted file
-            with open(memory_file, "w") as f:
-                json.dump({"facts": []}, f)
-            return {
-                "status": "ok",
-                "module": "memory",
-                "message": "Memory file reset (was corrupted)"
-            }
-        
+        from server.backend.repair_system import _repair_memory_file
+        res = _repair_memory_file()
         return {
-            "status": "ok",
+            "status": "ok" if res.get("success") else "error",
             "module": "memory",
-            "message": "Memory file OK"
+            "message": res.get("message", "Memory repair complete")
         }
-        
     except Exception as e:
+        logger.error(f"[OPTIMIZER] Memory repair failed: {e}")
         return {
             "status": "error",
             "module": "memory",
@@ -184,51 +111,23 @@ def repair_memory() -> Dict[str, Any]:
 def repair_dependencies() -> Dict[str, Any]:
     """
     Attempt to repair missing dependencies.
-    
-    Returns:
-        Dict with repair status
     """
     logger.info("[OPTIMIZER] Attempting dependency repair...")
-    
-    required_packages = [
-        "fastapi", "uvicorn", "requests", "pyttsx3",
-        "speech_recognition", "psutil", "pydantic"
-    ]
-    
-    installed = []
-    failed = []
-    
-    for package in required_packages:
-        try:
-            importlib.import_module(package)
-            installed.append(package)
-        except ImportError:
-            # Try to install
-            try:
-                subprocess.check_call(
-                    [sys.executable, "-m", "pip", "install", package],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
-                installed.append(package)
-            except subprocess.CalledProcessError:
-                failed.append(package)
-    
-    if failed:
+    try:
+        from server.backend.repair_system import _repair_dependencies
+        res = _repair_dependencies()
         return {
-            "status": "partial",
+            "status": "ok" if res.get("success") else "error",
             "module": "dependencies",
-            "installed": installed,
-            "failed": failed,
-            "message": f"Installed {len(installed)}, failed {len(failed)}"
+            "message": res.get("message", "Dependency repair complete")
         }
-    
-    return {
-        "status": "ok",
-        "module": "dependencies",
-        "installed": installed,
-        "message": f"All dependencies OK ({len(installed)} packages)"
-    }
+    except Exception as e:
+        logger.error(f"[OPTIMIZER] Dependency repair failed: {e}")
+        return {
+            "status": "error",
+            "module": "dependencies",
+            "message": str(e)
+        }
 
 
 def repair_all() -> Dict[str, Any]:
@@ -272,7 +171,7 @@ def check_performance() -> Dict[str, Any]:
     try:
         cpu = psutil.cpu_percent(interval=0.5)
         ram = psutil.virtual_memory().percent
-        disk = psutil.disk_usage("/").percent
+        disk = psutil.disk_usage(os.path.abspath(os.sep)).percent
         
         issues = []
         

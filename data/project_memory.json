@@ -1,0 +1,952 @@
+{
+  "architecture_summary": "",
+  "technology_stack": [
+    "FastAPI",
+    "Electron"
+  ],
+  "apis": {},
+  "db_layouts": {},
+  "file_relationships": {},
+  "file_states": {
+    "@AutomationLog.txt": {
+      "hash": "6b8d26e49953badca2be5b88cc5b645ae8ed25d291b799615ccb453a0b628cb4",
+      "mtime": 1780389243.7109344,
+      "size": 560
+    },
+    "BUILD.md": {
+      "hash": "81f8d25daf0c494773aa9304982d782cdb7c30955b409872cba3b42860a8dd91",
+      "mtime": 1772895068.34114,
+      "size": 1642
+    },
+    "create_shortcut.py": {
+      "hash": "8cc77d0c3170c2ecef6ec4c3721597c888d5fdbe58f7abd20ca1805fd2b59dcc",
+      "mtime": 1780380906.9590209,
+      "size": 10752
+    },
+    "launcher.py": {
+      "hash": "f6cd84d7a991e264502d8c2aed01910e663a86b716a45bedc4a4b70c1f940620",
+      "mtime": 1780826715.9743474,
+      "size": 3501
+    },
+    "package-lock.json": {
+      "hash": "1c6d5d2eb0a9972cf5dc6112f5b67d0e801c17416ef23377db0d8038661fe8d3",
+      "mtime": 1772895217.0075867,
+      "size": 30756
+    },
+    "package.json": {
+      "hash": "a36c2f19cffda10e2f1ac62ebb6cfe7daba2a70a4f956aa9475e4ceaab7f812a",
+      "mtime": 1772471465.704389,
+      "size": 391
+    },
+    "README.md": {
+      "hash": "09cbc9f8471f577b49663c3c7c47319051849ca86093682ff667c69144d1d65c",
+      "mtime": 1774422470.0568836,
+      "size": 1595
+    },
+    "requirements.txt": {
+      "hash": "5637f99453bc3f1d999be4ad0f50ae3011b8d319348715679d10b6f60e60122b",
+      "mtime": 1780822780.083872,
+      "size": 346
+    },
+    "setup.py": {
+      "hash": "a5668097ba9be06ec540697672899f16d0d663426c890d74fbf419f280f7ccaa",
+      "mtime": 1774250689.5227578,
+      "size": 2825
+    },
+    "setup_done.flag": {
+      "hash": "b1524bbaa7c7254f99d1428caa1bde3cb9a51a38de6d37745d41bdbd8d0730b3",
+      "mtime": 1774406556.4325433,
+      "size": 45
+    },
+    "STABILIZATION_PATCH_TODO.md": {
+      "hash": "e7e44e4cb4f3eef859c7011aa6b630cae22718e4a8417786dcb5ab05ae421232",
+      "mtime": 1772540296.9346035,
+      "size": 1251
+    },
+    "STARTUP_GUIDE.md": {
+      "hash": "e244eb22188a5e4c7947f35689306595b029d67703106545c40e48d31aee79b9",
+      "mtime": 1770762472.2791443,
+      "size": 4970
+    },
+    "test_autonomous_agent.py": {
+      "hash": "93868c82fe404c9f91aa3f79c26039c3a7db111ef7ac893464fc70a7c03bda07",
+      "mtime": 1780824760.6941786,
+      "size": 5249
+    },
+    "test_safety.py": {
+      "hash": "1ab471637f5e35dbbc60c8d11c8f48b2920b41cc2597758caa86024573d302b2",
+      "mtime": 1779990791.6477537,
+      "size": 2275
+    },
+    "test_stats.py": {
+      "hash": "ed0209e3da49da0de8b37dfddf8a4bda0c3d413ae96e7ae7dcc4b266de792d53",
+      "mtime": 1772809625.2794425,
+      "size": 661
+    },
+    "test_system.py": {
+      "hash": "ece41b2e4e73a33e53ee4f8a001f6f2c28f362bbfb98fdadab87b13ddddc2102",
+      "mtime": 1779990872.3025138,
+      "size": 7149
+    },
+    "test_tts.py": {
+      "hash": "0dde5ef5e695930c4fd11ee24ca29fd826d2017a868269ffd39f9ce8a1d89fcd",
+      "mtime": 1770660009.123399,
+      "size": 298
+    },
+    "TODO.md": {
+      "hash": "0184fc45d4a20804245cfd05f121978f7a7632ba683429cfdc75f207241f2258",
+      "mtime": 1776865224.9950058,
+      "size": 1657
+    },
+    "TODO_DIAGNOSTICS.md": {
+      "hash": "729b4d8f35343161bf38d80678cbca001971e75c9391398ee5c83f67ed6395d4",
+      "mtime": 1773814460.5211957,
+      "size": 792
+    },
+    "TODO_ELECTRON.md": {
+      "hash": "5781352a17eab0d4e3f6110c731b84d8855e46e5ae8d58666df7100edc379cbf",
+      "mtime": 1774423280.2531247,
+      "size": 1039
+    },
+    "TODO_FIX.md": {
+      "hash": "c5c38fe34d533b7aff00eac191f62530f1f8da87d7a313ab3ccc56f7c3b0e638",
+      "mtime": 1772469170.352668,
+      "size": 920
+    },
+    "TODO_REPAIR.md": {
+      "hash": "04f49fc506d4db209ff8591a679e109dca4fac9648bb1bec954148f5b6e2d1fd",
+      "mtime": 1773662170.2849648,
+      "size": 646
+    },
+    "TODO_STABILIZATION.md": {
+      "hash": "df20dd949231d24f910ec46fb533d6b923a1b1b11cc2449ab65882bc4ea5d682",
+      "mtime": 1772814590.8308578,
+      "size": 2827
+    },
+    "TODO_UI_FIX.md": {
+      "hash": "4e3b659416a5dd21c26845d28f5d9e3edd2f05557b092e4a3a7ad538a65eedc9",
+      "mtime": 1775417760.516068,
+      "size": 428
+    },
+    "tts_direct_test.py": {
+      "hash": "5f6106c317f926ea66bd8a72b645027470440f192c29004c86f1724caa31f8d2",
+      "mtime": 1770758803.128099,
+      "size": 760
+    },
+    "UPGRADE_PLAN.md": {
+      "hash": "9e60d30c42d58bb9ba562efab62092206dba281d213de97aba5ed042de762772",
+      "mtime": 1772539891.7754798,
+      "size": 4002
+    },
+    "workflow_mode.py": {
+      "hash": "9bbcade7cab8e68bb3dd61ad3b31c2290445289daef2a003ebf34cc314aa56ad",
+      "mtime": 1780429646.9254203,
+      "size": 7539
+    },
+    "__init__.py": {
+      "hash": "b806fb76a6342f9ec4d3684aa635a5eb6147c44daf94513dba8574a392b9e0a1",
+      "mtime": 1774412147.6045794,
+      "size": 170
+    },
+    "app/ui/app.js": {
+      "hash": "7d2304dd194bad788b22c54887a92ab9de3c9f5891f541cde4befbb0f8fff368",
+      "mtime": 1780822890.657719,
+      "size": 61351
+    },
+    "app/ui/index.html": {
+      "hash": "1b2df1438bd326c7241270b27993960b76a81b3bb9d5f64173bcc7c2147e06ea",
+      "mtime": 1780828882.526533,
+      "size": 28257
+    },
+    "app/ui/style.css": {
+      "hash": "69682867d2c06a50e08da914cd0ca37b8ade5e5fc35c9f8d40d5c4176a01a023",
+      "mtime": 1780828895.8265362,
+      "size": 29443
+    },
+    "core/brain.py": {
+      "hash": "ab9905331b0c6d2ae05f04c3baa53fc363ec62e72c1c6c1b9cfeb2b9a16cd3d7",
+      "mtime": 1780165895.4334085,
+      "size": 1771
+    },
+    "core/codebase_map.py": {
+      "hash": "c7220cca33463ab6593b56cbd9fbdcf727bc7c88f411f9d6263708d232a1b20d",
+      "mtime": 1780165951.0863042,
+      "size": 6843
+    },
+    "core/intent_router.py": {
+      "hash": "e9c3b7adcc9e09f0752cfbe40b362b912cfa9e83f48b8196ad78eab97a086e14",
+      "mtime": 1780429561.6230197,
+      "size": 5357
+    },
+    "core/logger.py": {
+      "hash": "4dacbc08ef63e94f3b97d8d78f17adb57a4f028f7450fa1b09d17b83c819da21",
+      "mtime": 1780165895.8779337,
+      "size": 2625
+    },
+    "core/__init__.py": {
+      "hash": "2e3b546e6778daed782f54f14f260e824daf9b0337077a5f3cffbefa73fb45b0",
+      "mtime": 1780165884.2150917,
+      "size": 99
+    },
+    "core/autonomous_agent/agent.py": {
+      "hash": "2a2ec6eaf722a1fb5101df83e4b69a70d70459d3ea2c8ada6156e5dc6ac82076",
+      "mtime": 1780824456.3117468,
+      "size": 10973
+    },
+    "core/autonomous_agent/context_engine.py": {
+      "hash": "a6d9bfc23ce48023f4d48eab38861de2e47041d986443942ea9b82dc3ba3f1d3",
+      "mtime": 1780824773.9960744,
+      "size": 5191
+    },
+    "core/autonomous_agent/error_analyzer.py": {
+      "hash": "026c1f853527c74a32a35dac0780a366ea52a327551feb535604b9f6988850e5",
+      "mtime": 1780824444.3271027,
+      "size": 4564
+    },
+    "core/autonomous_agent/file_engine.py": {
+      "hash": "5e85ac5a6b7a7ff463d8bbc13be5cb3c5447dee1b07161ab51dc1259b9bfb343",
+      "mtime": 1780824436.1390622,
+      "size": 9916
+    },
+    "core/autonomous_agent/git_integration.py": {
+      "hash": "16864651e9feb2f6857f804b9c528fe35ec98f49886323f8f860a6021c83af1c",
+      "mtime": 1780824450.5414245,
+      "size": 2921
+    },
+    "core/autonomous_agent/lang_detect.py": {
+      "hash": "27206b3e679a88dece19abf281ba1ac6f6c27a6ebb124199a3832a8ae128ad6e",
+      "mtime": 1780824420.5867872,
+      "size": 3064
+    },
+    "core/autonomous_agent/memory.py": {
+      "hash": "1dc110555ed96794109ddf776a45d4e7b3e92171190ac728099e19ada6e9574d",
+      "mtime": 1780824426.813579,
+      "size": 4736
+    },
+    "core/autonomous_agent/safety_system.py": {
+      "hash": "d802e96e4775390522f4c3857864888b423dc5de1d4a7b23932a344c80e70228",
+      "mtime": 1780824431.3134604,
+      "size": 4903
+    },
+    "core/autonomous_agent/scanner.py": {
+      "hash": "bb125e33de8f6f8988af7c5694f6dd30da15257278d4b781c4ee5f9f41d8eff8",
+      "mtime": 1780824424.2543714,
+      "size": 5801
+    },
+    "core/autonomous_agent/terminal_engine.py": {
+      "hash": "20bc2c99980b49d42bdaf400d16388bd22f81aae2e905e69742db39def901e0f",
+      "mtime": 1780824438.9455512,
+      "size": 2817
+    },
+    "core/autonomous_agent/__init__.py": {
+      "hash": "d9fede2e614ffaf4de63a98d48e92508727ca280fdaec7cbc86212b352c4b166",
+      "mtime": 1780824457.812254,
+      "size": 893
+    },
+    "data/memory.json": {
+      "hash": "634d2714dd72e4476ffed14597af26df4ed1d737cb532b90a3f018482b592c9e",
+      "mtime": 1777833063.8814642,
+      "size": 37
+    },
+    "data/project_map.json": {
+      "hash": "baba8f9cd3d35b3addaef98b1e7a576bc2dd3215bf034819ca0d09fcbabf7937",
+      "mtime": 1780828916.108705,
+      "size": 20783
+    },
+    "desktop/main.js": {
+      "hash": "801f4a867b9469c8e9f2b4a26874582944fbce58b59ecb93424e9e69bcebef49",
+      "mtime": 1780388294.7739685,
+      "size": 4627
+    },
+    "desktop/package-lock.json": {
+      "hash": "67b2a6e7e57f7c77eabe19e5700fac029e324442f4af41f2116143947657d5b9",
+      "mtime": 1780170004.53553,
+      "size": 31619
+    },
+    "desktop/package.json": {
+      "hash": "b3f7aad1f76268315676f668dc825710f1c117861c06ae5cfe56b00aa71311c6",
+      "mtime": 1780169897.0107136,
+      "size": 577
+    },
+    "logs/brain.log": {
+      "hash": "be2c3a7f9076becc393535ddfb4b3f78433065ddb24274e37042ef3958089447",
+      "mtime": 1780292518.3945048,
+      "size": 2969
+    },
+    "logs/desktop_control.log": {
+      "hash": "e5fd80ec84b67d831f1dca6a97e4889d180dd73ca5ff10dedcfcb20f401e1a09",
+      "mtime": 1780428119.2587192,
+      "size": 171
+    },
+    "logs/system.log": {
+      "hash": "70e830fac549a01a0fa564eefd2e337e1df06675f7f578f3ef6719b85b14457c",
+      "mtime": 1775417639.3833816,
+      "size": 40732
+    },
+    "logs/void_backend.log": {
+      "hash": "131deeea17cbd214fc7cc648528c52fac19fd6cf776bb9da10ee6814a8098663",
+      "mtime": 1775618596.4991002,
+      "size": 3028
+    },
+    "memory/academic_documents/c_programming/deep_research_report.md": {
+      "hash": "65bae1aec2f308840bab600784c63122537d3af45a7884cb764c14c492139c77",
+      "mtime": 1780498765.5727444,
+      "size": 82
+    },
+    "memory/academic_documents/maths/deep_research_report.md": {
+      "hash": "e149c4959941f8f8b81f9a1b9e91ed358f34a9ddfc067e57a9724b5f467e1f4b",
+      "mtime": 1780428899.5120265,
+      "size": 80
+    },
+    "memory/data/cvcs_config.json": {
+      "hash": "5cec69987458950c094b41f49ec8c8f189fe186426914359beac17dbd524da6f",
+      "mtime": 1780824825.0281808,
+      "size": 119
+    },
+    "memory/data/memory.json": {
+      "hash": "6e6167e703962fbe38209d65fc1e264d00e444a402c7e9fdfa1ee085dfc1f3b4",
+      "mtime": 1780309752.479832,
+      "size": 6610
+    },
+    "memory/data/secure_config.json": {
+      "hash": "b888d7fef66eaf1a878831ea01c6852819b450f5e5aa3f9a953feb141eed4057",
+      "mtime": 1780294240.410143,
+      "size": 89
+    },
+    "memory/data/data/codebase_map.json": {
+      "hash": "ce3fd8d6d56e675973abe25499369f4ba3840ebc28cab212dbe8f12814fc3cff",
+      "mtime": 1773005613.9454038,
+      "size": 2220
+    },
+    "memory/data/data/memory.json": {
+      "hash": "4ea17f53d8b0dad5187d0079e1fc92ee366e8d416c1bf223a438aaf96a7af409",
+      "mtime": 1777814061.094943,
+      "size": 1660
+    },
+    "memory/data/models/vosk-model-small-en-us-0.15/README": {
+      "hash": "c0cf286e4f7783306c5f6469b37db69228fb16803b03cae661edb2d7bba64ebb",
+      "mtime": 1780309794.4637463,
+      "size": 199
+    },
+    "memory/data/models/vosk-model-small-en-us-0.15/conf/mfcc.conf": {
+      "hash": "1e2228006d01d805ad1c267fee9f79709ca87ac51bd82b0e3f5c69ba543f0fc4",
+      "mtime": 1780309794.3451567,
+      "size": 131
+    },
+    "memory/data/models/vosk-model-small-en-us-0.15/conf/model.conf": {
+      "hash": "8f14cb1eeb07c762c371db648c6be688d347236155ca0f64fb13b6567a8ce81f",
+      "mtime": 1780309794.3416152,
+      "size": 290
+    },
+    "memory/data/models/vosk-model-small-en-us-0.15/graph/disambig_tid.int": {
+      "hash": "9ad87cc166d0998f08f758f47a6223a120dfffcbee805c4849c3aa5e6bb3c0fc",
+      "mtime": 1780309793.877917,
+      "size": 102
+    },
+    "memory/data/models/vosk-model-small-en-us-0.15/graph/phones/word_boundary.int": {
+      "hash": "da199d9c991e0e84681ddbb34627b915b26302d50a8fdaa23c51e2bc3a50b5c3",
+      "mtime": 1780309794.3310287,
+      "size": 1761
+    },
+    "memory/data/models/vosk-model-small-en-us-0.15/ivector/global_cmvn.stats": {
+      "hash": "33be09afcc80059847a275c3d043b51f1ab954c7c2438ddbbf4745e8ba144ff9",
+      "mtime": 1780309794.3577435,
+      "size": 1080
+    },
+    "memory/data/models/vosk-model-small-en-us-0.15/ivector/online_cmvn.conf": {
+      "hash": "a2f3571754b64297cb7efb2e7ca3df61995c5a45fcbb97188f90613552bb2dfe",
+      "mtime": 1780309794.4588819,
+      "size": 95
+    },
+    "memory/data/models/vosk-model-small-en-us-0.15/ivector/splice.conf": {
+      "hash": "9f0c5f7c82d18eaf25d8bce470efa9f7741f88411fe428774bc0a9bb69a24756",
+      "mtime": 1780309794.3490715,
+      "size": 35
+    },
+    "scratch/ddg_sample.html": {
+      "hash": "a08db0c1306d9adcbf326ad694434ba18dec014e0a01c1eb259ba72e3d3e5abc",
+      "mtime": 1780247219.158247,
+      "size": 42806
+    },
+    "scratch/get_active_chat.py": {
+      "hash": "05c6906cb165b02c1109e1f3442a8aa4a1f2752bdf64034cce20d4eb6e1517b3",
+      "mtime": 1780310293.5032701,
+      "size": 1768
+    },
+    "scratch/inspect_whatsapp.py": {
+      "hash": "ebd3bc1e9c809c0b95a81ab70f9225488a8d3df3888797c5557e4829cc93ec0f",
+      "mtime": 1780310247.723715,
+      "size": 1471
+    },
+    "scratch/read_transcript.py": {
+      "hash": "dace1688b62dc40fdb3074e939a1e49620a3597293fab39f18c87bb97b8a9be9",
+      "mtime": 1780341415.659956,
+      "size": 1387
+    },
+    "scratch/refactor_imports.py": {
+      "hash": "696f019e28d4c11811b12efb094b9b2811f8807e9f246d9810c401b74b514db6",
+      "mtime": 1777833464.6374362,
+      "size": 589
+    },
+    "scratch/search_stages.py": {
+      "hash": "8d799a1853b786537af06735a65080a289ebcfac7d7351d2aa78f823b0f27fa2",
+      "mtime": 1780292399.815574,
+      "size": 802
+    },
+    "scratch/test_academic_system.py": {
+      "hash": "dba7854835127d9338b7a67a968d4a75230b77fafb3cd6ff6b7de94763d691fb",
+      "mtime": 1780426865.1685843,
+      "size": 3936
+    },
+    "scratch/test_agent_network.py": {
+      "hash": "b86a6d25ecc77e423a657eaa3e78688a2c2b7ba5e9d073f5dde3499d42e2d789",
+      "mtime": 1780292493.6764324,
+      "size": 3680
+    },
+    "scratch/test_bare_whatsapp.py": {
+      "hash": "6307be37dc282e981ace0bb0369c3798f89d4214d045cebee3f4539ac7ee20d7",
+      "mtime": 1780309884.0449138,
+      "size": 1282
+    },
+    "scratch/test_chat.py": {
+      "hash": "ea4f9368fdbd370354efb3add2ec7dde366be7bff41896b7c5eca7f7596fb329",
+      "mtime": 1780289897.4770253,
+      "size": 417
+    },
+    "scratch/test_communication.py": {
+      "hash": "f4792726e1dda537df2e09b0076226461deebda3bfb57a49c71881626be4c78c",
+      "mtime": 1780430515.5025942,
+      "size": 2430
+    },
+    "scratch/test_copy.py": {
+      "hash": "f213a64ef964a9405c9e95a1b5153d990cd68fb7da502d5b3dbefdc8ddc9e42a",
+      "mtime": 1780251722.2299917,
+      "size": 1468
+    },
+    "scratch/test_cvcs.py": {
+      "hash": "40921ad4acef80d07f973430d750454c612fc88a618f29d15e7f53bc708f0af1",
+      "mtime": 1780427801.1437213,
+      "size": 2047
+    },
+    "scratch/test_ddg.py": {
+      "hash": "1623a38b4c41579a9483fd9939b50f1d052cb0a91f8ef6c2b9396d8fdcbad46d",
+      "mtime": 1780247248.3631997,
+      "size": 1735
+    },
+    "scratch/test_deep_research_flow.py": {
+      "hash": "d7061da9369ea260c101d1985492e3699f4481487219ba9844d14b0909c1e18b",
+      "mtime": 1780393600.377493,
+      "size": 3555
+    },
+    "scratch/test_emotion_system.py": {
+      "hash": "ac293fd8cbe30f271997b1b8f765dc0ef2d2304f99e6b1703107cf88ea78472b",
+      "mtime": 1780427096.766294,
+      "size": 3498
+    },
+    "scratch/test_endpoints.py": {
+      "hash": "84472c9b9b05307dcbe3c2e6c32f3a7a0b82eb9ddacad3798515dbb2f339d2ac",
+      "mtime": 1780428056.4302714,
+      "size": 6803
+    },
+    "scratch/test_founder.py": {
+      "hash": "f21d8f58e1c2426efe638ef8d4e927bce4fa6ff11af61e903ac8a780c4df59f0",
+      "mtime": 1780292159.5797195,
+      "size": 2430
+    },
+    "scratch/test_phase2.py": {
+      "hash": "9b2e1911b643f4c03d3980776119eff9ee1aa9d0e5c9a910d2ac44d7207ff7af",
+      "mtime": 1780822989.5333526,
+      "size": 2947
+    },
+    "scratch/test_pitch_perf.py": {
+      "hash": "2173ce80f1dc04878c06892f060d104cf9c69ea68dab43f2cbe906244448cd57",
+      "mtime": 1780811838.156319,
+      "size": 1343
+    },
+    "scratch/test_read.py": {
+      "hash": "a25cde8d0eabd1a7883f2bfca6c2e5444f658724a81aa7255c21cf7e70cc28ac",
+      "mtime": 1780251646.1902406,
+      "size": 1412
+    },
+    "scratch/test_router.py": {
+      "hash": "cff33da22f9f4680903e0008e4e086462dc622647004a08c402079cd067a3b34",
+      "mtime": 1780291082.9468884,
+      "size": 825
+    },
+    "scratch/test_self_modification.py": {
+      "hash": "35ba0297148b705dad3f946e493226b0e91a78b4222fcfcabc8403696e959813",
+      "mtime": 1780293053.739926,
+      "size": 2708
+    },
+    "scratch/test_stats.py": {
+      "hash": "e917cd14a3f03f9c907e6670c567faf3db7bf7d1c9808724ef6fc552ce499cc0",
+      "mtime": 1777805533.4620485,
+      "size": 152
+    },
+    "scratch/test_stt.py": {
+      "hash": "6924dab4a0c85d465e74cb96c63ab4d22d5ceb1b6f6ff0f5c497810e17e8c915",
+      "mtime": 1780291666.2114964,
+      "size": 256
+    },
+    "scratch/test_stt_dialects.py": {
+      "hash": "af959966ebe807a183ef16096b3a7294c85556468b2005bf932d28acd52f61e7",
+      "mtime": 1780811892.3322034,
+      "size": 1543
+    },
+    "scratch/test_thread_com.py": {
+      "hash": "79d57dd371c5b4b66cd9cd4692c255a7a1acf8148014e92a8cb2acda4602c7e0",
+      "mtime": 1780252177.737208,
+      "size": 581
+    },
+    "scratch/test_tools.py": {
+      "hash": "c238858a4731c6f4a321db49030e9d2eed25360e905f3182a12bf54a9e6fc9d4",
+      "mtime": 1780291105.6526842,
+      "size": 1820
+    },
+    "scratch/test_upgrades.py": {
+      "hash": "b08616dbbb335ed2b30b9f1c61db203a38dc0126813c16e33d570a0902d07adc",
+      "mtime": 1780814136.635847,
+      "size": 2438
+    },
+    "scratch/test_whatsapp.py": {
+      "hash": "4307ab363649e03f574514ff9b001b28d4ee0a463f61fbad3fdda32d49750b9e",
+      "mtime": 1780251582.9432247,
+      "size": 1267
+    },
+    "scratch/test_whatsapp_chat.py": {
+      "hash": "7af53a9bc6c757c1835676018d164c4a4363b66013e00c4e6b9051ee86472f05",
+      "mtime": 1780341759.2058492,
+      "size": 753
+    },
+    "scratch/test_whatsapp_integration.py": {
+      "hash": "0ce8063d6f0a97c98597f74c045f238237d98bf73351dd5bdb3f607b6eca2c05",
+      "mtime": 1780251854.2388308,
+      "size": 3041
+    },
+    "scratch/walk_whatsapp.py": {
+      "hash": "5ab9f05182bda16d627f72f86aeafe450e5c7e233e07ebe62e1e17470bc66b14",
+      "mtime": 1780251607.1186192,
+      "size": 1078
+    },
+    "scratch/whatsapp_tree.txt": {
+      "hash": "bcd013709648a3ae563d51120f1cac2cb643c28eefd24f3ef4fe3e698dd71b54",
+      "mtime": 1780251617.6292331,
+      "size": 3593
+    },
+    "server/main.py": {
+      "hash": "08fe3a28ba585aa1d5f7a608065a0c4046ccdd5a37a85a541b3424c62ea76410",
+      "mtime": 1780828863.9234645,
+      "size": 64559
+    },
+    "server/backend/academic_engine.py": {
+      "hash": "4a2ba3520ab83ff207636fcb23c9b0cedc8472612ca4fcb7d41f94cec6af0e1e",
+      "mtime": 1780428657.59235,
+      "size": 8873
+    },
+    "server/backend/academic_quiz_generator.py": {
+      "hash": "7534da3d8825668e40bdffac0adaae3946a3b321d594dea61a46cf20a4336078",
+      "mtime": 1780428647.4338627,
+      "size": 6578
+    },
+    "server/backend/academic_rag.py": {
+      "hash": "ec41561313a4aa9b07c340b5c3d23129321a289e5f134a50b789a10f270d2673",
+      "mtime": 1780428631.2693603,
+      "size": 10658
+    },
+    "server/backend/academic_syllabus.py": {
+      "hash": "76ca55a0018ad1cde225a9b83ad344e34b72bac45ee9e3b4f0326472e5f1aca7",
+      "mtime": 1780428641.1975741,
+      "size": 6778
+    },
+    "server/backend/decision_engine.py": {
+      "hash": "e92f2118c09c4726d68ce369fdc73acd80dc0e380f41f7e175d8c0c94ada500c",
+      "mtime": 1779909324.783929,
+      "size": 7265
+    },
+    "server/backend/deep_research.py": {
+      "hash": "6d441c3afbf2eddcf82770ca9f7231d25e9449a8021f401f74104b3f8969ef5e",
+      "mtime": 1780393631.281856,
+      "size": 23653
+    },
+    "server/backend/diagnostics.py": {
+      "hash": "310412a353b2538e31df6bc225dc1aaae97d5a265c06cb174cb51fa3dca853ae",
+      "mtime": 1780340569.157171,
+      "size": 14365
+    },
+    "server/backend/emotion_engine.py": {
+      "hash": "3c74e7cd023e40a425095a08e4168ce708440aa7dc63cf57f5ee886c108931e8",
+      "mtime": 1780426988.9997509,
+      "size": 7236
+    },
+    "server/backend/intent_router.py": {
+      "hash": "5c034f4cf16b45553ba71f616f1625bda781bac3b5ebb162bfadfbd44737f643",
+      "mtime": 1780828217.3797324,
+      "size": 26156
+    },
+    "server/backend/llm_client.py": {
+      "hash": "43d2d0e583f7c9bdb75ca5538bbe04978ae90f7ae1f741bb3b615087aae4cba3",
+      "mtime": 1780822801.4015121,
+      "size": 10072
+    },
+    "server/backend/memory_manager.py": {
+      "hash": "f0b41f4547807052a6f18baf99b702ff337ba9410e0b88a961beceb6ab0b9f22",
+      "mtime": 1780822793.190615,
+      "size": 8305
+    },
+    "server/backend/memory_sqlite.py": {
+      "hash": "ac9586d0f2e58c1d73105f72b4207fe114b6f7d62f3b2bfbc1085e9f085d7e4d",
+      "mtime": 1780294148.9503138,
+      "size": 9887
+    },
+    "server/backend/owner_profile.py": {
+      "hash": "7f59afb4559d30a33980ec2d714034891418ecb333078164e2f2684ac5e34bd9",
+      "mtime": 1780811962.9609635,
+      "size": 4306
+    },
+    "server/backend/pipeline.py": {
+      "hash": "d63743e3b7297450d5e45eed718021a1d73cc2edcf5317a930510137f46c1aec",
+      "mtime": 1777556631.1278362,
+      "size": 1552
+    },
+    "server/backend/repair_system.py": {
+      "hash": "d1fe4ade06fffcded47d9b48c16753623c3cf4059301f953216174f6e0fc85cd",
+      "mtime": 1780166926.7241502,
+      "size": 25469
+    },
+    "server/backend/safety_guard.py": {
+      "hash": "2f59fdc9f94caa4922c9de11921f8389fac886cd0851453475e7cf774dbd9747",
+      "mtime": 1780427584.6685002,
+      "size": 11270
+    },
+    "server/backend/schemas.py": {
+      "hash": "11093833c1ac5e463d9d95f1c27904bb97ca4e29782bf37b27ed05062b8864c2",
+      "mtime": 1780427674.5712376,
+      "size": 1651
+    },
+    "server/backend/screen_monitor.py": {
+      "hash": "6454dc6cdb40900e9c6d194a9e1913ee1784f4ddc78f2472b9e055f224c8a5a2",
+      "mtime": 1780427597.541486,
+      "size": 8113
+    },
+    "server/backend/tools_runtime.py": {
+      "hash": "80098dbda2e6a5f0a0fdbf587daac6c350a8b4f3d32d6637c690ab6b3b3804df",
+      "mtime": 1780828257.9380162,
+      "size": 31533
+    },
+    "server/backend/tool_manager.py": {
+      "hash": "674aa315d99285bc9ed453800791a23091a815cb7e44e065143052c185f797a8",
+      "mtime": 1780293041.9617574,
+      "size": 5888
+    },
+    "server/backend/tool_schemas.py": {
+      "hash": "a4baac25c91f2d2407a48e270d1f4246089b2758b3722efd4c369017d4bd9256",
+      "mtime": 1780824467.416473,
+      "size": 9292
+    },
+    "server/backend/validator.py": {
+      "hash": "055ea3e82323defa37b1cec1d00f37984273eaf41cdfdd9de456e91b5f737144",
+      "mtime": 1780166943.4067843,
+      "size": 3059
+    },
+    "server/backend/__init__.py": {
+      "hash": "ed0bf3d2b0ca4293cdeee83b0f6911f490032ffe43f8a972b50257e5d1e12953",
+      "mtime": 1775578229.481107,
+      "size": 41
+    },
+    "tools/academic_progress.py": {
+      "hash": "9f671178930e1e90e73d17005b711ab7b80dd16da0c315b8282957e00ad32445",
+      "mtime": 1780428620.7978685,
+      "size": 21281
+    },
+    "tools/agent_controller.py": {
+      "hash": "979f4884ef7a82aa5e371e43fc42588758238df5276687080aa26fe68067e8d8",
+      "mtime": 1772880682.9040098,
+      "size": 2958
+    },
+    "tools/agent_loop.py": {
+      "hash": "c8f3aa3e66fbbc25f122d38441ebf76e93bdada30e54ffda83e779962906103c",
+      "mtime": 1772887809.185489,
+      "size": 7129
+    },
+    "tools/agent_network.py": {
+      "hash": "de67363191af26d5f5fa07440b3688cb082551a452e179beae8c915015ec2b8b",
+      "mtime": 1780340577.309603,
+      "size": 24127
+    },
+    "tools/base_tool.py": {
+      "hash": "a376362560ff6e3fb824c5c96e8c3c69f110677dceed148de7399d411bd3dd1a",
+      "mtime": 1779909294.3302324,
+      "size": 1015
+    },
+    "tools/browser_helper.py": {
+      "hash": "4e67d3f453b3be23675b81e8dda2d0a51836e6c64e5bfdf950e56e8d3eb0df38",
+      "mtime": 1780289772.8876667,
+      "size": 5905
+    },
+    "tools/calendar_helper.py": {
+      "hash": "ae506beab06e63966f716309b3d0e3c440a64b41e4e5a65ba0146b40db7a91cc",
+      "mtime": 1780290976.6723728,
+      "size": 18587
+    },
+    "tools/cleanup.py": {
+      "hash": "27e8c9ba58fe378a1a006739dc3cdf913724512eabe63515e27dd85e1226894f",
+      "mtime": 1777803327.5007398,
+      "size": 1702
+    },
+    "tools/code_tools.py": {
+      "hash": "312e71a177e2b75d5904a3901e333649f4c26475d1e9c3bcd8e5ccf40e76ab48",
+      "mtime": 1780166966.886109,
+      "size": 24380
+    },
+    "tools/cv_control.py": {
+      "hash": "c64c61a4a45c0d5a71eaad2c56a2baee132ca9a0dcb8c697a8491551d913c481",
+      "mtime": 1780427564.751661,
+      "size": 10372
+    },
+    "tools/dep_manager.py": {
+      "hash": "89ceb9004979123b3d12cfd9e25deb72b6c501f47e484da0b2ba1b475912492d",
+      "mtime": 1774410973.8778389,
+      "size": 1971
+    },
+    "tools/desktop_simulator.py": {
+      "hash": "16a5646bed28611af4f200a80c1a8daa0fe5b30155ceca559f1c734b3dc04368",
+      "mtime": 1780427554.152347,
+      "size": 8034
+    },
+    "tools/diagnostics.py": {
+      "hash": "216c60e09c799809b0bf88808e58ae10d00e873e3f22b9bddba6151780782862",
+      "mtime": 1779990768.2619152,
+      "size": 1154
+    },
+    "tools/email_helper.py": {
+      "hash": "7f922f0de1033e8dec1612d963950cbca3ab1535c3143df9cc4f30dca123e11c",
+      "mtime": 1780290805.428139,
+      "size": 6194
+    },
+    "tools/error_interpreter.py": {
+      "hash": "456b855c930d30e9efa59d3a66d5ef835a514ff4c7937f491284d6f5ce6989f4",
+      "mtime": 1780822813.7605329,
+      "size": 22047
+    },
+    "tools/file_helper.py": {
+      "hash": "67ac00df31f8a4ba106a4d8faff3cc8198937fa2877dbc90dbd6b760656a0405",
+      "mtime": 1780290242.1648912,
+      "size": 10114
+    },
+    "tools/file_manager.py": {
+      "hash": "7b51593e44df690c230b8b638506c23ba69fd39cdf2fc4e887d4201bdcc148db",
+      "mtime": 1780294032.4924228,
+      "size": 14518
+    },
+    "tools/file_status.py": {
+      "hash": "8b8f7d094cea8bbf4aee46d724221eb7c1a37550550254b35fe8251335681c83",
+      "mtime": 1772367344.1262982,
+      "size": 8319
+    },
+    "tools/founder_assistant.py": {
+      "hash": "767fbbb528fe174d7ddbb31a45b9d419ac9fa6c4ac7489cf439840f78457171b",
+      "mtime": 1780292175.0973358,
+      "size": 25214
+    },
+    "tools/goal_planner.py": {
+      "hash": "050d7fd41227b0109f81d635f1c5cdb40491e5df59705214d3b364b1ebd89c0d",
+      "mtime": 1772884109.2985215,
+      "size": 6196
+    },
+    "tools/intent_detector.py": {
+      "hash": "8a9e5c0b06387ba01824bdbac8eb83244ad7eb8c2b75a1d8b21e846dec772235",
+      "mtime": 1779908358.124453,
+      "size": 5060
+    },
+    "tools/learning_system.py": {
+      "hash": "9e9facd0b66274f5fedec3beaddf81b9312392f0433c3bc95a0c4d8e249a6320",
+      "mtime": 1772892933.5885081,
+      "size": 15530
+    },
+    "tools/llm_planner.py": {
+      "hash": "a3a37a08b8cc78eff78a7aa5ae37a767515b584243e716e029fe54381a702905",
+      "mtime": 1772887052.2428381,
+      "size": 6610
+    },
+    "tools/network_scapy.py": {
+      "hash": "7ddd7725193836ebae0551e527cdf4c22fbc1d2c8a2d27d9637e9f3dc392e106",
+      "mtime": 1774410997.6078088,
+      "size": 7052
+    },
+    "tools/pc_control.py": {
+      "hash": "a2a520a43583dfd825be759fadd70631c5c8a0c79525bc41db14a4f79dde2b9a",
+      "mtime": 1780828262.3715935,
+      "size": 7600
+    },
+    "tools/pc_operator.py": {
+      "hash": "25492dffee5ad72dc6b39d9fa2e529c4c9a52994df37d1a5b763809e1a1cf694",
+      "mtime": 1780294048.9354532,
+      "size": 1990
+    },
+    "tools/presentation_builder.py": {
+      "hash": "023018f02be8a642ef6a138c2ba14a3f175063d727ac9220b895c0dac7017636",
+      "mtime": 1780290788.8239112,
+      "size": 10643
+    },
+    "tools/registry.py": {
+      "hash": "a1552ffe33ada5102069508dd17f6e83ad1b089066f3d8db9d65b865cd4696f2",
+      "mtime": 1780429552.1106198,
+      "size": 38217
+    },
+    "tools/rollback_system.py": {
+      "hash": "3eb2d5ab7f9ad168dcca499092cdbe5164883a9106efc8dc340e69a6651e4dd3",
+      "mtime": 1780294203.9317017,
+      "size": 7408
+    },
+    "tools/self_modifier.py": {
+      "hash": "ca70a2fb8c853c9d168ae4b7afd192c833654c707459dc81ad7527f942d2e073",
+      "mtime": 1780294067.0915701,
+      "size": 19528
+    },
+    "tools/self_optimizer.py": {
+      "hash": "e3dc3c75fea2bc12fbfd778e11d19ddb15e7f08f7f885b5b81eaedb6cc60c170",
+      "mtime": 1780166937.0115862,
+      "size": 13462
+    },
+    "tools/self_repair.py": {
+      "hash": "0454179aace3103b3e1638e2f1035cfa91d15d2967274b0fb76267de47ebd2c6",
+      "mtime": 1779990781.9303598,
+      "size": 757
+    },
+    "tools/self_upgrade.py": {
+      "hash": "0525a0fd484adc7a8cdbd4cf26054fb09e9c399a9208e2273a1944f9296cb341",
+      "mtime": 1780340581.5175183,
+      "size": 10166
+    },
+    "tools/system_control.py": {
+      "hash": "dfc1df4bc5d83f680f2780a98af9166c283f5584c8d7c4cf543e916b368c8ed5",
+      "mtime": 1772892352.777558,
+      "size": 16865
+    },
+    "tools/system_monitor.py": {
+      "hash": "65d634e08816ba5a79d72c64c0389920cd11d3ccef58ffced339798f3483cd90",
+      "mtime": 1772891299.4709616,
+      "size": 11004
+    },
+    "tools/system_stats.py": {
+      "hash": "680216e636504d9298c2b5ec74316062460d6f0b0ce3f5347717d613ee349320",
+      "mtime": 1779996372.6935053,
+      "size": 8725
+    },
+    "tools/system_tools.py": {
+      "hash": "6fe7ca38a32d8238da399bed81a79a05d3597ad320335673da910a36fcfd56a4",
+      "mtime": 1779990912.872847,
+      "size": 127
+    },
+    "tools/task_scheduler.py": {
+      "hash": "3b15ba61ad84538f475b77de6db65e136bceafae178d498b99aa7a41632847f2",
+      "mtime": 1772891508.216008,
+      "size": 12271
+    },
+    "tools/terminal_tools.py": {
+      "hash": "f7ff662a6257dc4b3c910f4022d91aed640b350cb1ddd0eacd69e3f9bd562a27",
+      "mtime": 1780294044.2981923,
+      "size": 10337
+    },
+    "tools/tts_speaker.py": {
+      "hash": "dff37f2c308ae79f51c74002f6577484d155220052092eff08e03e9a5d61bc8e",
+      "mtime": 1774410933.8873134,
+      "size": 964
+    },
+    "tools/vision_helper.py": {
+      "hash": "09b041e3e09e4308a5f1a70412d4b471383fa4188c9fa20e3e0cd0910b5bbb58",
+      "mtime": 1780294198.017728,
+      "size": 5385
+    },
+    "tools/voice_analyzer.py": {
+      "hash": "46ad921e7377f504d1b952056cfe03fb5b8693d63ac04f695a6a311d1ab15258",
+      "mtime": 1780426976.9273992,
+      "size": 3518
+    },
+    "tools/voice_listener.py": {
+      "hash": "d781897b9010110553bbeba51c384aa617ed9abe5745e205cc80dd40a916c353",
+      "mtime": 1780309919.6759565,
+      "size": 7825
+    },
+    "tools/voice_stt.py": {
+      "hash": "11f261ed9a90f1368d996cf4a7f44ae16d16f070c4bc6f1b33dba7edd9e022b9",
+      "mtime": 1780822841.9419487,
+      "size": 20754
+    },
+    "tools/voice_tts.py": {
+      "hash": "619962687ec0cfd93a714e097ab8f47fc2105ec00e3c02b88ebfb1bd98c275aa",
+      "mtime": 1780430510.2733605,
+      "size": 8926
+    },
+    "tools/wake_word.py": {
+      "hash": "91b8a6a1fb2fecef1f7ceb525bf4c47212bb531b8e5bfcc8a780447a8f814df1",
+      "mtime": 1780291724.8663182,
+      "size": 7370
+    },
+    "tools/web_search.py": {
+      "hash": "89786207222cd7b2c8848eecedd28a3948ff50d2cd2d681a199548f54825d07e",
+      "mtime": 1772892517.0886402,
+      "size": 12556
+    },
+    "tools/whatsapp_control.py": {
+      "hash": "817df7c8f7987a89d1fe089977ab474d3657aefc512248299de6cc0b126aeaef",
+      "mtime": 1780473304.7601564,
+      "size": 12134
+    },
+    "tools/window_helper.py": {
+      "hash": "14cdc03f1da724ed92c770597a448a0caa19eb77848f9a99c94f6185d99a4bf0",
+      "mtime": 1780289569.821558,
+      "size": 7964
+    },
+    "tools/ai/__init__.py": {
+      "hash": "7acd69b4e29ac9252514f1a23d910369c9309bf9b545323a7fc1e5b529a5eb1d",
+      "mtime": 1779909313.5212872,
+      "size": 272
+    },
+    "tools/browser/__init__.py": {
+      "hash": "0ecf22668abb7a503241ccc45ebf45909062b2d7fdcaf8d2f68130889790740b",
+      "mtime": 1779909302.4058576,
+      "size": 233
+    },
+    "tools/files/__init__.py": {
+      "hash": "4e8c5e4de6054590be9fa36588c8706a46a95c7d3d99a371c067b992d66c4752",
+      "mtime": 1779909308.7533019,
+      "size": 228
+    },
+    "tools/media/__init__.py": {
+      "hash": "e83a821eb0a6bf93f26b98f096603fabe11b78cd9f452fdc270e3322d5abb825",
+      "mtime": 1779909305.672744,
+      "size": 210
+    },
+    "tools/system/__init__.py": {
+      "hash": "c87d7e0591ca1d8fc5e4cec0f069ac17245829fe24caedf69529d23a69b1fea3",
+      "mtime": 1779909299.3345041,
+      "size": 289
+    },
+    "tools/voice/__init__.py": {
+      "hash": "1bc5da93c32cf3d673d4253cd8e7a258ed4d7796c429c249ebb0b61e42992740",
+      "mtime": 1779909311.6464772,
+      "size": 348
+    },
+    "workflows/workflow_engine.py": {
+      "hash": "0ad26ee6129e86a0d8660574b78f25b346d52446e640f5804de71fb678c2e434",
+      "mtime": 1780429568.2726598,
+      "size": 24688
+    },
+    "workflows/__init__.py": {
+      "hash": "add3fb526e80526bc44d01e6c7333737df58659eef0df0b3e7c2538a07f09a85",
+      "mtime": 1770382149.8459716,
+      "size": 19
+    },
+    "data/project_memory.json": {
+      "hash": "ecb30d41bd7484c741d4b98c9a4a778d3711ffa13a8e9b8c6fa7c41883c2eb5f",
+      "mtime": 1780828916.3629897,
+      "size": 34601
+    },
+    "logs/agent_terminal.log": {
+      "hash": "9581229152b95be94dfde8c1557c693176d1176d7678fccad8544d3e82738aea",
+      "mtime": 1780828464.4134865,
+      "size": 1424
+    }
+  }
+}

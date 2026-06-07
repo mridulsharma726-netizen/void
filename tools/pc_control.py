@@ -103,6 +103,92 @@ def open_url(url: str) -> dict:
         return {"status": "error", "message": f"Failed: {str(e)}"}
 
 
+def _resolve_folder_path(target: str) -> str | None:
+    if not target:
+        return None
+    
+    target = target.strip()
+    target_lower = target.lower()
+    
+    # 1. Direct absolute path check
+    if os.path.isabs(target) and os.path.exists(target) and os.path.isdir(target):
+        return os.path.abspath(target)
+        
+    # 2. Map standard special folders (high priority)
+    home = os.path.expanduser("~")
+    folder_map = {
+        "downloads": [os.path.join(home, "Downloads")],
+        "documents": [os.path.join(home, "Documents"), os.path.join(home, "OneDrive", "Documents")],
+        "desktop": [os.path.join(home, "Desktop"), os.path.join(home, "OneDrive", "Desktop")],
+        "pictures": [os.path.join(home, "Pictures"), os.path.join(home, "OneDrive", "Pictures")],
+        "music": [os.path.join(home, "Music")],
+        "videos": [os.path.join(home, "Videos")],
+        "home": [home],
+        "~": [home],
+    }
+    
+    if target_lower in folder_map:
+        for p in folder_map[target_lower]:
+            if os.path.exists(p) and os.path.isdir(p):
+                return os.path.abspath(p)
+                
+    # 3. Direct relative path check (relative to current working directory)
+    if os.path.exists(target) and os.path.isdir(target):
+        return os.path.abspath(target)
+        
+    # Check if target is a path relative to workspace root
+    try:
+        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    except Exception:
+        workspace_root = os.getcwd()
+        
+    rel_workspace = os.path.join(workspace_root, target)
+    if os.path.exists(rel_workspace) and os.path.isdir(rel_workspace):
+        return os.path.abspath(rel_workspace)
+                
+    # 3. Scan base paths for case-insensitive matching directory names
+    workspace_parent = os.path.dirname(workspace_root)
+    base_dirs = [
+        workspace_root,
+        workspace_parent,
+        home,
+        os.path.join(home, "OneDrive"),
+        os.path.join(home, "Desktop"),
+        os.path.join(home, "OneDrive", "Desktop"),
+        os.path.join(home, "Documents"),
+        os.path.join(home, "OneDrive", "Documents"),
+        os.path.join(home, "Downloads"),
+        os.getcwd(),
+        os.path.dirname(os.getcwd())
+    ]
+    
+    # Clean duplicates and non-existing base paths while maintaining order
+    unique_bases = []
+    for b in base_dirs:
+        b_abs = os.path.abspath(b)
+        if os.path.exists(b_abs) and os.path.isdir(b_abs) and b_abs not in unique_bases:
+            unique_bases.append(b_abs)
+            
+    # Try exact match (case-insensitive) of a subdirectory inside each base path
+    for base in unique_bases:
+        try:
+            # Check if direct join exists
+            direct_join = os.path.join(base, target)
+            if os.path.exists(direct_join) and os.path.isdir(direct_join):
+                return os.path.abspath(direct_join)
+                
+            # List immediate subdirectories and find case-insensitive match
+            for item in os.listdir(base):
+                item_path = os.path.join(base, item)
+                if os.path.isdir(item_path):
+                    if item.lower() == target_lower:
+                        return os.path.abspath(item_path)
+        except Exception:
+            continue
+            
+    return None
+
+
 def open_folder(folder_name: str) -> dict:
     """
     Open a system folder.
@@ -113,19 +199,15 @@ def open_folder(folder_name: str) -> dict:
     Returns:
         dict: {"status": "ok"|"error", "message": "..."}
     """
-    folder_lower = folder_name.lower().strip()
+    if not folder_name or not folder_name.strip():
+        return {"status": "error", "message": "Folder name is required"}
+        
+    resolved_path = _resolve_folder_path(folder_name)
     
-    # Get special folder path
-    if folder_lower in FOLDER_MAP:
-        folder_path = FOLDER_MAP[folder_lower]
-    else:
-        # Try user's folder
-        folder_path = os.path.expanduser(f"~/{folder_name}")
-    
-    if os.path.exists(folder_path):
+    if resolved_path:
         try:
-            subprocess.Popen(["explorer", folder_path])
-            return {"status": "ok", "message": f"Opening {folder_name}"}
+            subprocess.Popen(["explorer", os.path.normpath(resolved_path)])
+            return {"status": "ok", "message": f"Opening {resolved_path}"}
         except Exception as e:
             return {"status": "error", "message": f"Failed: {str(e)}"}
     else:
