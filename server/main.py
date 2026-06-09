@@ -179,11 +179,21 @@ def process_voice_command(command: str):
             logger.error(f"[WAKE WORD BACKGROUND] Error in voice command execution: {e}")
             
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
+        loop = None
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = VoidSingletons._instances.get("main_loop")
+            
+        if loop and loop.is_running():
             asyncio.run_coroutine_threadsafe(run_chat(), loop)
         else:
-            loop.run_until_complete(run_chat())
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            try:
+                new_loop.run_until_complete(run_chat())
+            finally:
+                new_loop.close()
     except Exception as e:
         logger.error(f"[WAKE WORD BACKGROUND] Loop submission error: {e}")
 
@@ -257,6 +267,8 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for VOID."""
     logger.info("VOID startup...")
+    # Register the main running event loop
+    VoidSingletons._instances["main_loop"] = asyncio.get_running_loop()
     # Spawn startup tasks in background to keep startup time near zero
     asyncio.create_task(run_background_startup())
     

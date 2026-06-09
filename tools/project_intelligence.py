@@ -63,7 +63,7 @@ def _compute_file_hash(filepath: str) -> str:
         return ""
 
 
-def _scan_directory(project_path: str) -> Dict[str, Any]:
+def _scan_directory(project_path: str, read_contents: bool = True) -> Dict[str, Any]:
     """
     Recursively scan a project directory.
     Returns file list, folder structure, and file contents for analysis.
@@ -105,7 +105,7 @@ def _scan_directory(project_path: str) -> Dict[str, Any]:
             })
 
             # Read content for analysis (skip large files)
-            if file_size <= MAX_FILE_SIZE:
+            if read_contents and file_size <= MAX_FILE_SIZE:
                 try:
                     with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
                         file_contents[rel_path] = f.read()
@@ -332,7 +332,7 @@ def scan_project_changes(project_id: str = "") -> Dict[str, Any]:
     old_file_map = {f["path"]: f for f in old_files}
 
     # Perform fresh scan
-    scan_result = _scan_directory(project_path)
+    scan_result = _scan_directory(project_path, read_contents=False)
     new_file_map = {f["path"]: f for f in scan_result["files"]}
 
     # Compute deltas

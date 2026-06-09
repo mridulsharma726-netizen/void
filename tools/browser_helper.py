@@ -39,8 +39,9 @@ def open_tabs(count: int, topic: str) -> Dict[str, Any]:
     
     try:
         # Spawn Chrome tabs simultaneously
-        cmd = ["start", "chrome"] + urls
-        subprocess.Popen(cmd, shell=True)
+        import webbrowser
+        for url in urls:
+            webbrowser.open(url)
         
         return {
             "status": "ok",
@@ -66,7 +67,8 @@ def research_competitors(query: str) -> Dict[str, Any]:
         response = requests.get(url, headers=headers, timeout=6.0)
         if response.status_code != 200:
             # Fallback to direct Chrome portal
-            subprocess.Popen(f"start chrome \"https://www.google.com/search?q={quote_plus(search_query)}\"", shell=True)
+            import webbrowser
+            webbrowser.open(f"https://www.google.com/search?q={quote_plus(search_query)}")
             return {
                 "status": "ok",
                 "message": f"I couldn't fetch organic results directly, Sir. I have opened a Chrome research portal for **'{topic} competitors'** instead."
@@ -92,7 +94,8 @@ def research_competitors(query: str) -> Dict[str, Any]:
                 "message": f"Here is the competitive analysis summary for **'{topic}'**:\n\n{summary}"
             }
         else:
-            subprocess.Popen(f"start chrome \"https://www.google.com/search?q={quote_plus(search_query)}\"", shell=True)
+            import webbrowser
+            webbrowser.open(f"https://www.google.com/search?q={quote_plus(search_query)}")
             return {
                 "status": "ok",
                 "message": f"I initiated a Chrome research board for **'{topic} competitors'** to assist your evaluation, Sir."

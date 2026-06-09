@@ -21,6 +21,10 @@ _speak_thread: Optional[threading.Thread] = None
 _is_speaking = threading.Event()
 _stop_flag = threading.Event()
 
+# Session ID lock and counter to prevent overlapping speech
+_speech_session_id = 0
+_session_lock = threading.Lock()
+
 # Fallback pyttsx3 engine
 _fallback_engine = None
 _fallback_lock = threading.Lock()
@@ -88,7 +92,7 @@ def clean_text_for_speech(text: str) -> str:
     for sym in common_ui_symbols:
         text = text.replace(sym, "")
     text = text.replace('\ufe0f', '')  # Explicit secondary strip
-        
+    
     # 6. Clean up whitespace and punctuation flow
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'\s*,\s*,+', ',', text)
@@ -112,8 +116,18 @@ def speak(text: str) -> dict:
         stop_speaking()
         _stop_flag.clear()
 
-        def _runner() -> None:
+        global _speech_session_id
+        with _session_lock:
+            _speech_session_id += 1
+            current_session = _speech_session_id
+
+        def _runner(session_id: int) -> None:
             global _ffplay_process
+            
+            with _session_lock:
+                if session_id != _speech_session_id:
+                    return
+                    
             _is_speaking.set()
 
             # Try edge-tts first
@@ -124,7 +138,7 @@ def speak(text: str) -> dict:
 
                 # Setup temp wav path
                 temp_dir = tempfile.gettempdir()
-                temp_wav = os.path.join(temp_dir, f"void_tts_{os.getpid()}.wav")
+                temp_wav = os.path.join(temp_dir, f"void_tts_{os.getpid()}_{session_id}.wav")
 
                 # Generate wav synchronously
                 async def _generate():
@@ -138,6 +152,15 @@ def speak(text: str) -> dict:
                 finally:
                     loop.close()
 
+                with _session_lock:
+                    if session_id != _speech_session_id:
+                        try:
+                            if os.path.exists(temp_wav):
+                                os.remove(temp_wav)
+                        except:
+                            pass
+                        return
+
                 # Verify file generated
                 if os.path.exists(temp_wav) and os.path.getsize(temp_wav) > 0:
                     edge_tts_success = True
@@ -148,6 +171,15 @@ def speak(text: str) -> dict:
             if edge_tts_success and os.path.exists(FFPLAY_PATH):
                 try:
                     # Spawn ffplay subprocess
+                    with _session_lock:
+                        if session_id != _speech_session_id:
+                            try:
+                                if os.path.exists(temp_wav):
+                                    os.remove(temp_wav)
+                            except:
+                                pass
+                            return
+                            
                     with _process_lock:
                         if not _stop_flag.is_set():
                             _ffplay_process = subprocess.Popen(
@@ -176,6 +208,9 @@ def speak(text: str) -> dict:
             # Fallback to pyttsx3 if edge-tts/ffplay failed
             if not edge_tts_success:
                 try:
+                    with _session_lock:
+                        if session_id != _speech_session_id:
+                            return
                     with _fallback_lock:
                         engine = _get_fallback_engine()
                         engine.say(cleaned)
@@ -184,10 +219,12 @@ def speak(text: str) -> dict:
                 except Exception as exc:
                     logger.exception("Fallback pyttsx3 runtime failed: %s", exc)
 
-            _is_speaking.clear()
+            with _session_lock:
+                if session_id == _speech_session_id:
+                    _is_speaking.clear()
 
         global _speak_thread
-        _speak_thread = threading.Thread(target=_runner, daemon=True)
+        _speak_thread = threading.Thread(target=_runner, args=(current_session,), daemon=True)
         _speak_thread.start()
         logger.info("TTS started")
         return {"status": "ok", "message": "Speaking", "status_code": "OK"}
