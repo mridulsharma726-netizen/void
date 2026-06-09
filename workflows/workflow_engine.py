@@ -430,18 +430,31 @@ class WorkflowEngine:
             
         return False
 
+    def _is_high_risk(self, action: str, description: str) -> bool:
+        """Determines if an action is high-risk and requires user confirmation."""
+        action_lower = action.lower()
+        desc_lower = description.lower()
+        
+        high_risk_actions = {"delete_file", "remove_file", "modify_system_settings", "edit_registry", "shutdown"}
+        if action_lower in high_risk_actions:
+            return True
+            
+        high_risk_keywords = ["delete ", "remove ", "registry", "system32", "syswow64", "rm -rf", "format ", "reg add", "reg delete"]
+        if any(kw in desc_lower for kw in high_risk_keywords):
+            return True
+            
+        return False
+
     def _execute_action(self, action: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Maps action names to tool calls."""
-        # Check high risk actions first
-        if self.is_action_high_risk(action, context):
-            if not context.get("user_confirmed", False) and not context.get("previous_results", {}).get("user_confirmed", False):
-                return {
-                    "success": False,
-                    "status": "pending_confirmation",
-                    "action": action,
-                    "description": context.get("description", ""),
-                    "message": f"Action '{action}' is high-risk and requires explicit user confirmation."
-                }
+        # Custom user confirmation trigger for high-risk commands
+        description = context.get("description", "")
+        if self._is_high_risk(action, description) and not context.get("confirmed", False):
+            return {
+                "success": False,
+                "status": "pending_confirmation",
+                "error": f"High-risk action '{action}' requires explicit user confirmation."
+            }
 
         action_map = {
             "analyze_file": self._action_analyze_file,

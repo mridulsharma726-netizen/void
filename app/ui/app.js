@@ -480,7 +480,7 @@ async function callChatWithProgress(msg) {
             lastStatus = statusText;
             const typingLabel = getEl('typingIndicator');
             if (typingLabel) {
-              const span = typingLabel.querySelector('span:not(.typing-dots)');
+              const span = typingLabel.querySelector(':scope > span:not(.typing-dots)');
               if (span) {
                 span.textContent = `VOID is analyzing: ${statusText}`;
               }
@@ -504,7 +504,7 @@ async function callChatWithProgress(msg) {
       clearInterval(pollInterval);
       const typingLabel = getEl('typingIndicator');
       if (typingLabel) {
-        const span = typingLabel.querySelector('span:not(.typing-dots)');
+        const span = typingLabel.querySelector(':scope > span:not(.typing-dots)');
         if (span) {
           span.textContent = "VOID is analyzing";
         }

@@ -159,6 +159,18 @@ class ToolRegistry:
         self.register("self_modifier", self._tool_self_modifier, "Modify codebase modules via AI")
         self.register("self_optimizer", self._tool_self_optimizer, "Optimize performance and repair modules")
 
+        # Meeting Intelligence
+        self.register("start_meeting", self._tool_start_meeting, "Start continuous meeting capture")
+        self.register("stop_meeting", self._tool_stop_meeting, "Stop meeting capture and generate notes")
+        self.register("recall_meeting", self._tool_recall_meeting, "Search and recall meeting notes")
+        self.register("get_action_items", self._tool_get_action_items, "Show pending action items")
+
+        # Project Intelligence
+        self.register("register_project", self._tool_register_project, "Register and scan a project directory")
+        self.register("scan_project_changes", self._tool_scan_project_changes, "Detect changes in a tracked project")
+        self.register("get_project_status", self._tool_get_project_status, "Get status of a tracked project")
+        self.register("query_recent_work", self._tool_query_recent_work, "Show recent work across projects")
+
     
     def register(self, name: str, func: Callable, description: str = ""):
         """Register a tool with name, function, and description."""
@@ -833,8 +845,45 @@ class ToolRegistry:
             return self_optimizer.repair_all()
         return self_optimizer.check_performance()
 
+    def _tool_start_meeting(self, **kwargs) -> Dict[str, Any]:
+        """Start continuous meeting capture."""
+        from tools import meeting_assistant
+        return meeting_assistant.start_meeting()
 
+    def _tool_stop_meeting(self, **kwargs) -> Dict[str, Any]:
+        """Stop meeting capture and generate notes."""
+        from tools import meeting_assistant
+        return meeting_assistant.stop_meeting()
 
+    def _tool_recall_meeting(self, query: str = "", **kwargs) -> Dict[str, Any]:
+        """Search and recall meeting notes."""
+        from tools import meeting_assistant
+        return meeting_assistant.recall_meeting(query)
+
+    def _tool_get_action_items(self, **kwargs) -> Dict[str, Any]:
+        """Show pending action items."""
+        from tools import meeting_assistant
+        return meeting_assistant.get_action_items()
+
+    def _tool_register_project(self, path: str = "", **kwargs) -> Dict[str, Any]:
+        """Register and scan a project directory."""
+        from tools import project_intelligence
+        return project_intelligence.register_project(path)
+
+    def _tool_scan_project_changes(self, project_id: str = "", **kwargs) -> Dict[str, Any]:
+        """Detect changes in a tracked project."""
+        from tools import project_intelligence
+        return project_intelligence.scan_project_changes(project_id)
+
+    def _tool_get_project_status(self, project_name: str = "", **kwargs) -> Dict[str, Any]:
+        """Get status of a tracked project."""
+        from tools import project_intelligence
+        return project_intelligence.get_project_status(project_name)
+
+    def _tool_query_recent_work(self, timeframe: str = "today", **kwargs) -> Dict[str, Any]:
+        """Show recent work across projects."""
+        from tools import project_intelligence
+        return project_intelligence.get_recent_work(timeframe)
 
 # Global registry instance
 tool_registry = ToolRegistry()
@@ -882,7 +931,10 @@ def should_use_tool(user_input: str) -> bool:
         "remember", "recall", "forget",
         "play music", "volume",
         "click", "type", "press shortcut", "hotkey", "double click",
-        "read screen", "what is on my screen", "watch my screen"
+        "read screen", "what is on my screen", "watch my screen",
+        "meeting", "task", "action item",
+        "track", "project", "register", "monitor", "scan", "status",
+        "what changed", "what did i work", "recent work"
     ]
     
     input_lower = user_input.lower()

@@ -108,6 +108,92 @@ def init_db():
         )
     """)
     
+    # 8. Meetings table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS meetings (
+            meeting_id TEXT PRIMARY KEY,
+            title TEXT,
+            date_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            participants TEXT,
+            transcript TEXT,
+            structured_notes TEXT,
+            summary TEXT
+        )
+    """)
+    
+    # 9. Action Items table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS action_items (
+            task_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            meeting_id TEXT,
+            description TEXT NOT NULL,
+            owner TEXT,
+            deadline TEXT,
+            status TEXT DEFAULT 'pending',
+            FOREIGN KEY(meeting_id) REFERENCES meetings(meeting_id)
+        )
+    """)
+    
+    # 10. Tracked Projects table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tracked_projects (
+            project_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            path TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_scan_date DATETIME,
+            purpose TEXT,
+            architecture TEXT,
+            technologies TEXT,
+            features_completed TEXT DEFAULT '[]',
+            features_progress TEXT DEFAULT '[]',
+            features_planned TEXT DEFAULT '[]',
+            blockers TEXT DEFAULT '[]',
+            recent_changes TEXT DEFAULT '[]',
+            folder_structure TEXT
+        )
+    """)
+    
+    # 11. Project Files table (for change detection)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS project_files (
+            file_id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            path TEXT NOT NULL,
+            file_hash TEXT,
+            summary TEXT,
+            last_scanned DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(project_id) REFERENCES tracked_projects(project_id)
+        )
+    """)
+    
+    # 12. Project Scan History table (for change reports)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS project_scan_history (
+            scan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id TEXT NOT NULL,
+            scan_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            new_files TEXT DEFAULT '[]',
+            modified_files TEXT DEFAULT '[]',
+            deleted_files TEXT DEFAULT '[]',
+            summary TEXT,
+            FOREIGN KEY(project_id) REFERENCES tracked_projects(project_id)
+        )
+    """)
+    
+    # Migrate action_items: add project_id, source, priority columns if missing
+    try:
+        cursor.execute("PRAGMA table_info(action_items)")
+        existing_cols = {row[1] for row in cursor.fetchall()}
+        if "project_id" not in existing_cols:
+            cursor.execute("ALTER TABLE action_items ADD COLUMN project_id TEXT DEFAULT ''")
+        if "source" not in existing_cols:
+            cursor.execute("ALTER TABLE action_items ADD COLUMN source TEXT DEFAULT 'meeting'")
+        if "priority" not in existing_cols:
+            cursor.execute("ALTER TABLE action_items ADD COLUMN priority TEXT DEFAULT 'normal'")
+    except Exception as e:
+        logger.warning(f"[SQLITE MEMORY] action_items migration note: {e}")
+    
     # Ensure default row in user_xp
     cursor.execute("SELECT COUNT(*) FROM user_xp")
     if cursor.fetchone()[0] == 0:
@@ -411,11 +497,30 @@ def add_xp(points: int) -> Dict[str, Any]:
             (new_points, new_level)
         )
         conn.commit()
+        
+        unlocked_roles = []
+        if leveled_up:
+            # Grant level-up achievements based on milestones
+            milestones = {
+                2: ("unlock_teacher", "Unlocked Personality: Teacher"),
+                3: ("unlock_researcher", "Unlocked Personality: Researcher"),
+                4: ("unlock_developer", "Unlocked Personality: Developer"),
+                5: ("unlock_founder", "Unlocked Personality: Founder"),
+                6: ("unlock_motivator", "Unlocked Personality: Motivator")
+            }
+            # We unlock all milestones that were passed
+            for lvl in range(current_level + 1, new_level + 1):
+                if lvl in milestones:
+                    badge_id, title = milestones[lvl]
+                    add_achievement(badge_id, title)
+                    unlocked_roles.append(title)
+
         return {
             "status": "ok",
             "points": new_points,
             "level": new_level,
-            "leveled_up": leveled_up
+            "leveled_up": leveled_up,
+            "unlocked": unlocked_roles
         }
     except Exception as e:
         logger.error(f"Failed to add XP: {e}")
@@ -529,5 +634,329 @@ def get_streaks() -> List[Dict[str, Any]]:
         return [{"subject_id": r[0], "streak_count": r[1], "last_active_date": r[2]} for r in cursor.fetchall()]
     except Exception:
         return []
+    finally:
+        conn.close()
+
+# === MEETING INTELLIGENCE ===
+
+def save_meeting(meeting_id: str, title: str, participants: str, transcript: str, structured_notes: str, summary: str) -> bool:
+    """Saves a meeting and its structured notes to the database."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO meetings (meeting_id, title, participants, transcript, structured_notes, summary) VALUES (?, ?, ?, ?, ?, ?)",
+            (meeting_id, title, participants, transcript, structured_notes, summary)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save meeting: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_meeting(meeting_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves a specific meeting by ID."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT title, date_time, participants, transcript, structured_notes, summary FROM meetings WHERE meeting_id = ?", (meeting_id,))
+        row = cursor.fetchone()
+        if row:
+            return {
+                "title": row[0],
+                "date_time": row[1],
+                "participants": row[2],
+                "transcript": row[3],
+                "structured_notes": row[4],
+                "summary": row[5]
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Failed to get meeting {meeting_id}: {e}")
+        return None
+    finally:
+        conn.close()
+
+def search_meetings(query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """Searches meetings for a query in title, notes or transcript."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT meeting_id, title, date_time, summary FROM meetings WHERE title LIKE ? OR transcript LIKE ? OR summary LIKE ? ORDER BY date_time DESC LIMIT ?",
+            (f"%{query}%", f"%{query}%", f"%{query}%", limit)
+        )
+        return [{"meeting_id": r[0], "title": r[1], "date_time": r[2], "summary": r[3]} for r in cursor.fetchall()]
+    except Exception as e:
+        logger.error(f"Failed to search meetings: {e}")
+        return []
+    finally:
+        conn.close()
+
+def get_recent_meetings(limit: int = 5) -> List[Dict[str, Any]]:
+    """Retrieves the most recent meetings."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT meeting_id, title, date_time, summary FROM meetings ORDER BY date_time DESC LIMIT ?",
+            (limit,)
+        )
+        return [{"meeting_id": r[0], "title": r[1], "date_time": r[2], "summary": r[3]} for r in cursor.fetchall()]
+    except Exception as e:
+        logger.error(f"Failed to get recent meetings: {e}")
+        return []
+    finally:
+        conn.close()
+
+def add_action_item(meeting_id: str, description: str, owner: str = "", deadline: str = "") -> bool:
+    """Adds a new action item to the database."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO action_items (meeting_id, description, owner, deadline) VALUES (?, ?, ?, ?)",
+            (meeting_id, description, owner, deadline)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to add action item: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_pending_action_items() -> List[Dict[str, Any]]:
+    """Retrieves all pending action items."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT task_id, meeting_id, description, owner, deadline FROM action_items WHERE status = 'pending' ORDER BY deadline ASC"
+        )
+        return [
+            {
+                "task_id": r[0],
+                "meeting_id": r[1],
+                "description": r[2],
+                "owner": r[3],
+                "deadline": r[4]
+            } for r in cursor.fetchall()
+        ]
+    except Exception as e:
+        logger.error(f"Failed to get pending action items: {e}")
+        return []
+    finally:
+        conn.close()
+
+def update_action_item_status(task_id: int, status: str) -> bool:
+    """Updates the status of an action item."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE action_items SET status = ? WHERE task_id = ?", (status, task_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to update action item {task_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
+# === PROJECT INTELLIGENCE ===
+
+def save_project(project_id: str, name: str, path: str, purpose: str = "",
+                 architecture: str = "", technologies: str = "",
+                 features_completed: str = "[]", features_progress: str = "[]",
+                 features_planned: str = "[]", blockers: str = "[]",
+                 folder_structure: str = "") -> bool:
+    """Saves or updates a tracked project profile."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """INSERT OR REPLACE INTO tracked_projects
+               (project_id, name, path, last_scan_date, purpose, architecture,
+                technologies, features_completed, features_progress, features_planned,
+                blockers, folder_structure)
+               VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (project_id, name, path, purpose, architecture, technologies,
+             features_completed, features_progress, features_planned,
+             blockers, folder_structure)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save project {project_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_project(project_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves a tracked project by ID."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT project_id, name, path, created_at, last_scan_date, purpose, architecture, technologies, features_completed, features_progress, features_planned, blockers, recent_changes, folder_structure FROM tracked_projects WHERE project_id = ?",
+            (project_id,)
+        )
+        row = cursor.fetchone()
+        if row:
+            return {
+                "project_id": row[0], "name": row[1], "path": row[2],
+                "created_at": row[3], "last_scan_date": row[4],
+                "purpose": row[5], "architecture": row[6], "technologies": row[7],
+                "features_completed": row[8], "features_progress": row[9],
+                "features_planned": row[10], "blockers": row[11],
+                "recent_changes": row[12], "folder_structure": row[13]
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Failed to get project {project_id}: {e}")
+        return None
+    finally:
+        conn.close()
+
+def get_project_by_name(name: str) -> Optional[Dict[str, Any]]:
+    """Retrieves a tracked project by name (case-insensitive)."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT project_id, name, path, created_at, last_scan_date, purpose, architecture, technologies, features_completed, features_progress, features_planned, blockers, recent_changes, folder_structure FROM tracked_projects WHERE LOWER(name) = LOWER(?)",
+            (name,)
+        )
+        row = cursor.fetchone()
+        if row:
+            return {
+                "project_id": row[0], "name": row[1], "path": row[2],
+                "created_at": row[3], "last_scan_date": row[4],
+                "purpose": row[5], "architecture": row[6], "technologies": row[7],
+                "features_completed": row[8], "features_progress": row[9],
+                "features_planned": row[10], "blockers": row[11],
+                "recent_changes": row[12], "folder_structure": row[13]
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Failed to get project by name '{name}': {e}")
+        return None
+    finally:
+        conn.close()
+
+def list_tracked_projects() -> List[Dict[str, Any]]:
+    """Lists all tracked projects."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT project_id, name, path, last_scan_date, purpose FROM tracked_projects ORDER BY last_scan_date DESC")
+        return [{"project_id": r[0], "name": r[1], "path": r[2], "last_scan_date": r[3], "purpose": r[4]} for r in cursor.fetchall()]
+    except Exception as e:
+        logger.error(f"Failed to list projects: {e}")
+        return []
+    finally:
+        conn.close()
+
+def save_project_file(file_id: str, project_id: str, path: str, file_hash: str, summary: str = "") -> bool:
+    """Saves or updates a project file record for change detection."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT OR REPLACE INTO project_files (file_id, project_id, path, file_hash, summary, last_scanned) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+            (file_id, project_id, path, file_hash, summary)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save project file: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_project_files(project_id: str) -> List[Dict[str, Any]]:
+    """Retrieves all file records for a project."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT file_id, path, file_hash, summary, last_scanned FROM project_files WHERE project_id = ? ORDER BY path",
+            (project_id,)
+        )
+        return [{"file_id": r[0], "path": r[1], "file_hash": r[2], "summary": r[3], "last_scanned": r[4]} for r in cursor.fetchall()]
+    except Exception as e:
+        logger.error(f"Failed to get project files: {e}")
+        return []
+    finally:
+        conn.close()
+
+def delete_project_file(file_id: str) -> bool:
+    """Removes a project file record (for deleted files)."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM project_files WHERE file_id = ?", (file_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to delete project file: {e}")
+        return False
+    finally:
+        conn.close()
+
+def save_scan_history(project_id: str, new_files: str, modified_files: str, deleted_files: str, summary: str = "") -> bool:
+    """Records a project scan result for historical tracking."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO project_scan_history (project_id, new_files, modified_files, deleted_files, summary) VALUES (?, ?, ?, ?, ?)",
+            (project_id, new_files, modified_files, deleted_files, summary)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save scan history: {e}")
+        return False
+    finally:
+        conn.close()
+
+def update_project_field(project_id: str, field: str, value: str) -> bool:
+    """Updates a single field on a tracked project."""
+    allowed_fields = {
+        "purpose", "architecture", "technologies", "features_completed",
+        "features_progress", "features_planned", "blockers", "recent_changes",
+        "folder_structure", "last_scan_date"
+    }
+    if field not in allowed_fields:
+        logger.warning(f"Attempted to update disallowed field: {field}")
+        return False
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f"UPDATE tracked_projects SET {field} = ? WHERE project_id = ?", (value, project_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to update project field {field}: {e}")
+        return False
     finally:
         conn.close()

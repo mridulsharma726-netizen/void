@@ -9,7 +9,7 @@ import sys
 import platform
 import re
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from fastapi import FastAPI, Request, Depends, HTTPException, File, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -129,14 +129,14 @@ async def ensure_ollama():
                 if llm.model not in models and f"{llm.model}:latest" not in models:
                     logger.info(f"Model {llm.model} missing. Attempting to pull...")
                     # Non-blocking pull
-                    subprocess.Popen(["ollama", "pull", llm.model])
+                    subprocess.Popen(["ollama", "pull", llm.model], close_fds=True)
         except:
             pass
         return True
     try:
         logger.info("Starting ollama serve...")
         p = await asyncio.to_thread(lambda: subprocess.Popen(
-            ["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            ["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True
         ))
         for _ in range(15): # Increased wait
             if await is_ollama_ready():
@@ -187,6 +187,68 @@ def process_voice_command(command: str):
     except Exception as e:
         logger.error(f"[WAKE WORD BACKGROUND] Loop submission error: {e}")
 
+async def run_background_startup():
+    """Background task to run heavy startup checks, tool validation, model checks, and services."""
+    logger.info("[BACKGROUND STARTUP] Starting background initialization tasks...")
+    # 1. Ollama
+    try:
+        ollama_ok = await ensure_ollama()
+    except Exception as e:
+        logger.error(f"[BACKGROUND STARTUP] Ollama check failed: {e}")
+        ollama_ok = False
+
+    # 2. Singletons test
+    singles = ["router", "llm", "tool_manager", "validator"]
+    failed = []
+    for s in singles:
+        try:
+            inst = VoidSingletons.get(s)
+            if not inst:
+                failed.append(s)
+        except Exception as e:
+            logger.error(f"[BACKGROUND STARTUP] Singleton {s} initialization failed: {e}")
+            failed.append(s)
+
+    # 3. Tools
+    try:
+        tools_ok = await check_all_tools()
+        tools_status = tools_ok.get("status", "error")
+    except Exception as e:
+        logger.error(f"[BACKGROUND STARTUP] Tools check failed: {e}")
+        tools_status = "error"
+
+    # 4. Non-blocking LLM warmup
+    try:
+        llm = VoidSingletons.get("llm")
+        if llm:
+            logger.info("[BACKGROUND STARTUP] Warming up LLM Client (pre-loading model)...")
+            await llm.warmup()
+    except Exception as e:
+        logger.error(f"[BACKGROUND STARTUP] LLM warmup failed: {e}")
+
+    # 5. Start Wake Word service as background daemon
+    try:
+        from tools.voice_listener import start_voice_loop_thread, set_command_callback, set_activation_phrase
+        set_activation_phrase("Yes?")
+        set_command_callback(process_voice_command)
+        global _voice_thread
+        _voice_thread = start_voice_loop_thread()
+        logger.info("[BACKGROUND STARTUP] Wake word background daemon successfully initiated.")
+    except Exception as e:
+        logger.error(f"[BACKGROUND STARTUP] Failed to start wake word daemon: {e}")
+
+    # 6. Start CVCS Monitor Loop
+    try:
+        from server.backend.screen_monitor import get_monitor_instance
+        monitor = get_monitor_instance()
+        monitor.start_monitor_loop()
+        logger.info("[BACKGROUND STARTUP] CVCS background monitor loop initiated.")
+    except Exception as e:
+        logger.error(f"[BACKGROUND STARTUP] Failed to start CVCS monitor: {e}")
+
+    logger.info(f"[BACKGROUND STARTUP] Complete: ollama={ollama_ok}, singles_failed={len(failed)}, tools={tools_status}")
+
+
 _voice_thread = None
 
 from contextlib import asynccontextmanager
@@ -195,47 +257,8 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for VOID."""
     logger.info("VOID startup...")
-    # 1. Ollama
-    ollama_ok = await ensure_ollama()
-    
-    # 2. Singletons test
-    singles = ["router", "llm", "tool_manager", "validator"]
-    failed = []
-    for s in singles:
-        inst = VoidSingletons.get(s)
-        if not inst:
-            failed.append(s)
-    
-    # 3. Tools
-    tools_ok = await check_all_tools()
-    
-    # 4. Non-blocking LLM warmup
-    llm = VoidSingletons.get("llm")
-    if llm:
-        logger.info("Warming up LLM Client (pre-loading model)...")
-        asyncio.create_task(llm.warmup())
-        
-    # 5. Start Wake Word service as background daemon
-    try:
-        from tools.voice_listener import start_voice_loop_thread, set_command_callback, set_activation_phrase
-        set_activation_phrase("Yes?")
-        set_command_callback(process_voice_command)
-        global _voice_thread
-        _voice_thread = start_voice_loop_thread()
-        logger.info("[LIFESPAN] Wake word background daemon successfully initiated.")
-    except Exception as e:
-        logger.error(f"[LIFESPAN] Failed to start wake word daemon: {e}")
-        
-    # 6. Start CVCS Monitor Loop
-    try:
-        from server.backend.screen_monitor import get_monitor_instance
-        monitor = get_monitor_instance()
-        monitor.start_monitor_loop()
-        logger.info("[LIFESPAN] CVCS background monitor loop initiated.")
-    except Exception as e:
-        logger.error(f"[LIFESPAN] Failed to start CVCS monitor: {e}")
-        
-    logger.info(f"Startup complete: ollama={ollama_ok}, singles_failed={len(failed)}, tools={tools_ok['status']}")
+    # Spawn startup tasks in background to keep startup time near zero
+    asyncio.create_task(run_background_startup())
     
     yield
     
@@ -787,6 +810,16 @@ class AddSubjectRequest(BaseModel):
 class RemoveSubjectRequest(BaseModel):
     subject_id: str
 
+class FlashcardCreateRequest(BaseModel):
+    subject_id: str
+    topic_id: str
+    front: str
+    back: str
+
+class FlashcardReviewRequest(BaseModel):
+    card_id: int
+    quality: int
+
 @app.get("/academic/summary")
 async def get_academic_summary_endpoint():
     """Returns the current progress statistics for the dashboard."""
@@ -822,8 +855,8 @@ async def upload_academic_document(file: UploadFile = File(...)):
     subject_dir.mkdir(parents=True, exist_ok=True)
     
     ext = Path(file.filename).suffix.lower()
-    if ext not in [".txt", ".md", ".pdf"]:
-        raise HTTPException(status_code=400, detail="Unsupported file format. Only PDF, TXT, and MD files are allowed.")
+    if ext not in [".txt", ".md", ".pdf", ".pptx"]:
+        raise HTTPException(status_code=400, detail="Unsupported file format. Only PDF, TXT, MD, and PPTX files are allowed.")
         
     target_path = subject_dir / file.filename
     try:
@@ -979,6 +1012,34 @@ async def remove_subject_endpoint(req: RemoveSubjectRequest):
         return {"status": "ok", "message": f"Subject {req.subject_id} and all its data removed successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/academic/flashcards")
+async def create_flashcard_endpoint(req: FlashcardCreateRequest):
+    from tools.academic_progress import add_flashcard
+    ok = add_flashcard(req.subject_id, req.topic_id, req.front, req.back)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to create flashcard.")
+    return {"status": "ok", "message": "Flashcard created successfully."}
+
+@app.get("/academic/flashcards/due")
+async def get_due_flashcards_endpoint(subject_id: str = None):
+    from tools.academic_progress import get_due_flashcards
+    return get_due_flashcards(subject_id)
+
+@app.post("/academic/flashcards/review")
+async def review_flashcard_endpoint(req: FlashcardReviewRequest):
+    if req.quality < 0 or req.quality > 5:
+        raise HTTPException(status_code=400, detail="Quality score must be between 0 and 5 inclusive.")
+    from tools.academic_progress import review_flashcard
+    res = review_flashcard(req.card_id, req.quality)
+    if res.get("status") == "error":
+        raise HTTPException(status_code=500, detail=res.get("message"))
+    return res
+
+@app.get("/academic/schedule")
+async def get_study_schedule_endpoint(subject_id: str = None):
+    from tools.academic_progress import generate_study_schedule
+    return generate_study_schedule(subject_id)
 
 @app.get("/academic/emotion")
 async def get_academic_emotion_endpoint():

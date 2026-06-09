@@ -10,7 +10,7 @@ import sqlite3
 import os
 import time
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
@@ -148,11 +148,18 @@ def init_db():
                 front TEXT NOT NULL,
                 back TEXT NOT NULL,
                 interval INTEGER DEFAULT 1,
+                repetitions INTEGER DEFAULT 0,
                 ease_factor REAL DEFAULT 2.5,
                 next_review TEXT,
                 FOREIGN KEY (subject_id) REFERENCES subjects(subject_id)
             )
         """)
+        
+        # Migration: Ensure repetitions column exists
+        try:
+            cursor.execute("ALTER TABLE flashcards ADD COLUMN repetitions INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
         
         # 9. Analytics Log Table
         cursor.execute("""
@@ -540,6 +547,171 @@ def get_academic_summary() -> Dict[str, Any]:
         "average_score": avg_score,
         "weak_areas": weak_areas
     }
+
+# --- SPACED REPETITION & STUDY SCHEDULER ---
+
+def add_flashcard(subject_id: str, topic_id: str, front: str, back: str) -> bool:
+    """Creates a new flashcard in the database with defaults."""
+    init_db()
+    next_review = datetime.now().date().isoformat()
+    with get_connection() as conn:
+        try:
+            conn.execute("""
+                INSERT INTO flashcards (subject_id, topic_id, front, back, interval, repetitions, ease_factor, next_review)
+                VALUES (?, ?, ?, ?, 1, 0, 2.5, ?)
+            """, (subject_id, topic_id, front, back, next_review))
+            conn.commit()
+            return True
+        except Exception:
+            return False
+
+def get_due_flashcards(subject_id: str = None) -> List[Dict[str, Any]]:
+    """Returns a list of due flashcards for study (today or past due dates)."""
+    init_db()
+    today_str = datetime.now().date().isoformat()
+    query = "SELECT id, subject_id, topic_id, front, back, interval, repetitions, ease_factor, next_review FROM flashcards WHERE next_review <= ?"
+    params = [today_str]
+    
+    if subject_id:
+        query += " AND subject_id = ?"
+        params.append(subject_id)
+        
+    with get_connection() as conn:
+        rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+def review_flashcard(card_id: int, quality: int) -> Dict[str, Any]:
+    """
+    Applies the SM-2 Spaced Repetition algorithm based on the user response quality.
+    quality: 0 (blackout) to 5 (perfect recall).
+    """
+    init_db()
+    with get_connection() as conn:
+        card = conn.execute(
+            "SELECT interval, repetitions, ease_factor FROM flashcards WHERE id = ?",
+            (card_id,)
+        ).fetchone()
+        
+        if not card:
+            return {"status": "error", "message": "Flashcard not found."}
+            
+        interval = card["interval"]
+        repetitions = card["repetitions"]
+        ease_factor = card["ease_factor"]
+        
+        # SM-2 calculation
+        if quality < 3:
+            # Failed to remember, reset interval and repetitions
+            repetitions = 0
+            interval = 1
+        else:
+            # Correct recall
+            if repetitions == 0:
+                interval = 1
+            elif repetitions == 1:
+                interval = 6
+            else:
+                interval = round(interval * ease_factor)
+            repetitions += 1
+            
+        # Adjust ease factor
+        ease_factor = ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+        if ease_factor < 1.3:
+            ease_factor = 1.3
+            
+        next_review_date = (datetime.now().date() + timedelta(days=interval)).isoformat()
+        
+        conn.execute("""
+            UPDATE flashcards 
+            SET interval = ?, repetitions = ?, ease_factor = ?, next_review = ?
+            WHERE id = ?
+        """, (interval, repetitions, ease_factor, next_review_date, card_id))
+        conn.commit()
+        
+        return {
+            "status": "ok",
+            "card_id": card_id,
+            "next_interval": interval,
+            "next_review": next_review_date,
+            "ease_factor": ease_factor
+        }
+
+def generate_study_schedule(subject_id: str = None) -> List[Dict[str, Any]]:
+    """
+    Generates a prioritized study schedule for the user.
+    Sorts topics based on:
+    1. Due flashcards (Priority 3)
+    2. Knowledge gaps / struggles count (Priority 2)
+    3. Uncompleted chapters/topics in curriculum (Priority 1)
+    """
+    init_db()
+    
+    if not subject_id:
+        subject_id = get_profile_value("current_subject", "dsa")
+        
+    schedule = []
+    
+    # 1. Fetch due flashcards topics count
+    due_cards = get_due_flashcards(subject_id)
+    due_topics_counts = {}
+    for c in due_cards:
+        t = c["topic_id"]
+        due_topics_counts[t] = due_topics_counts.get(t, 0) + 1
+        
+    # 2. Fetch knowledge gaps
+    gaps = get_knowledge_gaps(subject_id)
+    gaps_map = {g["topic_id"]: g for g in gaps}
+    
+    # 3. Fetch completed topics
+    completed = {c["topic_id"] for c in get_completed_topics(subject_id)}
+    
+    # 4. Fetch curriculum structure
+    curriculum = get_curriculum(subject_id)
+    
+    # Traverse curriculum and rate each chapter's priority
+    for item in curriculum:
+        chapter = item["chapter_title"]
+        unit = item["unit_title"]
+        subtopics = item["subtopics"]
+        
+        for topic in subtopics:
+            is_completed = topic in completed
+            due_cards_count = due_topics_counts.get(topic, 0)
+            gap_info = gaps_map.get(topic)
+            struggles = gap_info["wrong_answers"] if gap_info else 0
+            
+            # Priority classification:
+            # 0: Completed & No cards due (Low)
+            # 1: Not completed (Normal)
+            # 2: Knowledge Gap / Struggles (High)
+            # 3: Due Flashcards (Critical)
+            if due_cards_count > 0:
+                priority_val = 3
+                priority_label = "Critical Review (Due Flashcards)"
+            elif struggles > 0:
+                priority_val = 2
+                priority_label = f"High Priority (Struggling: {struggles} errors)"
+            elif not is_completed:
+                priority_val = 1
+                priority_label = "Standard Study (New Topic)"
+            else:
+                priority_val = 0
+                priority_label = "Completed (No reviews due)"
+                
+            schedule.append({
+                "unit": unit,
+                "chapter": chapter,
+                "topic": topic,
+                "priority_val": priority_val,
+                "priority_label": priority_label,
+                "due_flashcards": due_cards_count,
+                "struggles": struggles,
+                "completed": is_completed
+            })
+            
+    # Sort schedule by priority value descending, then struggles descending
+    schedule.sort(key=lambda x: (-x["priority_val"], -x["struggles"], x["topic"]))
+    return schedule
 
 # Make sure tables exist on load
 init_db()

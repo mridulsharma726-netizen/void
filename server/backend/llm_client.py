@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Any, AsyncGenerator, Dict, List
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import requests
 
@@ -150,7 +150,7 @@ class OllamaClient:
                     "stream": False,
                     "options": options
                 }, 
-                timeout=self.timeout
+                timeout=(3.0, self.timeout)
             ))
             resp.raise_for_status()
             return resp.json().get("message", {}).get("content", "").strip()
@@ -206,7 +206,7 @@ class OllamaClient:
                     "options": options
                 }, 
                 stream=True, 
-                timeout=self.timeout
+                timeout=(3.0, self.timeout)
             ))
             
             def read_lines():
@@ -222,4 +222,27 @@ class OllamaClient:
         except Exception as e:
             logger.error(f"[LLM ERROR] Chat stream failed: {e}", exc_info=True)
             yield "Stream interrupted. Please try again, Sir."
+
+    def generate(self, prompt: str, system_prompt: Optional[str] = None, format: Optional[str] = None) -> str:
+        """
+        Synchronously generates a response using Ollama's /api/generate endpoint.
+        """
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+        }
+        if system_prompt:
+            payload["system"] = system_prompt
+        if format:
+            payload["format"] = format
+            
+        url = self.chat_url.replace("/chat", "/generate")
+        try:
+            resp = requests.post(url, json=payload, timeout=self.timeout)
+            resp.raise_for_status()
+            return resp.json().get("response", "").strip()
+        except Exception as e:
+            logger.error(f"[LLM ERROR] Generate failed: {e}", exc_info=True)
+            raise e
 

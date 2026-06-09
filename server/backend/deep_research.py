@@ -119,6 +119,7 @@ class CitationManager:
         if url not in self.url_map:
             self.url_map[url] = {
                 "id": self.next_id,
+                "url": url,
                 "title": title or url,
                 "snippet": snippet or ""
             }

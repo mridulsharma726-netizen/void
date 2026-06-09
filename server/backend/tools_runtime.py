@@ -123,6 +123,22 @@ class ToolRuntime:
                 output = await self._agent_run_tests()
             elif name == "agent_fix_errors":
                 output = await self._agent_fix_errors(data.get("logs"))
+            elif name == "start_meeting":
+                output = await self._start_meeting()
+            elif name == "stop_meeting":
+                output = await self._stop_meeting()
+            elif name == "recall_meeting":
+                output = await self._recall_meeting(data.get("query"))
+            elif name == "get_action_items":
+                output = await self._get_action_items()
+            elif name == "register_project":
+                output = await self._register_project(data.get("path"))
+            elif name == "scan_project_changes":
+                output = await self._scan_project_changes(data.get("project_id"))
+            elif name == "get_project_status":
+                output = await self._get_project_status(data.get("project_name"))
+            elif name == "query_recent_work":
+                output = await self._query_recent_work(data.get("timeframe"))
             else:
                 raise ValueError(f"Unknown tool: {name}")
                 
@@ -637,6 +653,70 @@ class ToolRuntime:
         if res.get("status") == "error":
             return f"Error fixing build: {res.get('message')}"
         return f"Attempted to fix build error. Details: {res.get('message')}. Analysis:\n{res.get('analysis')}"
+
+    async def _start_meeting(self) -> str:
+        try:
+            from tools.meeting_assistant import start_meeting
+            res = await asyncio.to_thread(start_meeting)
+            return res.get("message", "Meeting started.")
+        except Exception as e:
+            return f"Error starting meeting: {e}"
+
+    async def _stop_meeting(self) -> str:
+        try:
+            from tools.meeting_assistant import stop_meeting
+            res = await asyncio.to_thread(stop_meeting)
+            return res.get("message", "Meeting stopped.")
+        except Exception as e:
+            return f"Error stopping meeting: {e}"
+
+    async def _recall_meeting(self, query: Optional[str]) -> str:
+        try:
+            from tools.meeting_assistant import recall_meeting
+            res = await asyncio.to_thread(recall_meeting, query or "")
+            return res.get("message", "No meetings found.")
+        except Exception as e:
+            return f"Error recalling meeting: {e}"
+
+    async def _get_action_items(self) -> str:
+        try:
+            from tools.meeting_assistant import get_action_items
+            res = await asyncio.to_thread(get_action_items)
+            return res.get("message", "No action items found.")
+        except Exception as e:
+            return f"Error getting action items: {e}"
+
+    async def _register_project(self, path: str) -> str:
+        try:
+            from tools.project_intelligence import register_project
+            res = await asyncio.to_thread(register_project, path or "")
+            return res.get("message", "Project registered.")
+        except Exception as e:
+            return f"Error registering project: {e}"
+
+    async def _scan_project_changes(self, project_id: Optional[str]) -> str:
+        try:
+            from tools.project_intelligence import scan_project_changes
+            res = await asyncio.to_thread(scan_project_changes, project_id or "")
+            return res.get("message", "Project changes scanned.")
+        except Exception as e:
+            return f"Error scanning project changes: {e}"
+
+    async def _get_project_status(self, project_name: Optional[str]) -> str:
+        try:
+            from tools.project_intelligence import get_project_status
+            res = await asyncio.to_thread(get_project_status, project_name or "")
+            return res.get("message", "No status report found.")
+        except Exception as e:
+            return f"Error getting project status: {e}"
+
+    async def _query_recent_work(self, timeframe: Optional[str]) -> str:
+        try:
+            from tools.project_intelligence import get_recent_work
+            res = await asyncio.to_thread(get_recent_work, timeframe or "today")
+            return res.get("message", "No recent work found.")
+        except Exception as e:
+            return f"Error querying recent work: {e}"
 
     def stats(self) -> Dict[str, Any]:
         """System stats for /stats endpoint."""

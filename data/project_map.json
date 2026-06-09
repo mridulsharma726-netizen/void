@@ -69,8 +69,23 @@
       "suffix": ".md"
     },
     {
+      "path": "test_academic_upgrade.py",
+      "size_bytes": 6183,
+      "suffix": ".py"
+    },
+    {
+      "path": "test_agentic_workflow.py",
+      "size_bytes": 4884,
+      "suffix": ".py"
+    },
+    {
       "path": "test_autonomous_agent.py",
       "size_bytes": 5249,
+      "suffix": ".py"
+    },
+    {
+      "path": "test_gamification.py",
+      "size_bytes": 4247,
       "suffix": ".py"
     },
     {
@@ -150,7 +165,7 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 61351,
+      "size_bytes": 70440,
       "suffix": ".js"
     },
     {
@@ -160,7 +175,7 @@
     },
     {
       "path": "app/ui/style.css",
-      "size_bytes": 29443,
+      "size_bytes": 30755,
       "suffix": ".css"
     },
     {
@@ -189,8 +204,18 @@
       "suffix": ".py"
     },
     {
+      "path": "core/academic/textbook_extractor.py",
+      "size_bytes": 3461,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/analytics/productivity_tracker.py",
+      "size_bytes": 2616,
+      "suffix": ".py"
+    },
+    {
       "path": "core/autonomous_agent/agent.py",
-      "size_bytes": 10973,
+      "size_bytes": 16449,
       "suffix": ".py"
     },
     {
@@ -225,7 +250,12 @@
     },
     {
       "path": "core/autonomous_agent/safety_system.py",
-      "size_bytes": 4903,
+      "size_bytes": 5387,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/autonomous_agent/sandbox_validator.py",
+      "size_bytes": 3690,
       "suffix": ".py"
     },
     {
@@ -235,12 +265,27 @@
     },
     {
       "path": "core/autonomous_agent/terminal_engine.py",
-      "size_bytes": 2817,
+      "size_bytes": 2835,
       "suffix": ".py"
     },
     {
       "path": "core/autonomous_agent/__init__.py",
       "size_bytes": 893,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/integrations/social_manager.py",
+      "size_bytes": 2939,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/vision/screen_ocr.py",
+      "size_bytes": 3281,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/voice_ai/voice_profile.py",
+      "size_bytes": 4334,
       "suffix": ".py"
     },
     {
@@ -250,17 +295,17 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 20783,
+      "size_bytes": 23146,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 34601,
+      "size_bytes": 38435,
       "suffix": ".json"
     },
     {
       "path": "desktop/main.js",
-      "size_bytes": 4627,
+      "size_bytes": 6119,
       "suffix": ".js"
     },
     {
@@ -275,7 +320,7 @@
     },
     {
       "path": "logs/agent_terminal.log",
-      "size_bytes": 1424,
+      "size_bytes": 3916,
       "suffix": ".log"
     },
     {
@@ -309,6 +354,31 @@
       "suffix": ".md"
     },
     {
+      "path": "memory/academic_documents/maths/rag_index_cache.json",
+      "size_bytes": 53044,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/academic_documents/maths/unit_1_study_guide.md",
+      "size_bytes": 3813,
+      "suffix": ".md"
+    },
+    {
+      "path": "memory/academic_documents/maths/unit_2_study_guide.md",
+      "size_bytes": 3698,
+      "suffix": ".md"
+    },
+    {
+      "path": "memory/academic_documents/maths/unit_3_study_guide.md",
+      "size_bytes": 4408,
+      "suffix": ".md"
+    },
+    {
+      "path": "memory/academic_documents/maths/unit_4_study_guide.md",
+      "size_bytes": 3128,
+      "suffix": ".md"
+    },
+    {
       "path": "memory/data/cvcs_config.json",
       "size_bytes": 119,
       "suffix": ".json"
@@ -321,6 +391,11 @@
     {
       "path": "memory/data/secure_config.json",
       "size_bytes": 89,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/voice_config.json",
+      "size_bytes": 44,
       "suffix": ".json"
     },
     {
@@ -372,6 +447,11 @@
       "path": "memory/data/models/vosk-model-small-en-us-0.15/ivector/splice.conf",
       "size_bytes": 35,
       "suffix": ".conf"
+    },
+    {
+      "path": "scratch/check_db.py",
+      "size_bytes": 393,
+      "suffix": ".py"
     },
     {
       "path": "scratch/ddg_sample.html",
@@ -441,6 +521,11 @@
     {
       "path": "scratch/test_ddg.py",
       "size_bytes": 1735,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/test_deep.py",
+      "size_bytes": 281,
       "suffix": ".py"
     },
     {
@@ -545,7 +630,7 @@
     },
     {
       "path": "server/main.py",
-      "size_bytes": 64559,
+      "size_bytes": 71643,
       "suffix": ".py"
     },
     {
@@ -560,7 +645,7 @@
     },
     {
       "path": "server/backend/academic_rag.py",
-      "size_bytes": 10658,
+      "size_bytes": 11842,
       "suffix": ".py"
     },
     {
@@ -575,7 +660,7 @@
     },
     {
       "path": "server/backend/deep_research.py",
-      "size_bytes": 23653,
+      "size_bytes": 23681,
       "suffix": ".py"
     },
     {
@@ -590,12 +675,12 @@
     },
     {
       "path": "server/backend/intent_router.py",
-      "size_bytes": 26156,
+      "size_bytes": 29159,
       "suffix": ".py"
     },
     {
       "path": "server/backend/llm_client.py",
-      "size_bytes": 10072,
+      "size_bytes": 10947,
       "suffix": ".py"
     },
     {
@@ -605,7 +690,7 @@
     },
     {
       "path": "server/backend/memory_sqlite.py",
-      "size_bytes": 9887,
+      "size_bytes": 34044,
       "suffix": ".py"
     },
     {
@@ -640,17 +725,17 @@
     },
     {
       "path": "server/backend/tools_runtime.py",
-      "size_bytes": 31533,
+      "size_bytes": 35368,
       "suffix": ".py"
     },
     {
       "path": "server/backend/tool_manager.py",
-      "size_bytes": 5888,
+      "size_bytes": 6072,
       "suffix": ".py"
     },
     {
       "path": "server/backend/tool_schemas.py",
-      "size_bytes": 9292,
+      "size_bytes": 10748,
       "suffix": ".py"
     },
     {
@@ -665,7 +750,7 @@
     },
     {
       "path": "tools/academic_progress.py",
-      "size_bytes": 21281,
+      "size_bytes": 28458,
       "suffix": ".py"
     },
     {
@@ -779,6 +864,11 @@
       "suffix": ".py"
     },
     {
+      "path": "tools/meeting_assistant.py",
+      "size_bytes": 7311,
+      "suffix": ".py"
+    },
+    {
       "path": "tools/network_scapy.py",
       "size_bytes": 7052,
       "suffix": ".py"
@@ -799,13 +889,23 @@
       "suffix": ".py"
     },
     {
+      "path": "tools/project_intelligence.py",
+      "size_bytes": 20062,
+      "suffix": ".py"
+    },
+    {
       "path": "tools/registry.py",
-      "size_bytes": 38217,
+      "size_bytes": 41214,
       "suffix": ".py"
     },
     {
       "path": "tools/rollback_system.py",
       "size_bytes": 7408,
+      "suffix": ".py"
+    },
+    {
+      "path": "tools/screen_ocr.py",
+      "size_bytes": 4311,
       "suffix": ".py"
     },
     {
@@ -940,7 +1040,7 @@
     },
     {
       "path": "workflows/workflow_engine.py",
-      "size_bytes": 24688,
+      "size_bytes": 27393,
       "suffix": ".py"
     },
     {

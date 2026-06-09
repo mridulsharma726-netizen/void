@@ -293,17 +293,24 @@ class AutonomousAgent:
         ast_hints = ""
         if file_path.endswith(".py"):
             ast_hints = self._analyze_python_ast(content)
-        
         prompt = (
             f"You are the refactoring engine for the VOID Operating System.\n"
             f"Target file: {file_path}\n"
-            f"Language: {lang}\n\n"
+            f"Language: {lang}\n"
             f"{ast_hints}\n"
             f"Code content:\n```\n{content}\n```\n\n"
             f"Task: Please identify code smells, unused variables/imports, dead code, and performance bottlenecks. "
             f"Refactor the code to improve its structure, clean up dead segments, and optimize performance. "
             f"Provide ONLY the complete refactored file content. Do not include markdown code block formatting or explanations."
         )
+        
+        # Perform optional deep syntax check (AST parsing) for Python before sending to LLM
+        if lang.lower() in ["python", "py"]:
+            import ast
+            try:
+                ast.parse(content)
+            except SyntaxError as syntax_err:
+                prompt += f"\nNote: The current file has a SyntaxError: {syntax_err}. Please fix this syntax error during refactoring."
         
         try:
             refactored_content = await self.llm.chat([], prompt)
@@ -317,6 +324,14 @@ class AutonomousAgent:
                 if lines and lines[-1].startswith("```"):
                     lines = lines[:-1]
                 clean_content = "\n".join(lines).strip()
+                
+            # Perform deep syntax check on refactored content for Python
+            if lang.lower() in ["python", "py"]:
+                import ast
+                try:
+                    ast.parse(clean_content)
+                except SyntaxError as e:
+                    return {"status": "error", "message": f"LLM returned invalid Python syntax: {e}"}
                 
             # Perform git backup branch creation first
             backup_branch = None

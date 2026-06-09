@@ -126,6 +126,30 @@ def extract_text_from_file(file_path: Path) -> str:
         except Exception as e:
             return f"Error extracting PDF: {e}"
             
+    elif ext == ".pptx":
+        # Pure-Python zipfile extraction of PPTX slide paragraphs
+        try:
+            import zipfile
+            import xml.etree.ElementTree as ET
+            with zipfile.ZipFile(str(file_path), 'r') as zip_ref:
+                slide_texts = []
+                slide_files = [f for f in zip_ref.namelist() if f.startswith('ppt/slides/slide')]
+                
+                # Sort numerically
+                slide_files.sort(key=lambda x: [int(s) if s.isdigit() else s for s in re.split(r'(\d+)', x)])
+                
+                for slide_file in slide_files:
+                    slide_xml = zip_ref.read(slide_file)
+                    root = ET.fromstring(slide_xml)
+                    namespaces = {'a': 'http://schemas.openxmlformats.org/drawingml/2006/main'}
+                    texts = [node.text for node in root.findall('.//a:t', namespaces) if node.text]
+                    if texts:
+                        slide_texts.append(" ".join(texts))
+                        
+                return "\n\n--- Slide ---\n\n".join(slide_texts)
+        except Exception as e:
+            return f"Error extracting PPTX: {str(e)}"
+            
     return ""
 
 def generate_chunks(text: str, source_name: str, chunk_size: int = 700, overlap: int = 150) -> List[Dict[str, Any]]:

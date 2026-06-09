@@ -163,6 +163,38 @@ class IntentRouter:
         "agent_refactor": [
             PREFIX + r"(?:refactor|optimize|clean\s+up)\s+(?:code\s+in\s+)?(?:file\s+)?([^\s]+)" + SUFFIX
         ],
+        "start_meeting": [
+            PREFIX + r"(?:start|begin)\s+(?:a\s+)?meeting" + SUFFIX,
+            PREFIX + r"meeting\s+start" + SUFFIX
+        ],
+        "stop_meeting": [
+            PREFIX + r"(?:stop|end|finish)\s+(?:the\s+)?meeting" + SUFFIX,
+            PREFIX + r"meeting\s+(?:is\s+)?(?:over|ended|done)" + SUFFIX
+        ],
+        "recall_meeting": [
+            PREFIX + r"(?:what\s+happened\s+in|summarize|show)\s+(?:the\s+)?(?:meeting|yesterday's\s+meeting|today's\s+meeting)\s*(.*)" + SUFFIX,
+            PREFIX + r"(?:find|search)\s+meetings?\s+(?:about|on|regarding)\s+(.+)" + SUFFIX
+        ],
+        "get_action_items": [
+            PREFIX + r"(?:show|get|what\s+are)\s+(?:my\s+)?(?:pending\s+tasks|action\s+items)" + SUFFIX,
+            PREFIX + r"which\s+(?:tasks|action\s+items)\s+are\s+(?:overdue|pending)" + SUFFIX
+        ],
+        "register_project": [
+            PREFIX + r"(?:track|register|monitor)\s+(?:this\s+)?(?:project|folder)(?:\s+(.+))?" + SUFFIX,
+            PREFIX + r"start\s+tracking\s+(?:project\s+)?(.+)?" + SUFFIX
+        ],
+        "scan_project_changes": [
+            PREFIX + r"(?:scan|check|detect)\s+(?:project\s+)?changes?(?:\s+(?:in|for)\s+(.+))?" + SUFFIX,
+            PREFIX + r"what\s+(?:has\s+)?changed\s+(?:in\s+(?:the\s+)?project|since\s+last\s+(?:scan|time))" + SUFFIX
+        ],
+        "get_project_status": [
+            PREFIX + r"(?:what\s+is\s+)?(?:the\s+)?status\s+(?:of\s+)?(.+)" + SUFFIX,
+            PREFIX + r"(?:show|get)\s+(?:the\s+)?project\s+(?:status|info|profile)(?:\s+(?:of|for)\s+(.+))?" + SUFFIX
+        ],
+        "query_recent_work": [
+            PREFIX + r"what\s+did\s+(?:i|we)\s+work\s+on\s+(.+)" + SUFFIX,
+            PREFIX + r"(?:show|get)\s+(?:my\s+)?recent\s+(?:work|changes|activity)(?:\s+(.+))?" + SUFFIX
+        ],
     }
     
     # Words that indicate conversational/abstract usage of action verbs
@@ -268,7 +300,9 @@ class IntentRouter:
             "create_presentation", "manage_email", "manage_calendar",
             "skipit_assistant", "smart_cart_assistant", "business_intelligence", "agent_network",
             "cvcs_click", "cvcs_type", "cvcs_read_screen", "cvcs_set_permission",
-            "agent_scan", "agent_explain", "agent_code", "agent_run_tests", "agent_fix_errors", "agent_refactor"
+            "agent_scan", "agent_explain", "agent_code", "agent_run_tests", "agent_fix_errors", "agent_refactor",
+            "start_meeting", "stop_meeting", "recall_meeting", "get_action_items",
+            "register_project", "scan_project_changes", "get_project_status", "query_recent_work"
         ]:
             if action in self.COMMAND_PATTERNS:
                 for pat in self.COMMAND_PATTERNS[action]:
@@ -290,7 +324,9 @@ class IntentRouter:
                 "create_presentation", "manage_email", "manage_calendar",
                 "skipit_assistant", "smart_cart_assistant", "business_intelligence", "agent_network",
                 "cvcs_click", "cvcs_type", "cvcs_read_screen", "cvcs_set_permission",
-                "agent_scan", "agent_explain", "agent_code", "agent_run_tests", "agent_fix_errors", "agent_refactor"
+                "agent_scan", "agent_explain", "agent_code", "agent_run_tests", "agent_fix_errors", "agent_refactor",
+                "start_meeting", "stop_meeting", "recall_meeting", "get_action_items",
+                "register_project", "scan_project_changes", "get_project_status", "query_recent_work"
             ]:
                 continue
             for pat in patterns:
@@ -461,8 +497,18 @@ class IntentRouter:
             return {"logs": target}
         elif action == "agent_refactor":
             return {"file_path": target}
-        elif action in ["agent_scan", "agent_explain", "agent_run_tests"]:
+        elif action in ["agent_scan", "agent_explain", "agent_run_tests", "start_meeting", "stop_meeting", "get_action_items"]:
             return {}
+        elif action == "recall_meeting":
+            return {"query": target}
+        elif action == "register_project":
+            return {"path": target if target else ""}
+        elif action == "scan_project_changes":
+            return {"project_id": target if target else ""}
+        elif action == "get_project_status":
+            return {"project_name": target if target else ""}
+        elif action == "query_recent_work":
+            return {"timeframe": target if target else "today"}
         return {"raw": raw}
     
     @staticmethod

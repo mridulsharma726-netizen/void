@@ -154,6 +154,30 @@ class AgentRunTestsInput(ToolInput):
 class AgentFixErrorsInput(ToolInput):
     logs: str = Field(..., description="Stack trace or build error logs to analyze and fix")
 
+class StartMeetingInput(ToolInput):
+    pass
+
+class StopMeetingInput(ToolInput):
+    pass
+
+class RecallMeetingInput(ToolInput):
+    query: Optional[str] = Field(None, description="Optional query string to search meetings")
+
+class GetActionItemsInput(ToolInput):
+    pass
+
+class RegisterProjectInput(ToolInput):
+    path: str = Field(..., description="Absolute path to the project directory to register")
+
+class ScanProjectChangesInput(ToolInput):
+    project_id: Optional[str] = Field(None, description="Optional ID of the project to scan. Scans first tracked project if omitted.")
+
+class GetProjectStatusInput(ToolInput):
+    project_name: Optional[str] = Field(None, description="Optional name of the project. Lists all tracked projects if omitted.")
+
+class QueryRecentWorkInput(ToolInput):
+    timeframe: Optional[str] = Field("today", description="Timeframe to query (e.g. today, yesterday, week)")
+
 # Tool Registry - name → (input_model, output_model, timeout_sec)
 # Registered with generous 25-second timeouts for Digital Employee operations
 TOOL_REGISTRY = {
@@ -198,6 +222,14 @@ TOOL_REGISTRY = {
     "agent_code": (AgentCodeInput, ToolOutput, 95.0),
     "agent_run_tests": (AgentRunTestsInput, ToolOutput, 30.0),
     "agent_fix_errors": (AgentFixErrorsInput, ToolOutput, 60.0),
+    "start_meeting": (StartMeetingInput, ToolOutput, 10.0),
+    "stop_meeting": (StopMeetingInput, ToolOutput, 95.0),
+    "recall_meeting": (RecallMeetingInput, ToolOutput, 10.0),
+    "get_action_items": (GetActionItemsInput, ToolOutput, 10.0),
+    "register_project": (RegisterProjectInput, ToolOutput, 95.0),
+    "scan_project_changes": (ScanProjectChangesInput, ToolOutput, 15.0),
+    "get_project_status": (GetProjectStatusInput, ToolOutput, 10.0),
+    "query_recent_work": (QueryRecentWorkInput, ToolOutput, 15.0),
 }
 
 def get_tool_spec(name: str):

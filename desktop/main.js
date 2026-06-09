@@ -2,7 +2,7 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
 const { app, BrowserWindow, dialog } = require("electron");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, execSync } = require("child_process");
 const http = require("http");
 
 const isPackaged = app.isPackaged;
@@ -30,7 +30,40 @@ async function isBackendReady() {
   });
 }
 
+function cleanupPort8002() {
+  if (process.platform !== 'win32') return;
+  try {
+    log('info', 'Checking for zombie processes on port 8002...');
+    const output = execSync(`netstat -ano | findstr :${BACKEND_PORT}`).toString();
+    const lines = output.split('\n');
+    const pidsToKill = new Set();
+    for (const line of lines) {
+      if (line.includes('LISTENING') || line.includes('TIME_WAIT')) {
+        const parts = line.trim().split(/\s+/);
+        const pid = parts[parts.length - 1];
+        if (pid && pid !== '0' && !isNaN(pid)) {
+          pidsToKill.add(parseInt(pid, 10));
+        }
+      }
+    }
+    for (const pid of pidsToKill) {
+      log('info', `Killing zombie process tree for PID ${pid} holding port 8002...`);
+      try {
+        execSync(`taskkill /f /t /pid ${pid}`);
+      } catch (err) {
+        log('warn', `Failed to kill PID ${pid}: ${err.message}`);
+      }
+    }
+  } catch (e) {
+    // netstat returns exit code 1 if no matches are found, which is normal
+    log('info', 'No active processes found on port 8002.');
+  }
+}
+
 async function startBackend() {
+  // Clear any existing zombie servers holding port 8002
+  cleanupPort8002();
+
   if (await isBackendReady()) {
     log('info', 'Backend already running');
     return true;
@@ -148,7 +181,18 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  if (backendProc) backendProc.kill();
+  if (backendProc) {
+    log('info', 'Terminating backend process tree...');
+    if (process.platform === 'win32') {
+      try {
+        execSync(`taskkill /f /t /pid ${backendProc.pid}`);
+      } catch (e) {
+        log('error', `Failed to recursively kill backend: ${e.message}`);
+      }
+    } else {
+      backendProc.kill();
+    }
+  }
   app.quit();
 });
 

@@ -92,7 +92,9 @@ class ToolManager:
             "open_tabs", "download_file", "send_whatsapp", "read_whatsapp",
             "create_presentation", "manage_email", "manage_calendar",
             "skipit_assistant", "smart_cart_assistant", "business_intelligence", "agent_network",
-            "self_modifier", "self_optimizer"
+            "self_modifier", "self_optimizer", "start_meeting", "stop_meeting", "recall_meeting",
+            "get_action_items", "register_project", "scan_project_changes", "get_project_status",
+            "query_recent_work"
         }
         
         for name in self.specs:
