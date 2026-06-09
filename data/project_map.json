@@ -320,7 +320,7 @@
     },
     {
       "path": "logs/agent_terminal.log",
-      "size_bytes": 5120,
+      "size_bytes": 5298,
       "suffix": ".log"
     },
     {
