@@ -128,66 +128,67 @@ def listen_for_wake_word(timeout: Optional[float] = None,
     logger.info(f"Listening for wake word '{WAKE_WORD}'...")
     start_time = time.time()
 
-    while True:
-        with _running_lock:
-            if not _running:
-                logger.info("Wake word detection stopped programmatically")
-                return False
+    try:
+        with _microphone as source:
+            while True:
+                with _running_lock:
+                    if not _running:
+                        logger.info("Wake word detection stopped programmatically")
+                        return False
 
-        # Check timeout
-        if timeout and (time.time() - start_time) > timeout:
-            logger.info("Wake word listen timed out")
-            return False
+                # Check timeout
+                if timeout and (time.time() - start_time) > timeout:
+                    logger.info("Wake word listen timed out")
+                    return False
 
-        try:
-            with _microphone as source:
-                # listen with small timeout to regularly check _running flag
-                audio = _recognizer.listen(
-                    source, 
-                    phrase_time_limit=phrase_time_limit,
-                    timeout=1
-                )
-
-            # Offline-first wake word detection
-            text = ""
-            try:
-                text_raw = _recognizer.recognize_vosk(audio)
-                import json
                 try:
-                    res_dict = json.loads(text_raw)
-                    text = res_dict.get("text", text_raw).strip().lower()
-                except Exception:
-                    text = text_raw.strip().lower()
-            except Exception:
-                # Fallback to Google online recognition
-                try:
-                    text = _recognizer.recognize_google(audio).lower()
-                except Exception:
-                    pass
+                    # listen with small timeout to regularly check _running flag
+                    audio = _recognizer.listen(
+                        source, 
+                        phrase_time_limit=phrase_time_limit,
+                        timeout=1
+                    )
 
-            if text:
-                logger.info(f"[WAKE WORD] Heard: {text}")
-                if _check_for_wake_word(text):
-                    logger.info(f"Wake word '{WAKE_WORD}' detected!")
-                    if _wake_callback:
+                    # Offline-first wake word detection
+                    text = ""
+                    try:
+                        text_raw = _recognizer.recognize_vosk(audio)
+                        import json
                         try:
-                            _wake_callback()
-                        except Exception as e:
-                            logger.error(f"Wake callback error: {e}")
-                    return True
+                            res_dict = json.loads(text_raw)
+                            text = res_dict.get("text", text_raw).strip().lower()
+                        except Exception:
+                            text = text_raw.strip().lower()
+                    except Exception:
+                        # Fallback to Google online recognition
+                        try:
+                            text = _recognizer.recognize_google(audio).lower()
+                        except Exception:
+                            pass
 
-        except sr.WaitTimeoutError:
-            # No speech detected, continue listening
-            continue
-        except sr.UnknownValueError:
-            # Could not understand audio
-            continue
-        except sr.RequestError as e:
-            logger.error(f"Recognition error: {e}")
-            time.sleep(0.5)
-        except Exception as e:
-            logger.error(f"Wake word loop error: {e}")
-            time.sleep(0.5)
+                    if text:
+                        logger.info(f"[WAKE WORD] Heard: {text}")
+                        if _check_for_wake_word(text):
+                            logger.info(f"Wake word '{WAKE_WORD}' detected!")
+                            if _wake_callback:
+                                try:
+                                    _wake_callback()
+                                except Exception as e:
+                                    logger.error(f"Wake callback error: {e}")
+                            return True
+
+                except sr.WaitTimeoutError:
+                    # No speech detected, continue listening
+                    continue
+                except sr.UnknownValueError:
+                    # Could not understand audio
+                    continue
+                except sr.RequestError as e:
+                    logger.error(f"Recognition error: {e}")
+                    time.sleep(0.5)
+                except Exception as e:
+                    logger.error(f"Wake word loop error: {e}")
+                    time.sleep(0.5)
 
     return False
 
