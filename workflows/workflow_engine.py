@@ -453,7 +453,8 @@ class WorkflowEngine:
             return {
                 "success": False,
                 "status": "pending_confirmation",
-                "error": f"High-risk action '{action}' requires explicit user confirmation."
+                "error": f"High-risk action '{action}' requires explicit user confirmation.",
+                "message": f"High-risk action '{action}' requires explicit user confirmation."
             }
 
         action_map = {
