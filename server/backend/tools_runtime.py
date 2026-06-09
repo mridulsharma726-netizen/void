@@ -22,9 +22,12 @@ class ToolRuntime:
             "edge": "msedge",
             "firefox": "firefox",
             "vscode": "code",
+            "vs code": "code",
+            "visual studio code": "code",
             "notepad": "notepad",
             "notepad++": "notepad++",
             "calculator": "calc",
+            "calc": "calc",
             "terminal": "wt.exe",  # Windows Terminal
             "cmd": "cmd",
             "powershell": "powershell",
@@ -139,6 +142,18 @@ class ToolRuntime:
                 output = await self._get_project_status(data.get("project_name"))
             elif name == "query_recent_work":
                 output = await self._query_recent_work(data.get("timeframe"))
+            elif name == "screenshot":
+                output = await self._screenshot()
+            elif name == "lock_computer":
+                output = await self._lock_computer()
+            elif name == "press_key":
+                output = await self._press_key(data.get("key"))
+            elif name == "mouse_control":
+                output = await self._mouse_control(data.get("action"), data.get("x"), data.get("y"), data.get("amount"))
+            elif name == "check_file_exists":
+                output = await self._check_file_exists(data.get("path"))
+            elif name == "list_directory":
+                output = await self._list_directory(data.get("path"))
             else:
                 raise ValueError(f"Unknown tool: {name}")
                 
@@ -171,9 +186,22 @@ class ToolRuntime:
         disk = psutil.disk_usage(os.path.abspath(os.sep))
         disk_pct = (disk.used / disk.total) * 100
         
+        battery = psutil.sensors_battery()
+        batt_str = f"{battery.percent}%" if battery else "N/A"
+        charging_str = " (Charging)" if battery and battery.power_plugged else ""
+        
+        import socket
+        try:
+            socket.create_connection(("1.1.1.1", 53), timeout=1.5)
+            network = "Online"
+        except OSError:
+            network = "Offline"
+            
         return (f"OS: {platform.system()} {platform.release()} | "
                 f"CPU: {cpu:.0f}% | RAM: {ram:.0f}% | "
-                f"Disk: {disk_pct:.0f}%")
+                f"Disk: {disk_pct:.0f}% | "
+                f"Battery: {batt_str}{charging_str} | "
+                f"Network: {network}")
 
     def _open_app(self, app: Optional[str]) -> str:
         if not app or not app.strip():
@@ -307,17 +335,22 @@ class ToolRuntime:
 
     def _open_folder(self, path: Optional[str]) -> str:
         if not path or not path.strip():
-            return "Error: valid folder path required"
+            return "Error: valid folder or file path required"
             
-        resolved_path = self._resolve_folder_path(path)
+        target = path.strip()
+        if os.path.exists(target):
+            resolved_path = os.path.abspath(target)
+        else:
+            resolved_path = self._resolve_folder_path(path)
+            
         if not resolved_path:
-            return f"Error: folder not found: {path}"
+            return f"Error: folder or file not found: {path}"
             
         try:
-            subprocess.Popen(["explorer", os.path.normpath(resolved_path)])
-            return f"✅ Opened folder: {resolved_path}"
+            subprocess.Popen(["cmd", "/c", "start", "", os.path.normpath(resolved_path)], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            return f"✅ Opened: {resolved_path}"
         except Exception as e:
-            return f"❌ Folder open failed: {e}"
+            return f"❌ Open failed: {e}"
 
     def _run_command(self, command: Optional[str]) -> str:
         if not command: return "Error: command required"
@@ -717,6 +750,83 @@ class ToolRuntime:
             return res.get("message", "No recent work found.")
         except Exception as e:
             return f"Error querying recent work: {e}"
+
+    async def _screenshot(self) -> str:
+        try:
+            from tools.system_control import take_screenshot
+            res = await asyncio.to_thread(take_screenshot)
+            return res.get("message", "Screenshot captured successfully.")
+        except Exception as e:
+            return f"Error taking screenshot: {e}"
+
+    async def _lock_computer(self) -> str:
+        try:
+            import ctypes
+            if platform.system() == "Windows":
+                ctypes.windll.user32.LockWorkStation()
+                return "Computer locked successfully, Sir."
+            else:
+                return "Locking computer is only supported on Windows, Sir."
+        except Exception as e:
+            return f"Error locking computer: {e}"
+
+    async def _press_key(self, key: str) -> str:
+        try:
+            import pyautogui
+            key_clean = key.strip().lower()
+            if "+" in key_clean:
+                keys = key_clean.split("+")
+                pyautogui.hotkey(*[k.strip() for k in keys])
+                return f"Successfully pressed hotkey combination: {key_clean}, Sir."
+            else:
+                pyautogui.press(key_clean)
+                return f"Successfully pressed key: {key_clean}, Sir."
+        except Exception as e:
+            return f"Error pressing key: {e}"
+
+    async def _mouse_control(self, action: str, x: Optional[int], y: Optional[int], amount: Optional[int]) -> str:
+        try:
+            import pyautogui
+            act = action.strip().lower()
+            if act == "click":
+                pyautogui.click()
+                return "Clicked at current position, Sir."
+            elif act == "double_click":
+                pyautogui.doubleClick()
+                return "Double-clicked at current position, Sir."
+            elif act == "right_click":
+                pyautogui.rightClick()
+                return "Right-clicked at current position, Sir."
+            elif act == "move":
+                if x is not None and y is not None:
+                    pyautogui.moveTo(x, y)
+                    return f"Moved mouse to coordinates ({x}, {y}), Sir."
+                return "Error: missing coordinates for mouse move."
+            elif act == "scroll":
+                scroll_amount = amount if amount is not None else 100
+                pyautogui.scroll(scroll_amount)
+                return f"Scrolled mouse by {scroll_amount}, Sir."
+            return f"Unknown mouse action: {action}"
+        except Exception as e:
+            return f"Error executing mouse action: {e}"
+
+    async def _check_file_exists(self, path: str) -> str:
+        try:
+            exists = os.path.exists(path)
+            status = "exists" if exists else "does not exist"
+            return f"The file '{path}' {status}, Sir."
+        except Exception as e:
+            return f"Error checking file: {e}"
+
+    async def _list_directory(self, path: Optional[str]) -> str:
+        try:
+            target_path = path or os.getcwd()
+            items = os.listdir(target_path)
+            files = [i for i in items if os.path.isfile(os.path.join(target_path, i))]
+            dirs = [i for i in items if os.path.isdir(os.path.join(target_path, i))]
+            return f"Contents of {target_path}, Sir:\nFolders: {', '.join(dirs) or 'None'}\nFiles: {', '.join(files) or 'None'}"
+        except Exception as e:
+            return f"Error listing directory: {e}"
 
     def stats(self) -> Dict[str, Any]:
         """System stats for /stats endpoint."""

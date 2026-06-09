@@ -1,5 +1,5 @@
 {
-  "architecture_summary": "",
+  "architecture_summary": "I'm having a brief connection issue, Sir. Give me a moment.",
   "technology_stack": [
     "FastAPI",
     "Electron"
@@ -249,9 +249,9 @@
       "size": 37
     },
     "data/project_map.json": {
-      "hash": "41c53704d03447dca835dd64e32bb1b3e8312e0dc8c0c5fe13f25a5c83e651ac",
-      "mtime": 1781023821.1403341,
-      "size": 23146
+      "hash": "801e3cdff8aa1fa8d3130511d20fb0dcfb92a3962a732b33bd9d11bfb4c8e90e",
+      "mtime": 1781028778.4658077,
+      "size": 23617
     },
     "desktop/main.js": {
       "hash": "138e5c099af0e194d24af43d6d190b3e637271cba1de88b00a958711acbc77b3",
@@ -534,9 +534,9 @@
       "size": 3593
     },
     "server/main.py": {
-      "hash": "0b88f6b0c853117a25c96b594288168b42660cada794a2fc6e514127173bd595",
-      "mtime": 1780837660.5652206,
-      "size": 71643
+      "hash": "a9fb97ef298c342f6e953b9948d1f1a356e291e3b65b7cf27a4e0d3ce3921b92",
+      "mtime": 1781026141.362323,
+      "size": 80307
     },
     "server/backend/academic_engine.py": {
       "hash": "4a2ba3520ab83ff207636fcb23c9b0cedc8472612ca4fcb7d41f94cec6af0e1e",
@@ -579,14 +579,14 @@
       "size": 7236
     },
     "server/backend/intent_router.py": {
-      "hash": "7258402b565dc4f0131ee8cf3508d1bbfd2f1ee7c52f83491474c3d38ce40701",
-      "mtime": 1781023145.045432,
-      "size": 29159
+      "hash": "0ca0c5b32f53e07a91c78f6d7ed9263385586467c3158bf071aa10e54e8c9ab3",
+      "mtime": 1781026503.5061507,
+      "size": 32060
     },
     "server/backend/llm_client.py": {
-      "hash": "f2ac7b8d9be87f4988b1f0ad591ce0729b22add6637d0ad71278940bde88c8fb",
-      "mtime": 1781023811.7870538,
-      "size": 10947
+      "hash": "93761086417bdfd0573adbd75e819bb1d3fe7f583c5c0648b93a28650d683011",
+      "mtime": 1781028766.0829613,
+      "size": 11340
     },
     "server/backend/memory_manager.py": {
       "hash": "f0b41f4547807052a6f18baf99b702ff337ba9410e0b88a961beceb6ab0b9f22",
@@ -629,9 +629,9 @@
       "size": 8113
     },
     "server/backend/tools_runtime.py": {
-      "hash": "b65ed643a94253f21a06bf9c7a3a6f070c489ec2df3564254c748872ae059a51",
-      "mtime": 1781023803.0560038,
-      "size": 35368
+      "hash": "2595261bae81fad848d8c8fe0b201e04f6eaa989166bd8be209041e2967dc319",
+      "mtime": 1781026112.594342,
+      "size": 40394
     },
     "server/backend/tool_manager.py": {
       "hash": "db0e362c56cad80576c3cf8e508777b6825850cf402e1fc83364c98afb08e75d",
@@ -639,9 +639,9 @@
       "size": 6072
     },
     "server/backend/tool_schemas.py": {
-      "hash": "f2f2d2a1a4b1d4817290227b3366982c79551e95887dd12fcbd7e7e9e242b7d9",
-      "mtime": 1781023789.9027512,
-      "size": 10748
+      "hash": "62ce7fd5e13d92db64346f0fc586db75571f0ff20198a251ace40b361457bef9",
+      "mtime": 1781025969.905866,
+      "size": 11902
     },
     "server/backend/validator.py": {
       "hash": "055ea3e82323defa37b1cec1d00f37984273eaf41cdfdd9de456e91b5f737144",
@@ -929,9 +929,9 @@
       "size": 348
     },
     "workflows/workflow_engine.py": {
-      "hash": "c37280c35be37611a8132deff091cfad4a7448c021e11576affb5228ada5c2ae",
-      "mtime": 1780837156.0608706,
-      "size": 27393
+      "hash": "5080954000014146350a1b422d86d8d9b22fe9f32afdac71758c561d83700caf",
+      "mtime": 1781024563.4988716,
+      "size": 27489
     },
     "workflows/__init__.py": {
       "hash": "add3fb526e80526bc44d01e6c7333737df58659eef0df0b3e7c2538a07f09a85",
@@ -939,14 +939,14 @@
       "size": 19
     },
     "data/project_memory.json": {
-      "hash": "1897bd4ab0889d074192eb1b1a6f5f8659da286454cbef8bda4f3528b4914104",
-      "mtime": 1781023837.9563622,
-      "size": 38435
+      "hash": "f3bf96f37710e33284b57ce242a8f66cf807ab237246056f4c4141abcd5aa8fb",
+      "mtime": 1781028778.5031884,
+      "size": 39257
     },
     "logs/agent_terminal.log": {
-      "hash": "294dc55cc6b1340676d99ea6a7b45151ed1387f75cadde313936da0cac1818df",
-      "mtime": 1781023360.7952554,
-      "size": 3738
+      "hash": "a86c6e26ced893d0be4e98110ec6ffd5910608702bac46098da51bbd12597cce",
+      "mtime": 1781027347.4119277,
+      "size": 5120
     },
     "test_agentic_workflow.py": {
       "hash": "5bdad6f65962d8a9b6dd248e42867da517db74ff8b88072054c98ec0a8d746b1",
@@ -1047,6 +1047,26 @@
       "hash": "15ed4fe8493ab32e7397fdbc0dc94856bd37cc2121236072dfeb7599c8710e39",
       "mtime": 1781023052.2123303,
       "size": 20062
+    },
+    "scratch/test_direct_layer.py": {
+      "hash": "81fa38a98072d37ae14132cb62f5223c60aeb4213f18a8413d259ec68521918b",
+      "mtime": 1781026163.0689485,
+      "size": 2217
+    },
+    "scratch/test_chat_integration.py": {
+      "hash": "e4383b1f44695e1e557f19197e96ed5afa142b86a018e4bb8cc3ecbc5012a327",
+      "mtime": 1781026226.7825596,
+      "size": 1352
+    },
+    "scratch/test_logging.py": {
+      "hash": "3facf07eeabf6f79659863b913bd5e82b0bebb758acf1d2faecb42a117f93dc7",
+      "mtime": 1781026275.5669868,
+      "size": 2631
+    },
+    "memory/academic_documents/ai_ml/rag_index_cache.json": {
+      "hash": "8538ce0061117a793cf038ee0114eac177fe0e1fda3a9876b0ff811a6fa412f3",
+      "mtime": 1781028284.8261302,
+      "size": 71
     }
   }
 }

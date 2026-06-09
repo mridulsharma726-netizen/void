@@ -1205,14 +1205,117 @@ def clean_intercept_text(text: str) -> str:
     cleaned = re.sub(r'[^\w\s]', '', text)
     return " ".join(cleaned.lower().split())
 
+def evaluate_math_locally(text: str) -> Optional[str]:
+    """Deterministically detects and evaluates simple arithmetic math queries locally.
+    Supports basic operations: +, -, *, /, %, ^, **, parentheses, and numbers.
+    """
+    cleaned = text.lower().strip()
+    # Remove common prefix phrases
+    cleaned = re.sub(
+        r'^(?:void\s*,\s*|void\s+)?(?:what\s+is\s+the\s+value\s+of\s+|what\s+is\s+|what\'s\s+|calculate\s+|solve\s+|compute\s+)',
+        '',
+        cleaned
+    )
+    # Remove common suffix phrases/punctuation
+    cleaned = re.sub(r'\s*(?:\?|please|sir)?$', '', cleaned).strip()
+    
+    # We must ensure it's not empty, and only contains arithmetic characters
+    if not cleaned or not re.match(r'^[0-9\+\-\*\/\%\^\(\)\.\s]+$', cleaned):
+        return None
+        
+    # Extra check: require at least one digit and one operator to avoid treating plain numbers as math
+    if not any(c.isdigit() for c in cleaned) or not any(c in '+-*/%^()' for c in cleaned):
+        return None
+        
+    try:
+        expr = cleaned.replace('^', '**')
+        # Evaluate safely without builtins
+        val = eval(expr, {"__builtins__": {}}, {})
+        if isinstance(val, float) and val.is_integer():
+            val = int(val)
+        return f"The calculation result is {val}, Sir."
+    except Exception:
+        return None
+
+
+def humanize_tool_output_locally(action: str, params: Dict[str, Any], output: str, is_success: bool) -> str:
+    """Provides natural cybernetic persona replies for direct tool execution outputs."""
+    if not is_success:
+        return f"⚠️ I encountered an issue executing {action.replace('_', ' ')}, Sir. Details: {output}"
+        
+    if action == "time":
+        return f"The current time is {output}, Sir."
+    elif action == "system_info":
+        return f"Here is the system status, Sir:\n{output}"
+    elif action == "open_app":
+        app = params.get("app", "the application")
+        return f"I have launched {app} for you, Sir."
+    elif action == "close_app":
+        app = params.get("app", "the application")
+        return f"I have closed {app}, Sir."
+    elif action == "open_url":
+        url = params.get("url", "the URL")
+        return f"I have opened the link {url} in your browser, Sir."
+    elif action == "open_folder":
+        path = params.get("path", "the folder or file")
+        return f"I have opened the requested location: {path}, Sir."
+    elif action == "screenshot":
+        return "I have successfully captured a screenshot for you, Sir."
+    elif action == "lock_computer":
+        return "System workstation locked successfully, Sir."
+    elif action == "press_key":
+        key = params.get("key", "key")
+        return f"Pressed key '{key}', Sir."
+    elif action == "cvcs_type":
+        return "Successfully typed the requested text, Sir."
+    elif action == "mouse_control":
+        act = params.get("action", "action")
+        return f"Mouse {act} operation completed, Sir."
+    elif action == "check_file_exists":
+        return output
+    elif action == "list_directory":
+        return f"Here are the directory contents, Sir:\n{output}"
+    elif action == "create_folder":
+        return f"I have created the folder for you, Sir. Details: {output}"
+    elif action == "file_manager":
+        if params.get("content"):
+            return "I have successfully written to the file, Sir."
+        else:
+            return f"Here is the file content, Sir:\n```\n{output}\n```"
+            
+    return f"Action {action} executed successfully, Sir. Result: {output}"
+
+
+def log_chat_request(intent_detected: str, execution_path: str, tool_used: str, status: str, start_time: float):
+    elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+    logger.info(
+        f"\n--- Chat Request Execution Log ---\n"
+        f"Intent Detected: {intent_detected}\n"
+        f"Execution Path: {execution_path}\n"
+        f"Execution Time: {elapsed_ms}ms\n"
+        f"Tool Used: {tool_used}\n"
+        f"Success or Failure: {status}\n"
+        f"----------------------------------"
+    )
+
+
+DIRECT_TOOLS = {
+    "time", "system_info", "open_app", "close_app", "open_url", "open_folder",
+    "screenshot", "lock_computer", "press_key", "mouse_control", 
+    "check_file_exists", "list_directory", "create_folder", "cvcs_type",
+    "file_manager"
+}
+
+
 @app.post("/chat")
 async def chat(req: ChatRequest):
+    start_time = time.perf_counter()
     STATS["messages"] += 1
     text = (req.message or req.text or "").strip()
     if not text:
+        log_chat_request("empty", "DIRECT_TOOL", "None", "Success", start_time)
         return {"reply": "?", "meta": {"intent": "empty"}}
         
-    # Log analytics chat event
     try:
         from core.analytics.productivity_tracker import ProductivityTracker
         tracker = ProductivityTracker()
@@ -1220,7 +1323,6 @@ async def chat(req: ChatRequest):
     except Exception as e:
         logger.error(f"Failed to log chat event in analytics: {e}")
     
-    # Use singleton memory
     memory = _get_memory()
     
     # Intercept workflow commands
@@ -1239,7 +1341,6 @@ async def chat(req: ChatRequest):
         }
         try:
             workflow_res = await asyncio.to_thread(execute_workflow_text, text, engine_tools)
-            # Humanize workflow result via LLM
             llm = VoidSingletons.get("llm") or OllamaClient()
             logs = "\n".join(workflow_res.get("logs", []))
             is_ok = workflow_res.get("ok", True)
@@ -1247,6 +1348,7 @@ async def chat(req: ChatRequest):
             
             memory.remember_turn("user", text)
             memory.remember_turn("void", reply)
+            log_chat_request("workflow", "LLM_REQUIRED", "workflow_engine", "Success" if is_ok else "Failure", start_time)
             return {"reply": reply, "meta": {"intent": "workflow", "result": workflow_res}}
         except Exception as e:
             logger.error(f"Workflow execution failed: {e}")
@@ -1255,13 +1357,17 @@ async def chat(req: ChatRequest):
             reply = f"⚠️ Workflow execution failed, Sir. {friendly_err}"
             memory.remember_turn("user", text)
             memory.remember_turn("void", reply)
+            log_chat_request("workflow", "LLM_REQUIRED", "workflow_engine", "Failure", start_time)
             return {"reply": reply, "meta": {"intent": "workflow", "error": str(e)}}
     
     # Handle explicit memory commands
     if text.lower() == "show memory":
-        return {"reply": memory.get_summary(), "meta": {"intent": "system"}}
+        reply = memory.get_summary()
+        log_chat_request("show_memory", "DIRECT_TOOL", "None", "Success", start_time)
+        return {"reply": reply, "meta": {"intent": "system"}}
     if text.lower() == "clear memory":
         memory.clear()
+        log_chat_request("clear_memory", "DIRECT_TOOL", "None", "Success", start_time)
         return {"reply": "Memory banks have been purged, Sir.", "meta": {"intent": "system"}}
 
     # Deterministic Developer Mode & Self-Modification Intercepts
@@ -1273,6 +1379,7 @@ async def chat(req: ChatRequest):
         reply = "🔓 **Developer Mode Enabled**, Sir. Write access, self-repairs, and system self-modifications are now fully unlocked. I am standing by for engineering commands."
         memory.remember_turn("user", text)
         memory.remember_turn("void", reply)
+        log_chat_request("enable_developer_mode", "DIRECT_TOOL", "None", "Success", start_time)
         return {"reply": reply, "meta": {"intent": "system"}}
         
     if norm_text_lower in ["exit developer mode", "disable developer mode", "developer mode off", "exit dev mode"]:
@@ -1281,14 +1388,16 @@ async def chat(req: ChatRequest):
         reply = "🔒 **Developer Mode Disabled**, Sir. System write access is locked. Operating in read-only safe mode."
         memory.remember_turn("user", text)
         memory.remember_turn("void", reply)
+        log_chat_request("disable_developer_mode", "DIRECT_TOOL", "None", "Success", start_time)
         return {"reply": reply, "meta": {"intent": "system"}}
         
     if norm_text_lower in ["show developer mode", "developer mode status", "is developer mode enabled"]:
         from core.brain import is_developer_mode
-        status = "🔓 ENABLED (Write/Modify Unlocked)" if is_developer_mode() else "🔒 DISABLED (Read-Only Safe Mode)"
-        reply = f"🤖 **Developer Mode Status**: {status}, Sir."
+        status_str = "🔓 ENABLED (Write/Modify Unlocked)" if is_developer_mode() else "🔒 DISABLED (Read-Only Safe Mode)"
+        reply = f"🤖 **Developer Mode Status**: {status_str}, Sir."
         memory.remember_turn("user", text)
         memory.remember_turn("void", reply)
+        log_chat_request("developer_mode_status", "DIRECT_TOOL", "None", "Success", start_time)
         return {"reply": reply, "meta": {"intent": "system"}}
 
     if norm_text_lower == "repair yourself" or norm_text_lower == "run self repair":
@@ -1297,15 +1406,16 @@ async def chat(req: ChatRequest):
             reply = "🔒 **Action Denied**: Developer mode is currently disabled, Sir. Please say *\"enter developer mode\"* to enable self-repair access."
             memory.remember_turn("user", text)
             memory.remember_turn("void", reply)
+            log_chat_request("repair_yourself", "DIRECT_TOOL", "None", "Failure", start_time)
             return {"reply": reply, "meta": {"intent": "system"}}
             
-        # Run self-repair workflow
         from tools.self_modifier import self_repair_workflow
         res = await asyncio.to_thread(self_repair_workflow)
         actions_taken_list = [a.get("action", str(a)) if isinstance(a, dict) else str(a) for a in res.get('actions_taken', [])]
         reply = f"🔧 **Self-Repair Execution Complete**, Sir!\n\n**Action Status**: {res.get('status').upper()}\n- **Actions Taken**: {', '.join(actions_taken_list) or 'None'}\n- **Message**: {res.get('message')}"
         memory.remember_turn("user", text)
         memory.remember_turn("void", reply)
+        log_chat_request("repair_yourself", "DIRECT_TOOL", "self_repair", "Success" if res.get('status') == 'ok' else "Failure", start_time)
         return {"reply": reply, "meta": {"intent": "system", "result": res}}
 
     if norm_text_lower.startswith("rewrite module ") or norm_text_lower.startswith("improve module "):
@@ -1314,13 +1424,12 @@ async def chat(req: ChatRequest):
             reply = "🔒 **Action Denied**: Developer mode is currently disabled, Sir. Please say *\"enter developer mode\"* to enable rewrite and file edit capabilities."
             memory.remember_turn("user", text)
             memory.remember_turn("void", reply)
+            log_chat_request("rewrite_module", "DIRECT_TOOL", "None", "Failure", start_time)
             return {"reply": reply, "meta": {"intent": "system"}}
             
-        # Parse rewrite module
         cmd_words = "rewrite module " if norm_text_lower.startswith("rewrite module ") else "improve module "
         module_clause = text[len(cmd_words):].strip()
         
-        # Check if instructions exist (e.g. "rewrite module voice_tts to support custom volumes")
         if " to " in module_clause:
             module_name, instructions = module_clause.split(" to ", 1)
         else:
@@ -1342,13 +1451,13 @@ async def chat(req: ChatRequest):
             
         memory.remember_turn("user", text)
         memory.remember_turn("void", reply)
+        log_chat_request("rewrite_module", "LLM_REQUIRED", "self_modifier", "Success" if res.get('status') == 'ok' else "Failure", start_time)
         return {"reply": reply, "meta": {"intent": "system", "result": res}}
 
     # Zero-latency greetings/identity intercept check
     norm_text = clean_intercept_text(text)
     intercept_reply = GREETINGS_INTERCEPTS.get(norm_text)
     
-    # Fast standalone fallback checks
     if not intercept_reply:
         if norm_text in ["hello", "hi", "hey", "greetings", "yo"]:
             intercept_reply = GREETINGS_INTERCEPTS["hello"]
@@ -1360,15 +1469,24 @@ async def chat(req: ChatRequest):
     if intercept_reply:
         memory.remember_turn("user", text)
         memory.remember_turn("void", intercept_reply)
+        log_chat_request("intercept", "DIRECT_TOOL", "None", "Success", start_time)
         return {"reply": intercept_reply, "meta": {"intent": "intercept", "latency_ms": 0}}
 
-    history = memory.short_term[-10:]  # last 10 turns
+    # Local Math Intercept
+    math_reply = evaluate_math_locally(text)
+    if math_reply is not None:
+        memory.remember_turn("user", text)
+        memory.remember_turn("void", math_reply)
+        log_chat_request("math_calculation", "DIRECT_TOOL", "math_evaluator", "Success", start_time)
+        return {"reply": math_reply, "meta": {"intent": "command", "action": "math_evaluator"}}
+
+    history = memory.short_term[-10:]
     
     # Get singletons
     llm = VoidSingletons.get("llm") or OllamaClient()
     router = VoidSingletons.get("router")
     
-    # Auto-learn user facts from natural conversation
+    # Auto-learn user facts
     try:
         from backend.memory_manager import extract_and_remember
         extract_and_remember(text)
@@ -1377,7 +1495,6 @@ async def chat(req: ChatRequest):
         
     orig_prompt = llm.system_prompt
     try:
-        # Separate error handling for intent classification failures
         intent = None
         try:
             if router:
@@ -1385,20 +1502,17 @@ async def chat(req: ChatRequest):
         except Exception as e:
             logger.error(f"Intent classification failed: {e}. Falling back to pure chat mode.")
             
-        # Analyze lexical sentiment and update active mood cache
         try:
             from backend.emotion_engine import EmotionEngine
             engine = EmotionEngine()
             engine.process_turn(text)
             
-            # Temporarily adapt prompt if mood meets confidence rules
             modifier = EmotionEngine.get_system_prompt_modifier()
             if modifier:
                 llm.system_prompt = orig_prompt + modifier
             else:
                 llm.system_prompt = orig_prompt
 
-            # Append voice personality modifier
             try:
                 from core.voice_ai.voice_profile import VoiceProfileManager
                 profile_mgr = VoiceProfileManager()
@@ -1454,6 +1568,7 @@ async def chat(req: ChatRequest):
             
             memory.remember_turn("user", text)
             memory.remember_turn("void", final_reply)
+            log_chat_request(intent.action, "LLM_REQUIRED", "agent_assistant", "Success", start_time)
             return {"reply": final_reply, "meta": meta}
             
         elif intent and intent.intent == "deep_research":
@@ -1461,6 +1576,7 @@ async def chat(req: ChatRequest):
             from backend.deep_research import ResearchManager
             manager = ResearchManager()
             final_reply = await manager.run_workflow(topic)
+            
         elif intent and intent.intent == "academic":
             from backend.academic_engine import AcademicEngine
             engine = AcademicEngine()
@@ -1468,9 +1584,9 @@ async def chat(req: ChatRequest):
             final_reply = res.get("reply", "")
             intent.action = res.get("meta", {}).get("mode", "quick_answer")
             intent.params = res.get("meta", {})
+            
         elif intent and intent.intent == "command" and intent.action == "change_motd":
             new_motd = intent.params.get("motd", "").strip()
-            # If no MOTD specified or it is just the command words, generate a cool motivating quote!
             if (not new_motd or "message of the day" in new_motd.lower() or "motd" in new_motd.lower() or 
                     new_motd.lower() in ["on the pannel", "on the panel", "pannel", "panel", "to the panel"]):
                 prompt = (
@@ -1484,49 +1600,90 @@ async def chat(req: ChatRequest):
             global MOTD
             MOTD = new_motd
             final_reply = f"Understood, Sir. I have updated the panel's Message of the Day to: \"{new_motd}\""
+            
         elif intent and (intent.intent == "command" or (intent.intent == "system" and intent.action in ["repair", "diagnostics"])):
-            # Separate error handling for tool execution/humanization failures
-            try:
-                action_name = "repair_self" if intent.action == "repair" else intent.action
-                tm = VoidSingletons.get("tool_manager")
-                result = await tm.execute(action_name, intent.params)
-                
-                is_success = result.meta.get("status") != "FAIL"
-                # Timeout guard on the LLM summarization call
-                final_reply = await asyncio.wait_for(
-                    llm.summarize_tool_output(text, action_name, result.output, is_success=is_success),
-                    timeout=45.0
-                )
-            except asyncio.TimeoutError as time_err:
-                logger.error("LLM tool summarization timed out.")
-                from tools.error_interpreter import translate_exception
-                translated = translate_exception(time_err)
-                return {
-                    "reply": f"⚠️ Action completed but LLM response timed out, Sir. Raw: {result.output[:100]}...",
-                    "meta": {
-                        "intent": intent.intent,
-                        "action": intent.action,
-                        "status": "error",
-                        "error": "TimeoutError",
-                        "error_title": translated["title"],
-                        "error_action": translated["action"],
-                        "severity": "high"
+            action_name = "repair_self" if intent.action == "repair" else intent.action
+            if action_name in DIRECT_TOOLS:
+                # Bypasses Ollama completely
+                try:
+                    tm = VoidSingletons.get("tool_manager")
+                    result = await tm.execute(action_name, intent.params)
+                    is_success = result.meta.get("status") != "FAIL"
+                    final_reply = humanize_tool_output_locally(action_name, intent.params, result.output, is_success)
+                    
+                    memory.remember_turn("user", text)
+                    memory.remember_turn("void", final_reply)
+                    log_chat_request(intent.action, "DIRECT_TOOL", action_name, "Success" if is_success else "Failure", start_time)
+                    return {"reply": final_reply, "meta": {"intent": intent.intent, "action": intent.action}}
+                except Exception as tool_err:
+                    logger.error(f"Direct tool execution failed: {tool_err}")
+                    from tools.error_interpreter import interpret_error
+                    friendly_err = interpret_error(str(tool_err))
+                    final_reply = f"⚠️ Tool execution failed, Sir. {friendly_err}"
+                    
+                    memory.remember_turn("user", text)
+                    memory.remember_turn("void", final_reply)
+                    log_chat_request(intent.action, "DIRECT_TOOL", action_name, "Failure", start_time)
+                    return {
+                        "reply": final_reply,
+                        "meta": {
+                            "intent": intent.intent,
+                            "action": intent.action,
+                            "status": "error",
+                            "error": str(tool_err),
+                            "severity": "high"
+                        }
                     }
-                }
-            except Exception as tool_err:
-                logger.error(f"Tool execution or humanization failed: {tool_err}")
-                from tools.error_interpreter import interpret_error
-                friendly_err = interpret_error(str(tool_err))
-                return {
-                    "reply": f"⚠️ Tool execution failed, Sir. {friendly_err}",
-                    "meta": {
-                        "intent": intent.intent,
-                        "action": intent.action,
-                        "status": "error",
-                        "error": str(tool_err),
-                        "severity": "high"
+            else:
+                # LLM required to summarize tool output
+                try:
+                    tm = VoidSingletons.get("tool_manager")
+                    result = await tm.execute(action_name, intent.params)
+                    is_success = result.meta.get("status") != "FAIL"
+                    
+                    final_reply = await asyncio.wait_for(
+                        llm.summarize_tool_output(text, action_name, result.output, is_success=is_success),
+                        timeout=45.0
+                    )
+                    
+                    memory.remember_turn("user", text)
+                    memory.remember_turn("void", final_reply)
+                    log_chat_request(intent.action, "LLM_REQUIRED", action_name, "Success" if is_success else "Failure", start_time)
+                    return {"reply": final_reply, "meta": {"intent": intent.intent, "action": intent.action}}
+                except asyncio.TimeoutError as time_err:
+                    logger.error("LLM tool summarization timed out.")
+                    from tools.error_interpreter import translate_exception
+                    translated = translate_exception(time_err)
+                    final_reply = f"⚠️ Action completed but LLM response timed out, Sir. Raw: {result.output[:100]}..."
+                    log_chat_request(intent.action, "LLM_REQUIRED", action_name, "Failure", start_time)
+                    return {
+                        "reply": final_reply,
+                        "meta": {
+                            "intent": intent.intent,
+                            "action": intent.action,
+                            "status": "error",
+                            "error": "TimeoutError",
+                            "error_title": translated["title"],
+                            "error_action": translated["action"],
+                            "severity": "high"
+                        }
                     }
-                }
+                except Exception as tool_err:
+                    logger.error(f"Tool execution or humanization failed: {tool_err}")
+                    from tools.error_interpreter import interpret_error
+                    friendly_err = interpret_error(str(tool_err))
+                    final_reply = f"⚠️ Tool execution failed, Sir. {friendly_err}"
+                    log_chat_request(intent.action, "LLM_REQUIRED", action_name, "Failure", start_time)
+                    return {
+                        "reply": final_reply,
+                        "meta": {
+                            "intent": intent.intent,
+                            "action": intent.action,
+                            "status": "error",
+                            "error": str(tool_err),
+                            "severity": "high"
+                        }
+                    }
         else:
             # Pure chat — send to LLM with conversation history and a timeout guard
             intent_name = intent.intent if intent else "pure_chat"
@@ -1540,8 +1697,10 @@ async def chat(req: ChatRequest):
                 logger.error("LLM chat timed out.")
                 from tools.error_interpreter import translate_exception
                 translated = translate_exception(time_err)
+                final_reply = "⚠️ Ollama is taking too long to generate a response, Sir. Please check if the service is loaded and running."
+                log_chat_request(intent_name, "LLM_REQUIRED", "None", "Failure", start_time)
                 return {
-                    "reply": "⚠️ Ollama is taking too long to generate a response, Sir. Please check if the service is loaded and running.",
+                    "reply": final_reply,
                     "meta": {
                         "intent": intent_name,
                         "action": action_name,
@@ -1553,12 +1712,13 @@ async def chat(req: ChatRequest):
                     }
                 }
         
-        # Single memory write (no duplicates)
+        # Single memory write (no duplicates) for deep research, academic, etc. fall-throughs
         memory.remember_turn("user", text)
         memory.remember_turn("void", final_reply)
         
         intent_name = intent.intent if intent else "pure_chat"
         action_name = intent.action if intent else None
+        log_chat_request(action_name or intent_name, "LLM_REQUIRED", "None", "Success", start_time)
         return {"reply": final_reply, "meta": {"intent": intent_name, "action": action_name}}
     except Exception as e:
         logger.error(f"Chat error: {e}", exc_info=True)
@@ -1566,6 +1726,7 @@ async def chat(req: ChatRequest):
         translated = translate_exception(e)
         intent_name = intent.intent if intent else "pure_chat"
         action_name = intent.action if intent else None
+        log_chat_request(action_name or intent_name, "LLM_REQUIRED", "None", "Failure", start_time)
         return {
             "reply": f"⚠️ I encountered an issue, Sir. {translated['title']}: {translated['message']}",
             "meta": {

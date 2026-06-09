@@ -178,6 +178,27 @@ class GetProjectStatusInput(ToolInput):
 class QueryRecentWorkInput(ToolInput):
     timeframe: Optional[str] = Field("today", description="Timeframe to query (e.g. today, yesterday, week)")
 
+class ScreenshotInput(ToolInput):
+    pass
+
+class LockComputerInput(ToolInput):
+    pass
+
+class PressKeyInput(ToolInput):
+    key: str = Field(..., description="Key to press or hotkey combination")
+
+class MouseControlInput(ToolInput):
+    action: str = Field(..., description="Mouse action (click, double_click, right_click, move, scroll)")
+    x: Optional[int] = Field(None, description="X coordinate for move")
+    y: Optional[int] = Field(None, description="Y coordinate for move")
+    amount: Optional[int] = Field(None, description="Scroll amount")
+
+class CheckFileExistsInput(ToolInput):
+    path: str = Field(..., description="Path to check if exists")
+
+class ListDirectoryInput(ToolInput):
+    path: Optional[str] = Field(None, description="Directory path to list")
+
 # Tool Registry - name → (input_model, output_model, timeout_sec)
 # Registered with generous 25-second timeouts for Digital Employee operations
 TOOL_REGISTRY = {
@@ -230,6 +251,12 @@ TOOL_REGISTRY = {
     "scan_project_changes": (ScanProjectChangesInput, ToolOutput, 15.0),
     "get_project_status": (GetProjectStatusInput, ToolOutput, 10.0),
     "query_recent_work": (QueryRecentWorkInput, ToolOutput, 15.0),
+    "screenshot": (ScreenshotInput, ToolOutput, 10.0),
+    "lock_computer": (LockComputerInput, ToolOutput, 5.0),
+    "press_key": (PressKeyInput, ToolOutput, 5.0),
+    "mouse_control": (MouseControlInput, ToolOutput, 5.0),
+    "check_file_exists": (CheckFileExistsInput, ToolOutput, 5.0),
+    "list_directory": (ListDirectoryInput, ToolOutput, 10.0),
 }
 
 def get_tool_spec(name: str):

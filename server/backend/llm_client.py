@@ -33,10 +33,12 @@ class OllamaClient:
         self.tags_url = f"{base_url}/api/tags"
         self.timeout = 60  # Increase to 60s to allow model loading
         self.system_prompt = SYSTEM_PROMPT
-        
-        # Self-optimization: auto-detect lightweight models (once at init)
+        self.model_detected = False
+        self._detect_model()
+
+    def _detect_model(self):
         try:
-            resp = requests.get(self.tags_url, timeout=1.5)
+            resp = requests.get(self.tags_url, timeout=5.0)
             if resp.status_code == 200:
                 models = [m.get("name") for m in resp.json().get("models", [])]
                 for fast_model in ["qwen2.5:0.5b", "qwen2.5:1.5b"]:
@@ -44,12 +46,13 @@ class OllamaClient:
                         self.model = fast_model
                         logger.info(f"[LLM] Auto-selected fast model: {self.model}")
                         break
-        except:
-            pass
+                self.model_detected = True
+        except Exception as e:
+            logger.debug(f"[LLM] Model detection failed: {e}")
 
     async def available(self) -> bool:
         try:
-            requests.get(self.tags_url, timeout=1.5)
+            requests.get(self.tags_url, timeout=2.0)
             return True
         except:
             return False
@@ -98,25 +101,26 @@ class OllamaClient:
             }
         else:
             return {
-                "temperature": 0.5,
+                "temperature": 0.7,
                 "num_predict": 512,
-                "num_ctx": 2048,
+                "num_ctx": 4096,
                 "num_thread": 4
             }
 
     def build_context_prompt(self, user_text: str) -> str:
-        """
-        Builds the memory-enriched system prompt.
-        Retrieves relevant semantic facts and gets overall memory context,
-        then appends them to the system prompt.
-        """
+        """Dynamically inserts relevant stored memories/facts into system prompt context."""
         try:
-            from backend.memory_manager import query_semantic_facts, get_memory_context
-            # Query relevant semantic facts
-            relevant_facts = query_semantic_facts(user_text, limit=3)
-            # Get user info and preferences
-            pref_context = get_memory_context()
+            from backend.memory_manager import query_memories
+            # Retrieve semantic matches
+            relevant_facts = query_memories(user_text, limit=3)
             
+            # Retrieve preferred user context profile
+            try:
+                from backend.owner_profile import get_preference_context
+                pref_context = get_preference_context()
+            except ImportError:
+                pref_context = "No stored memory yet."
+                
             memory_block = []
             if relevant_facts:
                 memory_block.append("Relevant Stored Facts:\n" + "\n".join(f"- {fact}" for fact in relevant_facts))
@@ -131,6 +135,8 @@ class OllamaClient:
         return self.system_prompt
 
     async def chat(self, history: List[Dict], user_text: str) -> str:
+        if not self.model_detected:
+            self._detect_model()
         # Extract and remember any new facts
         try:
             from backend.memory_manager import extract_and_remember
@@ -186,6 +192,8 @@ class OllamaClient:
         return await self.chat([], prompt)
 
     async def chat_stream(self, history: List[Dict], user_text: str) -> AsyncGenerator[str, None]:
+        if not self.model_detected:
+            self._detect_model()
         # Extract and remember any new facts
         try:
             from backend.memory_manager import extract_and_remember
@@ -227,6 +235,8 @@ class OllamaClient:
         """
         Synchronously generates a response using Ollama's /api/generate endpoint.
         """
+        if not self.model_detected:
+            self._detect_model()
         payload = {
             "model": self.model,
             "prompt": prompt,
@@ -245,4 +255,3 @@ class OllamaClient:
         except Exception as e:
             logger.error(f"[LLM ERROR] Generate failed: {e}", exc_info=True)
             raise e
-

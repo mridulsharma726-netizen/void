@@ -295,12 +295,12 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 23146,
+      "size_bytes": 23617,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 38435,
+      "size_bytes": 39257,
       "suffix": ".json"
     },
     {
@@ -320,7 +320,7 @@
     },
     {
       "path": "logs/agent_terminal.log",
-      "size_bytes": 3916,
+      "size_bytes": 5120,
       "suffix": ".log"
     },
     {
@@ -342,6 +342,11 @@
       "path": "logs/void_backend.log",
       "size_bytes": 3028,
       "suffix": ".log"
+    },
+    {
+      "path": "memory/academic_documents/ai_ml/rag_index_cache.json",
+      "size_bytes": 71,
+      "suffix": ".json"
     },
     {
       "path": "memory/academic_documents/c_programming/deep_research_report.md",
@@ -504,6 +509,11 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/test_chat_integration.py",
+      "size_bytes": 1352,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/test_communication.py",
       "size_bytes": 2430,
       "suffix": ".py"
@@ -534,6 +544,11 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/test_direct_layer.py",
+      "size_bytes": 2217,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/test_emotion_system.py",
       "size_bytes": 3498,
       "suffix": ".py"
@@ -546,6 +561,11 @@
     {
       "path": "scratch/test_founder.py",
       "size_bytes": 2430,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/test_logging.py",
+      "size_bytes": 2631,
       "suffix": ".py"
     },
     {
@@ -630,7 +650,7 @@
     },
     {
       "path": "server/main.py",
-      "size_bytes": 71643,
+      "size_bytes": 80307,
       "suffix": ".py"
     },
     {
@@ -675,12 +695,12 @@
     },
     {
       "path": "server/backend/intent_router.py",
-      "size_bytes": 29159,
+      "size_bytes": 32060,
       "suffix": ".py"
     },
     {
       "path": "server/backend/llm_client.py",
-      "size_bytes": 10947,
+      "size_bytes": 11340,
       "suffix": ".py"
     },
     {
@@ -725,7 +745,7 @@
     },
     {
       "path": "server/backend/tools_runtime.py",
-      "size_bytes": 35368,
+      "size_bytes": 40394,
       "suffix": ".py"
     },
     {
@@ -735,7 +755,7 @@
     },
     {
       "path": "server/backend/tool_schemas.py",
-      "size_bytes": 10748,
+      "size_bytes": 11902,
       "suffix": ".py"
     },
     {
@@ -1040,7 +1060,7 @@
     },
     {
       "path": "workflows/workflow_engine.py",
-      "size_bytes": 27393,
+      "size_bytes": 27489,
       "suffix": ".py"
     },
     {

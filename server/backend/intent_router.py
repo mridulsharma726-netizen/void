@@ -27,8 +27,18 @@ class IntentRouter:
 
     # Tightened command patterns — each requires specific structure
     COMMAND_PATTERNS = {
-        "time": [PREFIX + r"(?:what(?:'s|\s+is)?\s+(?:the\s+)?)?time(?:\s+is\s+it)?" + SUFFIX, PREFIX + r"(?:tell\s+(?:me\s+)?the\s+)?clock" + SUFFIX],
-        "system_info": [PREFIX + r"(?:system|cpu|ram|disk)\s+(?:info|status|stats|usage)" + SUFFIX, PREFIX + r"(?:show|get)\s+(?:system|cpu|ram)\s*(?:info|status|stats)?" + SUFFIX],
+        "time": [
+            PREFIX + r"(?:what(?:'s|\s+is)?\s+(?:the\s+)?)?time(?:\s+is\s+it)?" + SUFFIX,
+            PREFIX + r"(?:tell\s+(?:me\s+)?the\s+)?clock" + SUFFIX,
+            PREFIX + r"(?:what(?:'s|\s+is)?\s+(?:the\s+)?)?date(?:\s+is\s+it|\s+today)?" + SUFFIX,
+            PREFIX + r"(?:show|get|tell\s+(?:me\s+)?the\s+)?date" + SUFFIX
+        ],
+        "system_info": [
+            PREFIX + r"(?:system|cpu|ram|disk|battery|network|wifi)\s+(?:info|status|stats|usage|level)" + SUFFIX,
+            PREFIX + r"(?:show|get)\s+(?:system|cpu|ram|disk|battery|network|wifi)\s*(?:info|status|stats|usage|level)?" + SUFFIX,
+            PREFIX + r"battery(?:\s+status|\s+level)?" + SUFFIX,
+            PREFIX + r"network(?:\s+status)?" + SUFFIX
+        ],
         "open_app": [PREFIX + r"(?:open|launch|start)\s+([a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*)" + SUFFIX],
         "close_app": [PREFIX + r"close\s+(?:kill\s+|quit\s+)?([a-zA-Z0-9]+)" + SUFFIX],
         "open_url": [PREFIX + r"(?:open|visit|go\s+to)\s+(https?://\S+|www\.\S+|\S+\.(?:com|org|net|io|dev))" + SUFFIX],
@@ -36,7 +46,9 @@ class IntentRouter:
         "play_youtube": [PREFIX + r"(?:play|watch)\s+(?:youtube|yt)\s+(.+)" + SUFFIX],
         "open_folder": [
             PREFIX + r"open\s+(.+)\s+folder" + SUFFIX,
-            PREFIX + r"(?:open\s+)?(?:any\s+)?folder\s+(?:that's\s+|thats\s+)?(?:on\s+|in\s+)?(.+)" + SUFFIX
+            PREFIX + r"(?:open\s+)?(?:any\s+)?folder\s+(?:that's\s+|thats\s+)?(?:on\s+|in\s+)?(.+)" + SUFFIX,
+            PREFIX + r"open\s+file\s+(.+)" + SUFFIX,
+            PREFIX + r"open\s+folder\s+(.+)" + SUFFIX
         ],
         "run_command": [PREFIX + r"(?:run|execute|cmd|shell)\s+(.+)" + SUFFIX],
         "file_manager": [PREFIX + r"(?:create|write|save)\s+file\s+(.+)\s+with\s+(.+)" + SUFFIX, PREFIX + r"(?:read|get)\s+file\s+(.+)" + SUFFIX],
@@ -195,6 +207,29 @@ class IntentRouter:
             PREFIX + r"what\s+did\s+(?:i|we)\s+work\s+on\s+(.+)" + SUFFIX,
             PREFIX + r"(?:show|get)\s+(?:my\s+)?recent\s+(?:work|changes|activity)(?:\s+(.+))?" + SUFFIX
         ],
+        "screenshot": [
+            PREFIX + r"(?:take\s+)?screenshot" + SUFFIX
+        ],
+        "lock_computer": [
+            PREFIX + r"(?:lock\s+)(?:the\s+)?(?:computer|pc|system|workstation)" + SUFFIX
+        ],
+        "press_key": [
+            PREFIX + r"(?:press|send\s+key)\s+(.+)" + SUFFIX,
+            PREFIX + r"hotkey\s+(.+)" + SUFFIX
+        ],
+        "mouse_control": [
+            PREFIX + r"move\s+mouse\s+to\s+(\d+)\s*,\s*(\d+)" + SUFFIX,
+            PREFIX + r"scroll\s+(up|down)" + SUFFIX,
+            PREFIX + r"double\s+click" + SUFFIX,
+            PREFIX + r"right\s+click" + SUFFIX,
+            PREFIX + r"click" + SUFFIX
+        ],
+        "check_file_exists": [
+            PREFIX + r"check\s+file\s+exists?\s+(.+)" + SUFFIX
+        ],
+        "list_directory": [
+            PREFIX + r"(?:list|show)\s+(?:directory|folder|dir)\s*(.+)??" + SUFFIX
+        ],
     }
     
     # Words that indicate conversational/abstract usage of action verbs
@@ -272,6 +307,7 @@ class IntentRouter:
             r"\b(?:tell|explain|describe)\s+(?:me|us)\s+(?:about|how|why|what)\b",
             r"\bdo\s+you\s+(?:know|think|believe|remember)\b",
             r"\b(?:is|are)\s+(?:it|there|this|that)\b",
+            r"\b(?:write|create|draft|generate|make|plan|summarize|explain)\s+(?:[\w\s]{0,20})\s*(?:email|proposal|story|poem|essay|letter|report|article|post|blog|summary|meeting|plan|code|function|program|script|class|test|ui|app|dashboard|website|readme|codebase|architecture|project)\b"
         ]
         for pattern in conversational_phrases:
             if re.search(pattern, text, re.I):
@@ -299,10 +335,11 @@ class IntentRouter:
             "launch_workspace", "research_competitors", "open_tabs", "download_file",
             "create_presentation", "manage_email", "manage_calendar",
             "skipit_assistant", "smart_cart_assistant", "business_intelligence", "agent_network",
-            "cvcs_click", "cvcs_type", "cvcs_read_screen", "cvcs_set_permission",
+            "cvcs_read_screen", "cvcs_set_permission",
             "agent_scan", "agent_explain", "agent_code", "agent_run_tests", "agent_fix_errors", "agent_refactor",
             "start_meeting", "stop_meeting", "recall_meeting", "get_action_items",
-            "register_project", "scan_project_changes", "get_project_status", "query_recent_work"
+            "register_project", "scan_project_changes", "get_project_status", "query_recent_work",
+            "screenshot", "lock_computer", "press_key", "mouse_control", "check_file_exists", "list_directory"
         ]:
             if action in self.COMMAND_PATTERNS:
                 for pat in self.COMMAND_PATTERNS[action]:
@@ -323,10 +360,11 @@ class IntentRouter:
                 "launch_workspace", "research_competitors", "open_tabs", "download_file",
                 "create_presentation", "manage_email", "manage_calendar",
                 "skipit_assistant", "smart_cart_assistant", "business_intelligence", "agent_network",
-                "cvcs_click", "cvcs_type", "cvcs_read_screen", "cvcs_set_permission",
+                "cvcs_read_screen", "cvcs_set_permission",
                 "agent_scan", "agent_explain", "agent_code", "agent_run_tests", "agent_fix_errors", "agent_refactor",
                 "start_meeting", "stop_meeting", "recall_meeting", "get_action_items",
-                "register_project", "scan_project_changes", "get_project_status", "query_recent_work"
+                "register_project", "scan_project_changes", "get_project_status", "query_recent_work",
+                "screenshot", "lock_computer", "press_key", "mouse_control", "check_file_exists", "list_directory"
             ]:
                 continue
             for pat in patterns:
@@ -497,8 +535,28 @@ class IntentRouter:
             return {"logs": target}
         elif action == "agent_refactor":
             return {"file_path": target}
-        elif action in ["agent_scan", "agent_explain", "agent_run_tests", "start_meeting", "stop_meeting", "get_action_items"]:
+        elif action in ["agent_scan", "agent_explain", "agent_run_tests", "start_meeting", "stop_meeting", "get_action_items", "screenshot", "lock_computer"]:
             return {}
+        elif action == "press_key":
+            return {"key": target}
+        elif action == "mouse_control":
+            raw_lower = raw.lower()
+            if "move" in raw_lower:
+                return {"action": "move", "x": int(groups[0]) if len(groups) > 0 else 0, "y": int(groups[1]) if len(groups) > 1 else 0}
+            elif "scroll" in raw_lower:
+                direction = groups[0].strip() if groups else "up"
+                amt = 200 if direction == "up" else -200
+                return {"action": "scroll", "amount": amt}
+            elif "double" in raw_lower:
+                return {"action": "double_click"}
+            elif "right" in raw_lower:
+                return {"action": "right_click"}
+            else:
+                return {"action": "click"}
+        elif action == "check_file_exists":
+            return {"path": target}
+        elif action == "list_directory":
+            return {"path": groups[0].strip() if groups and groups[0] else ""}
         elif action == "recall_meeting":
             return {"query": target}
         elif action == "register_project":
