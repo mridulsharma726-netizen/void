@@ -170,6 +170,7 @@ class ToolRegistry:
         self.register("scan_project_changes", self._tool_scan_project_changes, "Detect changes in a tracked project")
         self.register("get_project_status", self._tool_get_project_status, "Get status of a tracked project")
         self.register("query_recent_work", self._tool_query_recent_work, "Show recent work across projects")
+        self.register("continue_where_left_off", self._tool_continue_where_left_off, "Continue where you left off in your project")
 
     
     def register(self, name: str, func: Callable, description: str = ""):
@@ -884,6 +885,11 @@ class ToolRegistry:
         """Show recent work across projects."""
         from tools import project_intelligence
         return project_intelligence.get_recent_work(timeframe)
+
+    def _tool_continue_where_left_off(self, project_id: str = "", **kwargs) -> Dict[str, Any]:
+        """Continue where you left off in your project."""
+        from tools import project_intelligence
+        return project_intelligence.continue_where_left_off(project_id)
 
 # Global registry instance
 tool_registry = ToolRegistry()

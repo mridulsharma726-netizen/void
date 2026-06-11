@@ -1,6 +1,6 @@
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
-const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, Menu } = require("electron");
 const path = require("path");
 const { spawn, execSync } = require("child_process");
 const http = require("http");
@@ -117,11 +117,62 @@ function createWindow() {
     titleBarStyle: 'hidden',
     resizable: true,
     alwaysOnTop: false,
+    backgroundColor: '#050505',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false  // Allow local file loads
+      webSecurity: false,  // Allow local file loads
+      preload: path.join(__dirname, 'preload.js')
     }
+  });
+
+  const template = [
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    }
+  ];
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+  mainWindow.setMenuBarVisibility(false);
+
+  // === IPC Window Controls ===
+  ipcMain.on('window-minimize', () => {
+    if (mainWindow) mainWindow.minimize();
+  });
+  ipcMain.on('window-maximize', () => {
+    if (mainWindow) {
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
+      } else {
+        mainWindow.maximize();
+      }
+    }
+  });
+  ipcMain.on('window-close', () => {
+    if (mainWindow) mainWindow.close();
   });
 
   // ✅ ABSOLUTE PATH TO UI

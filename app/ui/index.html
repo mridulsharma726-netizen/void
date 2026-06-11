@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:8002 http://localhost:8002 http://127.0.0.1:11434; img-src 'self' data: file: http://127.0.0.1:8002;">
-  <title>VOID Assistant</title>
+  <title>VOID AI Assistant - Command Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;800&family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Boot splash -->
+  <!-- Boot Splash -->
   <div id="bootOverlay" class="boot-overlay" role="status" aria-label="Loading VOID">
     <div class="boot-card">
       <div class="boot-title">VOID</div>
@@ -22,288 +22,905 @@
   </div>
 
   <div class="scan-line"></div>
+  <div class="grid-overlay"></div>
+
+  <!-- HUD Main Container -->
   <main class="hud-container" role="main">
 
-    <!-- ── LEFT: System Monitor ── -->
-    <section class="panel panel-left" aria-label="System Monitor">
-      <div class="panel-title">System Monitor</div>
-
-      <div class="card">
-        <div class="card-title">System Status</div>
-        <div class="status-row">
-          <span>Backend</span>
-          <span id="statusText" class="status-chip">Offline</span>
+    <!-- ── 1. TOP COMMAND BAR ── -->
+    <header class="top-command-bar">
+      <!-- Left: Logo & Subtitle -->
+      <div class="top-left">
+        <div class="void-logo-wrap">
+          <span class="void-bracket">[</span>
+          <span class="void-logo">V</span>
+          <span class="void-bracket">]</span>
         </div>
-        <div class="status-row">
-          <span>Uptime</span>
-          <span id="statUptime">--</span>
+        <div class="top-title-sub">
+          <h1>VOID AI</h1>
+          <h2>Desktop Assistant UI</h2>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Performance Monitor</div>
-        <div class="metric-row">
-          <span>CPU: <strong id="statCPU" style="color: #00e5ff;">--</strong></span>
-          <span>RAM: <strong id="statRAM" style="color: #ff007f;">--</strong></span>
+      <!-- Center: Status Panel -->
+      <div class="top-center">
+        <div class="system-status-panel">
+          <span class="status-marker">●</span>
+          <span>SYSTEM STATUS: <strong id="statusLabel">ONLINE</strong></span>
         </div>
-        <div class="chart-container" style="height: 100px; margin-top: 8px;">
+      </div>
+
+      <!-- Middle Top: Large Core Orb Symbol -->
+      <div class="top-middle-core">
+        <div class="orb-wrap" aria-hidden="true">
+          <div class="orb"></div>
+        </div>
+      </div>
+
+      <!-- Right: Clock & Window Controls -->
+      <div class="top-right">
+        <div class="clock-panel">
+          <div id="timeDisplay" class="clock">10:42:30 PM</div>
+          <div id="dateDisplay" class="date">WEDNESDAY, JUNE 10, 2026</div>
+        </div>
+        <div class="window-controls">
+          <button id="winMinBtn" class="win-btn" title="Minimize">─</button>
+          <button id="winMaxBtn" class="win-btn" title="Maximize">⌂</button>
+          <button id="winCloseBtn" class="win-btn close" title="Close">×</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── 2. SYSTEM METRICS ROW ── -->
+    <section class="system-metrics-row" aria-label="System Metrics">
+      <!-- CPU Metric Card -->
+      <div class="metric-card" id="cpuMetricCard">
+        <div class="metric-header">
+          <span class="metric-title">CPU USAGE</span>
+          <span class="metric-value" id="statCPU">--</span>
+        </div>
+        <div class="chart-container">
           <svg id="perfChart" viewBox="0 0 300 100" class="svg-chart"></svg>
         </div>
-        <div class="status-row" style="margin-top: 8px; font-size: 11px;">
-          <span>CPU Temp: <strong id="statCPUTemp">--</strong></span>
-          <span>Uptime: <strong id="statUptime">--</strong></span>
+        <div class="metric-footer">
+          <span>TEMP: <strong id="statCPUTemp">--</strong></span>
+          <span>UPTIME: <strong id="statUptime">--</strong></span>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Storage &amp; Power</div>
-        <div class="metric-row"><span>Storage</span><span id="statStorage">--</span></div>
-        <div class="metric-bar"><div id="barStorage" class="metric-fill"></div></div>
-        <div class="metric-row"><span>Battery</span><span id="statBattery">--</span></div>
-        <div class="metric-bar"><div id="barBattery" class="metric-fill"></div></div>
-        <div class="metric-row"><span>Network</span><span id="statNetwork">--</span></div>
-      </div>
-      
-      <div class="card">
-        <div class="card-title" style="color: #ff007f;">Emotional Diagnostics</div>
-        <div class="status-row"><span>Mood</span><span id="moodLabel" style="color: #ff007f;">Calm (85%)</span></div>
-        <div class="status-row"><span>Speech Rate</span><span id="moodWPM">-- WPM</span></div>
-        <div class="status-row"><span>Energy RMS</span><span id="moodEnergy">Normal</span></div>
-        <div class="status-row"><span>Adapt Mode</span><span id="adaptState" style="color: #39ff14;">Standard</span></div>
-        <div class="metric-bar"><div id="moodBar" class="metric-fill" style="width: 85%; background: #ff007f;"></div></div>
+      <!-- Memory Metric Card -->
+      <div class="metric-card" id="ramMetricCard">
+        <div class="metric-header">
+          <span class="metric-title">MEMORY</span>
+          <span class="metric-value" id="statRAM">--</span>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar"><div id="barMemory" class="progress-fill" style="width: 32%;"></div></div>
+        </div>
+        <div class="metric-footer">
+          <span>ALLOCATED: <strong id="statRAMDetail">5.2 GB / 16 GB</strong></span>
+        </div>
       </div>
 
-      <div class="card" id="voiceInputCard">
-        <div class="card-title" style="color: #00e5ff;">Voice Input</div>
-        <div class="status-row">
-          <span>Mic Status</span>
-          <span id="micStatusWrapper" style="display: flex; align-items: center; gap: 6px;">
-            <span id="micStatusDot" class="mic-status-dot"></span>
-            <span id="micStatusLabel" style="color: #888;">Inactive</span>
-          </span>
+      <!-- Storage Metric Card -->
+      <div class="metric-card" id="storageMetricCard">
+        <div class="metric-header">
+          <span class="metric-title">STORAGE</span>
+          <span class="metric-value" id="statStorage">--</span>
         </div>
-        <div class="status-row">
-          <span>Input Level</span>
-          <span id="micLevelPct">0%</span>
+        <div class="progress-container">
+          <div class="progress-bar"><div id="barStorage" class="metric-fill progress-fill"></div></div>
         </div>
-        <div class="metric-bar">
-          <div id="micLevelBar" class="metric-fill mic-level-fill" style="width: 0%;"></div>
+        <div class="metric-footer">
+          <span>CAPACITY: <strong id="statStorageDetail">434.8 GB / 476 GB</strong></span>
+        </div>
+      </div>
+
+      <!-- Network Metric Card -->
+      <div class="metric-card" id="networkMetricCard">
+        <div class="metric-header">
+          <span class="metric-title">NETWORK</span>
+          <span class="metric-value" id="statNetwork">CONNECTED</span>
+        </div>
+        <div class="network-wave">
+          <div class="signal-bars">
+            <span class="bar b1 active"></span>
+            <span class="bar b2 active"></span>
+            <span class="bar b3 active"></span>
+            <span class="bar b4 active"></span>
+            <span class="bar b5 active"></span>
+          </div>
+          <span class="latency-readout">LATENCY: Nominal</span>
+        </div>
+        <div class="metric-footer">
+          <span>STATUS: <strong>ONLINE</strong></span>
+        </div>
+      </div>
+
+      <!-- Voice Waveform Metric Card -->
+      <div class="metric-card" id="voiceMetricCard">
+        <div class="metric-header">
+          <span class="metric-title">VOICE</span>
+          <span class="metric-value" id="micStatusLabel">ACTIVE</span>
+        </div>
+        <div class="voice-waveform-wrap" id="voiceInputCard">
+          <div class="waveform-animation">
+            <span class="wave-bar w1"></span>
+            <span class="wave-bar w2"></span>
+            <span class="wave-bar w3"></span>
+            <span class="wave-bar w4"></span>
+            <span class="wave-bar w5"></span>
+            <span class="wave-bar w6"></span>
+            <span class="wave-bar w7"></span>
+            <span class="wave-bar w8"></span>
+          </div>
+          <div id="micStatusWrapper" class="hidden"><span id="micStatusDot"></span></div>
+          <div class="metric-bar hidden"><div id="micLevelBar" class="metric-fill"></div></div>
+          <span class="input-level-pct" id="micLevelPct">0%</span>
+        </div>
+        <div class="metric-footer">
+          <span>MODE: <strong>WAKE WORD ON</strong></span>
         </div>
       </div>
     </section>
 
-    <!-- ── CENTER: Chat ── -->
-    <section class="panel panel-center" aria-label="VOID Chat Interface">
-      <header class="center-header">
-        <div class="logo" aria-label="VOID">VOID</div>
-        <div class="status-pill" role="status" aria-live="polite">
-          <span id="statusDot" class="status-dot" aria-hidden="true"></span>
-          <span id="statusLabel">Offline</span>
-        </div>
-      </header>
+    <!-- ── THREE PANEL MAIN LAYOUT ── -->
+    <div class="hud-workspace">
 
-      <!-- Global Search Console -->
-      <div class="search-bar-wrap">
-        <input type="text" id="hudSearchInput" placeholder="Search memory, chats, and academic syllabus..." class="hud-search-input">
-        <button id="hudSearchBtn" class="btn btn-search">Search</button>
-        <button id="hudSearchCloseBtn" class="btn btn-search-close hidden">&times;</button>
-      </div>
-      <div id="searchResults" class="search-results-panel hidden"></div>
+      <!-- ── 3. LEFT SIDEBAR ── -->
+      <aside class="left-sidebar" aria-label="Command Menu">
+        <nav class="sidebar-nav">
+          <a href="#" class="nav-item active" data-view="dashboard">
+            <span class="nav-icon">⊞</span> Dashboard
+          </a>
+          <a href="#" class="nav-item" data-view="chat">
+            <span class="nav-icon">◈</span> Chat
+          </a>
+          <a href="#" class="nav-item" data-view="projects">
+            <span class="nav-icon">◧</span> Projects
+          </a>
+          <a href="#" class="nav-item" data-view="memory">
+            <span class="nav-icon">◎</span> Memory
+          </a>
+          <a href="#" class="nav-item" data-view="voice">
+            <span class="nav-icon">◉</span> Voice
+          </a>
+          <a href="#" class="nav-item" data-view="tools">
+            <span class="nav-icon">⚙</span> Tools
+          </a>
+          <a href="#" class="nav-item" data-view="meetings">
+            <span class="nav-icon">◫</span> Meetings
+          </a>
+          <a href="#" class="nav-item" data-view="automation">
+            <span class="nav-icon">⚡</span> Automation
+          </a>
+          <a href="#" class="nav-item" data-view="settings">
+            <span class="nav-icon">⊕</span> Settings
+          </a>
+        </nav>
 
-      <div class="orb-wrap" aria-hidden="true">
-        <div class="orb"></div>
-      </div>
-
-      <div id="chatMessages" class="chat-messages" role="log" aria-label="Chat messages" aria-live="polite"></div>
-
-      <div id="typingIndicator" class="typing hidden" role="status" aria-label="VOID is thinking">
-        <span class="typing-dots" aria-hidden="true">
-          <span></span><span></span><span></span>
-        </span>
-        <span>VOID is analyzing</span>
-      </div>
-
-      <div class="input-row">
-        <input
-          id="chatInput"
-          class="chat-input"
-          type="text"
-          placeholder="Ask VOID anything..."
-          autocomplete="off"
-          aria-label="Message input"
-          spellcheck="false"
-        >
-        <button id="sendBtn" class="btn btn-primary" aria-label="Send message">Send</button>
-        <button id="callBtn" class="btn" aria-label="Toggle voice call mode">Call</button>
-        <button id="micBtn"      class="btn" aria-label="Voice input">Mic</button>
-        <button id="voiceToggle" class="btn" aria-label="Toggle voice output">Voice</button>
-        <button id="clearBtn"    class="btn" aria-label="Clear chat">Clear</button>
-      </div>
-    </section>
-
-    <!-- ── RIGHT: Assistant Panel ── -->
-    <section class="panel panel-right" aria-label="Assistant Panel">
-      <div class="panel-title">Assistant Panel</div>
-
-      <div class="card center">
-        <div id="timeDisplay" class="clock" aria-live="off">00:00:00</div>
-        <div id="dateDisplay" class="date">Loading date...</div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">System Info</div>
-        <div id="system-info-text">Loading system info...</div>
-      </div>
-
-      <div class="card" id="academicDashboardCard" style="cursor: pointer;">
-        <div class="card-title" style="color: #00e5ff; display: flex; justify-content: space-between; align-items: center;">
-          <span>Academic Dashboard</span>
-          <div style="display: flex; gap: 5px;">
-            <button id="uploadDocBtn" class="btn" style="padding: 2px 6px; font-size: 10px; margin: 0; line-height: 1.2;">Upload</button>
-            <button id="openAcadDashboardBtn" class="btn" style="padding: 2px 6px; font-size: 10px; margin: 0; line-height: 1.2;">Open</button>
+        <!-- Redesigned Premium Profile Card -->
+        <div class="user-profile-card">
+          <div class="profile-top">
+            <div class="avatar-wrap">
+              <div class="avatar-glow"></div>
+              <span class="avatar-letter">M</span>
+            </div>
+            <div class="profile-details">
+              <div class="profile-name">FOUNDER // MRIDUL</div>
+              <div class="profile-status">
+                <span class="profile-dot"></span> ONLINE
+              </div>
+            </div>
+          </div>
+          <div class="profile-stats">
+            <div class="p-stat"><span>TRUST LEVEL</span><strong style="color: var(--accent-neon);">98.4%</strong></div>
+            <div class="p-stat"><span>PROJECTS</span><strong id="profileProjCount">--</strong></div>
+            <div class="p-stat"><span>MEMORIES</span><strong id="profileMemCount">--</strong></div>
+            <div class="p-stat"><span>SESSIONS</span><strong id="profileSessionsCount">--</strong></div>
           </div>
         </div>
-        <input type="file" id="academicFileInput" accept=".pdf,.txt,.md" style="display: none;">
-        <div class="status-row"><span>Subject</span><span id="acadSubject" style="color: #00e5ff;">Loading...</span></div>
-        <div class="status-row"><span>Chapter</span><span id="acadChapter" style="color: #39ff14;">Loading...</span></div>
-        <div class="status-row"><span>Completed</span><span id="acadCompleted">--</span></div>
-        <div class="status-row"><span>Gaps</span><span id="acadGaps" style="color: #ff003c;">--</span></div>
-        <div class="status-row"><span>Avg Score</span><span id="acadAvgScore" style="color: #ffb300;">--</span></div>
-      </div>
 
-      <div class="card">
-        <div class="card-title" style="color: #39ff14; display: flex; justify-content: space-between; align-items: center;">
-          <span>CV &amp; Computer Control</span>
-          <span id="cvcsActiveMonitor" style="font-size: 10px; color: #888;">Mon 1</span>
+        <!-- System Controls Grid -->
+        <div class="system-controls">
+          <div class="controls-title">SYSTEM CONTROLS</div>
+          <div class="controls-grid">
+            <button class="control-btn" id="ctrlRestartBtn" title="Restart">
+              <span class="btn-icon">↻</span>
+              <span class="btn-label">RESTART</span>
+            </button>
+            <button class="control-btn" id="ctrlShutdownBtn" title="Shutdown">
+              <span class="btn-icon">⏻</span>
+              <span class="btn-label">SHUTDOWN</span>
+            </button>
+            <button class="control-btn" id="ctrlLockBtn" title="Lock">
+              <span class="btn-icon">⊘</span>
+              <span class="btn-label">LOCK</span>
+            </button>
+            <button class="control-btn" id="ctrlLogsBtn" title="Logs">
+              <span class="btn-icon">☰</span>
+              <span class="btn-label">LOGS</span>
+            </button>
+          </div>
         </div>
-        <div class="status-row">
-          <span>Active Window</span>
-          <span id="cvcsActiveWin" style="color: #39ff14; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; display: inline-block;">--</span>
+      </aside>
+
+      <!-- ── 4. CENTER MAIN AREA ── -->
+      <section class="center-main-area" aria-label="VOID Main Console">
+        <!-- Search Console (Persistent at the top of center workspace) -->
+        <div class="search-bar-wrap">
+          <input type="text" id="hudSearchInput" placeholder="Search memory, chats, and academic syllabus..." class="hud-search-input">
+          <button id="hudSearchBtn" class="btn btn-search">Search</button>
+          <button id="hudSearchCloseBtn" class="btn btn-search-close hidden">&times;</button>
         </div>
-        <div class="status-row">
-          <span>Permissions</span>
-          <select id="cvcsPermissionSelect" style="background: #111; color: #39ff14; border: 1px solid #333; font-size: 11px; padding: 2px; border-radius: 4px; outline: none; cursor: pointer;">
-            <option value="1.0">L1: View Only</option>
-            <option value="2.0" selected>L2: Assisted</option>
-            <option value="3.0">L3: Authorized</option>
-            <option value="3.5">L3.5: Dev Session</option>
-            <option value="4.0">L4: Automated</option>
+        <div id="searchResults" class="search-results-panel hidden"></div>
+
+        <!-- === 4A. DASHBOARD VIEW === -->
+        <div id="view-dashboard" class="workspace-view">
+          <div class="view-header">
+            <h2>DASHBOARD OVERVIEW</h2>
+            <p>VOID Core AI Status & System Diagnostics</p>
+          </div>
+          
+          <div class="dashboard-grid">
+            <!-- System Health Card -->
+            <div class="card health-card">
+              <div class="card-title">SYSTEM HEALTH CENTER</div>
+              <div class="health-status-grid">
+                <div class="health-item">
+                  <span>Backend Server</span>
+                  <span id="healthBackend" class="status-indicator status-green">ONLINE</span>
+                </div>
+                <div class="health-item">
+                  <span>Ollama AI model</span>
+                  <span id="healthOllama" class="status-indicator status-green">ONLINE</span>
+                </div>
+                <div class="health-item">
+                  <span>Memory DB</span>
+                  <span id="healthDB" class="status-indicator status-green">ONLINE</span>
+                </div>
+                <div class="health-item">
+                  <span>Voice Engine</span>
+                  <span id="healthVoice" class="status-indicator status-green">ONLINE</span>
+                </div>
+                <div class="health-item">
+                  <span>Tool Engine</span>
+                  <span id="healthTools" class="status-indicator status-green">ONLINE</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Host Specifications Card -->
+            <div class="card specs-card">
+              <div class="card-title">SYSTEM SPECIFICATIONS</div>
+              <div class="specs-details" id="specsDetails">
+                <div class="spec-line"><span>OS:</span><strong id="specOS">--</strong></div>
+                <div class="spec-line"><span>CPU:</span><strong id="specCPU">--</strong></div>
+                <div class="spec-line"><span>Memory:</span><strong id="specRAM">--</strong></div>
+                <div class="spec-line"><span>Hostname:</span><strong id="specHost">--</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recommendations list -->
+          <div class="card recommendations-view-card" style="margin-top: 12px; flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+            <div class="card-title">PERSONALIZED INSIGHTS & RECOMMENDATIONS</div>
+            <div id="dashboardRecommendationsList" class="recommendations-box" style="flex-grow: 1; overflow-y: auto;">
+              <!-- Loaded dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- === 4B. CHAT VIEW === -->
+        <div id="view-chat" class="workspace-view hidden">
+          <!-- VOID Greeting Card -->
+          <div class="void-greeting-card">
+            <div class="greeting-left">
+              <h2>Hello, Commander! 👋</h2>
+              <p>I am VOID, at your service. How can I assist you today?</p>
+            </div>
+            <div class="greeting-right">
+              <div class="tech-ring-logo">
+                <div class="ring outer"></div>
+                <div class="ring middle"></div>
+                <div class="ring inner"></div>
+                <div class="core-logo">VOID</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat messages -->
+          <div id="chatMessages" class="chat-messages" role="log" aria-label="Chat messages" aria-live="polite">
+            <div class="chat-message void">
+              <div class="message-sender">VOID</div>
+              <div class="message-bubble">VOID Protocol Stabilized. Persisted memory layers online. Ready for command, Sir.</div>
+            </div>
+          </div>
+
+          <div id="typingIndicator" class="typing hidden" role="status" aria-label="VOID is thinking">
+            <span class="typing-dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+            <span>VOID is analyzing</span>
+          </div>
+
+          <!-- Chat Inputs -->
+          <div class="input-row">
+            <button id="micBtn" class="btn btn-mic" aria-label="Voice input">🎤 Mic</button>
+            <button id="callBtn" class="btn btn-voice" aria-label="Toggle voice call mode">📞 Call</button>
+            <input
+              id="chatInput"
+              class="chat-input"
+              type="text"
+              placeholder="Ask VOID anything..."
+              autocomplete="off"
+              aria-label="Message input"
+              spellcheck="false"
+            >
+            <button id="sendBtn" class="btn btn-primary btn-send" aria-label="Send message">SEND</button>
+          </div>
+        </div>
+
+        <!-- === 4C. PROJECTS VIEW === -->
+        <div id="view-projects" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>PROJECT INTELLIGENCE SYSTEM</h2>
+            <p>Deep scan and architecture analysis of local developer repositories</p>
+          </div>
+          
+          <div class="projects-layout">
+            <div class="proj-sidebar">
+              <div class="card register-card">
+                <div class="card-title">Track New Project</div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                  <input type="text" id="projectPathInput" placeholder="C:\path\to\project" class="hud-search-input">
+                  <button id="projectScanBtn" class="btn btn-search">SCAN</button>
+                </div>
+              </div>
+              
+              <div class="card proj-list-card" style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+                <div class="card-title">Tracked Projects</div>
+                <div id="projectListContainer" class="proj-list-container" style="flex-grow: 1; overflow-y: auto;">
+                  <!-- Loaded dynamically -->
+                </div>
+              </div>
+            </div>
+            
+            <div class="proj-workspace">
+              <div id="projNoSelection" class="empty-state">
+                <span>📁</span>
+                <p>Select a project on the left or enter a directory path to begin deep code analysis.</p>
+              </div>
+              
+              <div id="projActiveWorkspace" class="hidden" style="display: flex; flex-direction: column; gap: 12px; height: 100%;">
+                <div class="proj-header-row">
+                  <div>
+                    <h3 id="activeProjName">VOID</h3>
+                    <p id="activeProjPath">c:\...\void</p>
+                  </div>
+                  <button id="activeProjDeleteBtn" class="btn btn-danger" style="font-size: 9px; padding: 4px 10px;">DELETE TRACKING</button>
+                </div>
+                
+                <div class="proj-grid">
+                  <div class="card proj-tech-card">
+                    <div class="card-title">Technology Stack</div>
+                    <div id="projTechBadges" class="tech-badges">
+                      <!-- Dynamic badges -->
+                    </div>
+                  </div>
+                  
+                  <div class="card proj-summary-card">
+                    <div class="card-title">AI Architecture Summary</div>
+                    <div id="projSummaryText" class="proj-summary-text" style="overflow-y: auto; max-height: 120px;">
+                      Loading architecture and summaries...
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card proj-todo-card" style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+                  <div class="card-title">Detected Action Items & Tasks</div>
+                  <ul id="projTodoList" class="todo-list" style="flex-grow: 1; overflow-y: auto;">
+                    <!-- Dynamic TODOs -->
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === 4D. MEMORY VIEW === -->
+        <div id="view-memory" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>SEMANTIC MEMORY STORAGE</h2>
+            <p>Manage fact banks and persistent conversational associations in SQLite</p>
+          </div>
+          
+          <div class="memory-layout">
+            <div class="card add-memory-card">
+              <div class="card-title">Inject Memory Fact</div>
+              <div class="memory-form">
+                <textarea id="newMemoryFactInput" placeholder="Enter a fact for VOID to persistently remember (e.g. 'Commander Mridul prefers Dark Mode and Electron templates.')" style="width: 100%; height: 80px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 6px; padding: 8px; color: #fff; outline: none; font-size: 12px; resize: none;"></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                  <select id="memoryImportanceSelect" class="hud-search-input" style="width: auto; padding: 4px 8px; font-size: 11px;">
+                    <option value="5" selected>Importance: Normal (5)</option>
+                    <option value="9">Importance: Critical (9)</option>
+                    <option value="2">Importance: Low (2)</option>
+                  </select>
+                  <button id="saveMemoryFactBtn" class="btn btn-primary" style="font-size: 10px; padding: 5px 12px;">INJECT FACT</button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card memory-list-card" style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+              <div class="card-title">Persistent Fact Banks</div>
+              <div style="margin-bottom: 8px; display: flex; gap: 8px;">
+                <input type="text" id="memorySearchInput" placeholder="Search saved facts..." class="hud-search-input">
+              </div>
+              <div id="memoryFactsTimeline" class="memory-timeline" style="flex-grow: 1; overflow-y: auto;">
+                <!-- Loaded dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === 4E. MEETINGS VIEW === -->
+        <div id="view-meetings" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>MEETING INTELLIGENCE PORTAL</h2>
+            <p>Record audio streams, transcribe conversations, and extract action items</p>
+          </div>
+          
+          <div class="meetings-layout">
+            <div class="meetings-sidebar">
+              <div class="card recording-ctrl-card">
+                <div class="card-title">Meeting Recorder</div>
+                <div class="meeting-status-display" id="meetingStatusDisplay" style="margin-top: 8px; font-family: monospace; font-size: 13px; color: var(--accent-neon);">
+                  <span class="status-marker" id="meetingStatusDot" style="color: #ffb300; animation: pulseMarker 1.5s infinite alternate;">●</span> <span id="meetingStatusLabel">IDLE</span>
+                </div>
+                <div style="display: flex; gap: 8px; justify-content: center; margin-top: 12px;">
+                  <button id="meetingStartBtn" class="btn btn-success" style="font-size: 11px; padding: 6px 14px;">START RECORDING</button>
+                  <button id="meetingStopBtn" class="btn btn-danger hidden" style="font-size: 11px; padding: 6px 14px;">STOP &amp; ANALYZE</button>
+                </div>
+              </div>
+              
+              <div class="card meeting-history-card" style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+                <div class="card-title">Meeting History</div>
+                <div id="meetingHistoryList" class="meeting-history-list" style="flex-grow: 1; overflow-y: auto;">
+                  <!-- Dynamic historical log -->
+                </div>
+              </div>
+            </div>
+            
+            <div class="meetings-workspace">
+              <div id="meetingNoSelected" class="empty-state">
+                <span>🎙️</span>
+                <p>Start a recording or select an item from the history to view AI summaries, structured notes, and action items.</p>
+              </div>
+              
+              <div id="meetingActiveWorkspace" class="hidden" style="display: flex; flex-direction: column; gap: 12px; height: 100%;">
+                <div class="meeting-summary-header" style="border-bottom: 1px solid #1a1a1a; padding-bottom: 8px;">
+                  <h3 id="meetingTitle" style="font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--accent-neon);">Standup Sync</h3>
+                  <span id="meetingMeta" style="font-size: 11px; color: var(--text-dim);">Participants: Commander Mridul, VOID</span>
+                </div>
+                
+                <div class="meeting-notes-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <div class="card note-box">
+                    <div class="card-title">Structured Summary</div>
+                    <div id="meetingSummary" class="notes-content" style="font-size: 11px; color: #ccc; overflow-y: auto; height: 100px; line-height: 1.4;">--</div>
+                  </div>
+                  <div class="card note-box">
+                    <div class="card-title">Auto Transcript</div>
+                    <div id="meetingTranscript" class="notes-content" style="font-size: 11px; color: #ccc; overflow-y: auto; height: 100px; line-height: 1.4; font-family: monospace;">--</div>
+                  </div>
+                </div>
+                
+                <div class="card action-items-box" style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+                  <div class="card-title">Auto-Generated Action Items</div>
+                  <ul id="meetingActionItemsList" class="todo-list" style="flex-grow: 1; overflow-y: auto;">
+                    <!-- Dynamic Checklist -->
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === 4F. AUTOMATION VIEW === -->
+        <div id="view-automation" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>AUTOMATION DEPLOYMENT CONSOLE</h2>
+            <p>Monitor background scheduling, active agent loops, and file scans</p>
+          </div>
+          
+          <div class="automation-grid">
+            <div class="card active-pipelines-card">
+              <div class="card-title">Active Daemon Processes</div>
+              <div id="activePipelinesList" class="pipeline-list">
+                <!-- Dynamic workflows -->
+              </div>
+            </div>
+            
+            <div class="card scheduled-tasks-card">
+              <div class="card-title">Scheduled Scheduler Actions</div>
+              <div id="scheduledTasksList" class="task-list">
+                <!-- Dynamic tasks -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === 4G. SETTINGS VIEW === -->
+        <div id="view-settings" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>VOID SYSTEM CONFIGURATION</h2>
+            <p>Modify parameters, choose AI models, and customize speech synthesis</p>
+          </div>
+          
+          <div class="settings-grid">
+            <div class="card config-card">
+              <div class="card-title">Speech Synthesizer (TTS)</div>
+              <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-size: 11px; color: var(--text-dim);">Voice Personality</label>
+                <select id="settingsVoiceSelect" class="hud-search-input" style="padding: 6px; font-size: 12px;">
+                  <option value="jarvis">JARVIS (Cyberpunk Military)</option>
+                  <option value="glados">GLaDOS (Sarcastic Intelligence)</option>
+                  <option value="siri">Siri (Standard Assistant)</option>
+                </select>
+                <button id="saveVoiceSettingsBtn" class="btn btn-primary" style="margin-top: 8px; font-size: 11px; padding: 6px 14px;">APPLY PROFILE</button>
+              </div>
+            </div>
+            
+            <div class="card config-card">
+              <div class="card-title">AI Core Model (Ollama)</div>
+              <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-size: 11px; color: var(--text-dim);">Selected Model Name</label>
+                <select id="settingsModelSelect" class="hud-search-input" style="padding: 6px; font-size: 12px;">
+                  <option value="mistral">Mistral (Default)</option>
+                  <option value="llama3">Llama 3</option>
+                  <option value="codegemma">CodeGemma</option>
+                </select>
+                <button id="saveModelSettingsBtn" class="btn btn-primary" style="margin-top: 8px; font-size: 11px; padding: 6px 14px;">RELOAD LLM</button>
+              </div>
+            </div>
+            
+            <div class="card config-card">
+              <div class="card-title">Security &amp; Safety</div>
+              <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 12px;">Developer Mode</span>
+                  <button id="settingsDevModeBtn" class="btn" style="padding: 4px 10px; font-size: 11px;">OFF</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 12px;">Face Lock Autostart</span>
+                  <button id="settingsFaceLockAutostartBtn" class="btn" style="padding: 4px 10px; font-size: 11px;">OFF</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === 4H. VOICE ENGINE WORKSPACE === -->
+        <div id="view-voice" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>VOICE INTERACTION CORE</h2>
+            <p>Configure speech synthesis parameters, wake word detection, and live logs</p>
+          </div>
+          <div class="voice-workspace-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 100%; overflow: hidden;">
+            <div style="display: flex; flex-direction: column; gap: 12px; height: 100%;">
+              <div class="card" style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+                <div class="card-title">Live Voice Soundwave</div>
+                <div class="voice-center-visualizer" style="display: flex; align-items: center; justify-content: center; flex-grow: 1; width: 100%;">
+                  <div class="voice-wave-circle" style="width: 120px; height: 120px; border-radius: 50%; border: 2px solid var(--accent-neon); box-shadow: 0 0 20px var(--accent-glow); display: flex; align-items: center; justify-content: center; position: relative; animation: pulseMarker 2s infinite alternate;">
+                    <div style="font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: bold; color: var(--accent-neon);">VOID</div>
+                  </div>
+                </div>
+                <div style="font-size: 11px; color: var(--text-dim); text-align: center; margin-bottom: 15px;">VOICE ENGINE PROTOCOL // ACTIVE</div>
+              </div>
+              <div class="card">
+                <div class="card-title">Speech Synthesizer Configuration</div>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                  <div class="spec-line"><span>Speed Rate:</span><input type="range" id="voiceSpeedRange" min="50" max="250" value="150" style="flex-grow: 1; accent-color: var(--accent-neon); margin-left: 10px;"></div>
+                  <div class="spec-line"><span>Pitch Accent:</span><input type="range" id="voicePitchRange" min="0" max="2" step="0.1" value="1" style="flex-grow: 1; accent-color: var(--accent-neon); margin-left: 10px;"></div>
+                  <div class="spec-line"><span>Wake Sensitivity:</span><input type="range" id="voiceSensRange" min="0.1" max="1" step="0.05" value="0.5" style="flex-grow: 1; accent-color: var(--accent-neon); margin-left: 10px;"></div>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; height: 100%;">
+              <div class="card" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
+                <div class="card-title">Speech Transcript Logs</div>
+                <div id="voiceLogsContainer" style="flex-grow: 1; overflow-y: auto; font-family: monospace; font-size: 11px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; color: #ccc; margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+                  <div style="color: var(--text-dim);">[12:00 PM] Voice interaction engine loaded successfully.</div>
+                  <div style="color: var(--text-dim);">[12:01 PM] Wake word detection set to 'VOID'.</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Test Speech Outputs</div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                  <input type="text" id="voiceTestTextInput" placeholder="Enter text to speak..." class="hud-search-input" style="flex-grow: 1;">
+                  <button id="voiceTestSpeakBtn" class="btn btn-primary" style="font-size: 10px; padding: 6px 14px;">SPEAK</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === 4I. FUTURISTIC QUICK TOOLS CORE === -->
+        <div id="view-tools" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>UTILITY & QUICK TOOLS CONSOLE</h2>
+            <p>Execute file queries, code structure scanning, and system hardware diagnostics</p>
+          </div>
+          
+          <div class="tools-workspace-layout" style="display: grid; grid-template-columns: 200px 1fr; gap: 12px; height: 100%; overflow: hidden;">
+            <div class="card" style="display: flex; flex-direction: column; gap: 8px; padding: 10px;">
+              <div class="card-title">QUICK UTILITIES</div>
+              <button class="btn tool-tab-btn active" id="tabFileSearchBtn">🔍 File Search</button>
+              <button class="btn tool-tab-btn" id="tabCodeAnalysisBtn">💻 Code Analysis</button>
+              <button class="btn tool-tab-btn" id="tabScreenOcrBtn">👁️ Screen OCR</button>
+              <button class="btn tool-tab-btn" id="tabSysDiagnosticsBtn">⚙️ System Diagnostics</button>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
+              <!-- File Search Tab -->
+              <div id="tool-tab-filesearch" class="card tool-tab-content" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+                <div class="card-title">File Index Queries</div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                  <select id="toolsScopeSelect" class="hud-search-input" style="width: auto; padding: 4px 8px; font-size: 11px;">
+                    <option value="root">root</option>
+                  </select>
+                  <input type="text" id="toolsFileSearchInput" placeholder="Enter file pattern (e.g. index.html, main.py)" class="hud-search-input" style="flex-grow: 1;">
+                  <button id="toolsFileScanBtn" class="btn btn-primary" style="font-size: 11px; padding: 5px 12px;">SEARCH</button>
+                </div>
+                <div style="flex-grow: 1; overflow-y: auto; margin-top: 10px; border: 1px solid #111; border-radius: 4px; background: rgba(0,0,0,0.2);">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+                    <thead>
+                      <tr style="border-bottom: 1px solid #222; color: var(--accent-neon); background: rgba(255, 0, 0, 0.02);">
+                        <th style="padding: 8px;">Filename</th>
+                        <th style="padding: 8px;">Location</th>
+                        <th style="padding: 8px;">Size (bytes)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="toolsFileTableBody">
+                      <tr>
+                        <td colspan="3" style="text-align: center; color: var(--text-dim); padding: 20px;">Enter a query above to search database files, Sir.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <!-- Code Analysis Tab -->
+              <div id="tool-tab-codeanalysis" class="card tool-tab-content hidden" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+                <div class="card-title">AI Code Structure Scanner</div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                  <select id="analysisProjectSelect" class="hud-search-input" style="flex-grow: 1; font-size: 12px; padding: 6px;">
+                    <option value="">-- Select Tracked Project --</option>
+                  </select>
+                  <button id="toolsAnalysisBtn" class="btn btn-primary" style="font-size: 11px; padding: 6px 14px;">ANALYZE CODE</button>
+                </div>
+                <div id="analysisResultBox" style="flex-grow: 1; overflow-y: auto; margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid #1a1a1a; border-radius: 4px; font-family: monospace; font-size: 11px; color: #ccc; line-height: 1.4; white-space: pre-wrap;">Select a project and click ANALYZE CODE to run architecture mapping, Sir.</div>
+              </div>
+              
+              <!-- Screen OCR Tab -->
+              <div id="tool-tab-screenocr" class="card tool-tab-content hidden" style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; height: 100%;">
+                <div style="font-size: 32px;">👁️</div>
+                <h4 style="font-family: 'Orbitron', sans-serif; color: var(--accent-neon); margin: 0; font-size: 14px;">Optical Character Recognition</h4>
+                <p style="font-size: 12px; color: #bbb; max-width: 400px; line-height: 1.4;">
+                  VOID will capture the current screen contents, detect text blocks, and feed them into the local assistant thread.
+                </p>
+                <button id="toolsOcrCaptureBtn" class="btn btn-primary" style="font-size: 11px; padding: 8px 20px;">CAPTURE SCREEN OCR</button>
+                <div id="ocrOutputBox" class="hidden" style="width: 90%; max-height: 120px; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #1a1a1a; border-radius: 4px; text-align: left; font-family: monospace; font-size: 11px; color: #ccc; white-space: pre-wrap;"></div>
+              </div>
+              
+              <!-- System Diagnostics Tab -->
+              <div id="tool-tab-diagnostics" class="card tool-tab-content hidden" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+                <div class="card-title">Diagnostics Logs</div>
+                <div style="flex-grow: 1; overflow-y: auto; margin-top: 8px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #1a1a1a; border-radius: 4px; font-family: monospace; font-size: 11px; color: #ccc; line-height: 1.4; display: flex; flex-direction: column; gap: 4px;" id="sysDiagnosticsLogs">
+                  <div>[DIAGNOSTICS INITIALIZED]</div>
+                  <div>➔ System Specs: Operational</div>
+                  <div>➔ Database Integrity: Verified</div>
+                  <div>➔ Core Web Services: Connected</div>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end;">
+                  <button id="toolsRunRepairBtn" class="btn btn-danger" style="font-size: 11px; padding: 6px 14px;">RUN REPAIR SYSTEM</button>
+                  <button id="toolsRunDiagBtn" class="btn btn-primary" style="font-size: 11px; padding: 6px 14px;">RUN DIAGNOSTICS</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 5. RIGHT ANALYTICS & TOOLS PANEL ── -->
+      <aside class="right-analytics-panel" aria-label="Intelligence &amp; Tools">
+        <!-- Recent Activity Panel -->
+        <div class="card recent-activity-card">
+          <div class="card-title">RECENT ACTIVITY</div>
+          <div class="activity-timeline">
+            <div class="activity-item">
+              <span class="activity-time">10:40 PM</span>
+              <span class="activity-event">Project scan completed</span>
+              <span class="activity-status success">✓</span>
+            </div>
+            <div class="activity-item">
+              <span class="activity-time">10:22 PM</span>
+              <span class="activity-event">Voice command executed</span>
+              <span class="activity-status success">✓</span>
+            </div>
+            <div class="activity-item">
+              <span class="activity-time">09:15 PM</span>
+              <span class="activity-event">Meeting summary generated</span>
+              <span class="activity-status success">✓</span>
+            </div>
+            <div class="activity-item">
+              <span class="activity-time">08:05 PM</span>
+              <span class="activity-event">File analysis completed</span>
+              <span class="activity-status success">✓</span>
+            </div>
+            <div class="activity-item">
+              <span class="activity-time">07:50 PM</span>
+              <span class="activity-event">System diagnostics run</span>
+              <span class="activity-status success">✓</span>
+            </div>
+          </div>
+          <button class="btn btn-block" id="viewAllActivityBtn" style="margin-top: 5px;">VIEW ALL</button>
+        </div>
+
+        <!-- Quick Tools Panel -->
+        <div class="card quick-tools-card">
+          <div class="card-title">QUICK TOOLS</div>
+          <div class="tools-grid">
+            <button class="tool-action-btn" id="toolFileSearch">
+              <span class="tool-icon">🔍</span>
+              <span class="tool-label">File Search</span>
+            </button>
+            <button class="tool-action-btn" id="toolCodeAnalysis">
+              <span class="tool-icon">💻</span>
+              <span class="tool-label">Code Analysis</span>
+            </button>
+            <button class="tool-action-btn" id="toolScreenOCR">
+              <span class="tool-icon">👁️</span>
+              <span class="tool-label">Screen OCR</span>
+            </button>
+            <button class="tool-action-btn" id="diagnosticsBtn">
+              <span class="tool-icon">⚙️</span>
+              <span class="tool-label">System Info</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Hidden but functionally integrated components -->
+        <div class="hidden">
+          <div id="statusText" class="status-chip">Online</div>
+          <div id="system-info-text">System operational</div>
+          <button id="soundToggleBtn">Sound: ON</button>
+          <button id="showMemoryBtn">Memory</button>
+          <button id="clearMemoryBtn">Clear</button>
+          <button id="repairBtn">Repair</button>
+          <button id="faceLockBtn">Face Lock</button>
+          <button id="voiceToggle">Voice</button>
+          <button id="clearBtn">Clear</button>
+          <span id="acadSubject"></span>
+          <span id="acadChapter"></span>
+          <span id="acadCompleted"></span>
+          <span id="acadGaps"></span>
+          <span id="acadAvgScore"></span>
+          <svg id="academicDonutChart"></svg>
+        </div>
+
+        <!-- Reusable dashboard and connected services styled elegantly to keep VOID features working -->
+        <div class="card collapsed-section">
+          <div class="card-title" id="academicDashboardCard" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <span>Academic Hub</span>
+            <div style="display: flex; gap: 5px;">
+              <button id="uploadDocBtn" class="btn" style="padding: 2px 6px; font-size: 8px;">Upload</button>
+              <button id="openAcadDashboardBtn" class="btn" style="padding: 2px 6px; font-size: 8px;">Open</button>
+            </div>
+          </div>
+          <input type="file" id="academicFileInput" accept=".pdf,.txt,.md" style="display: none;">
+        </div>
+
+        <!-- Computer Control Watch Screen -->
+        <div class="card collapsed-section">
+          <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>CV &amp; Computer Control</span>
+            <button id="cvcsWatchToggleBtn" class="btn" style="padding: 2px 8px; font-size: 8px;">OFF</button>
+          </div>
+          <div class="status-row" style="font-size: 11px; display: flex; justify-content: space-between; margin-top: 5px;">
+            <span>Window</span>
+            <span id="cvcsActiveWin" style="color: #ff0000; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">--</span>
+          </div>
+          <select id="cvcsPermissionSelect" class="hidden">
+            <option value="2.0" selected>Assisted</option>
           </select>
+          <div id="cvcsTimerRow" style="display: none;"><span id="cvcsTimerLabel"></span></div>
+          <span id="cvcsLastAction" class="hidden"></span>
         </div>
-        <div class="status-row" id="cvcsTimerRow" style="display: none;">
-          <span>Session Timer</span>
-          <span id="cvcsTimerLabel" style="color: #ff007f; font-weight: bold;">30:00</span>
-        </div>
-        <div class="status-row">
-          <span>Watch Screen</span>
-          <button id="cvcsWatchToggleBtn" class="btn" style="padding: 2px 8px; font-size: 10px; margin: 0; line-height: 1.2;">OFF</button>
-        </div>
-        <div class="status-row">
-          <span>Last Action</span>
-          <span id="cvcsLastAction" style="font-size: 10px; color: #888;">Idle</span>
-        </div>
-      </div>
 
-      <div class="card">
-        <div class="card-title">Message of the Day</div>
-        <div id="motdText">Stay focused. Build fast. Keep it local.</div>
-      </div>
-
-      <div class="card" id="recommendationsCard">
-        <div class="card-title" style="color: #ffb300;">Personalized AI Recommendations</div>
-        <div id="recommendationsList" class="recommendations-list">
-          <!-- Populated dynamically -->
-          <div class="recommendation-item empty">All systems operational.</div>
-        </div>
-      </div>
-
-      <div class="card" id="integrationsCard">
-        <div class="card-title" style="color: #00e5ff;">Connected Services</div>
-        <div class="integrations-grid">
-          <div class="integration-item active" id="integrationOllama" title="Local LLM client configuration">
-            <span class="integration-name">Local LLM</span>
-            <span class="integration-status">Online</span>
-          </div>
-          <div class="integration-item active" id="integrationGoogle" title="Google Search services status">
-            <span class="integration-name">Web Search</span>
-            <span class="integration-status">Connected</span>
-          </div>
-          <div class="integration-item active" id="integrationWhatsapp" title="WhatsApp control interface">
-            <span class="integration-name">WhatsApp</span>
-            <span class="integration-status">Operational</span>
-          </div>
-          <div class="integration-item active" id="integrationEmail" title="Professional Email/Calendar sync status">
-            <span class="integration-name">Email/Cal</span>
-            <span class="integration-status">Synced</span>
+        <!-- Recommendations & Integrations -->
+        <div class="card collapsed-section" id="integrationsCard">
+          <div class="card-title">Connected Services</div>
+          <div class="integrations-grid">
+            <div class="integration-item active" id="integrationOllama">
+              <span class="integration-name">Local LLM</span>
+            </div>
+            <div class="integration-item active" id="integrationGoogle">
+              <span class="integration-name">Web Search</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="card">
-        <div class="card-title">Quick Actions</div>
-        <div class="button-grid">
-          <button id="soundToggleBtn" class="btn" aria-label="Toggle sound">Sound: OFF</button>
-          <button id="showMemoryBtn"  class="btn" aria-label="Show memory">Show Memory</button>
-          <button id="clearMemoryBtn" class="btn" aria-label="Clear memory">Clear Memory</button>
-          <button id="repairBtn"      class="btn" aria-label="Repair VOID">Repair</button>
-          <button id="diagnosticsBtn" class="btn" aria-label="Run diagnostics">Diagnostics</button>
-          <button id="faceLockBtn"    class="btn" aria-label="Biometric Login">Face Lock</button>
-        </div>
-      </div>
-    </section>
+        <div id="recommendationsCard" class="hidden"><div id="recommendationsList"></div></div>
+        <div id="motdText" class="hidden"></div>
+      </aside>
+    </div>
 
-  <!-- Academic Dashboard Modal -->
+    <!-- ── 8. BOTTOM STATUS BAR ── -->
+    <footer class="bottom-status-bar">
+      <div class="status-item">
+        <span class="status-icon">🎙️</span> VOICE: <strong class="glow-text">ACTIVE</strong>
+      </div>
+      <div class="status-separator">|</div>
+      <div class="status-item">
+        <span class="status-icon">🔊</span> WAKE WORD: <strong class="glow-text">ON</strong>
+      </div>
+      <div class="status-separator">|</div>
+      <div class="status-item">
+        <span class="status-icon">🤖</span> AUTONOMOUS MODE: <strong class="glow-text">STANDBY</strong>
+      </div>
+      <div class="status-separator">|</div>
+      <div class="status-item">
+        <span class="status-icon">🧠</span> MEMORY: <strong class="glow-text">OPTIMIZED</strong>
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- ── MODAL WINDOWS (UPGRADED THEME) ── -->
+
+  <!-- Academic Command Center Modal -->
   <div id="academicDashboardModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-content academic-modal-content" style="max-width: 900px; width: 90%; height: 85vh; display: flex; flex-direction: column; text-align: left; padding: 25px; border-color: #00e5ff; box-shadow: 0 0 25px rgba(0, 229, 255, 0.25);">
-      <div class="panel-title" style="color: #00e5ff; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 18px;">
+    <div class="modal-content academic-modal-content" style="max-width: 900px; width: 90%; height: 85vh; display: flex; flex-direction: column; text-align: left; padding: 25px; border-color: #ff0000; box-shadow: 0 0 25px rgba(255, 0, 0, 0.25);">
+      <div class="panel-title" style="color: #ff0000; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 18px;">
         <span>VOID Academic Command Center</span>
         <button id="closeAcadDashboardBtn" class="btn" style="font-size: 11px; padding: 4px 10px;">Close</button>
       </div>
       
       <div class="academic-modal-body" style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; flex-grow: 1; overflow: hidden;">
-        
         <!-- Left Column: Subjects list -->
         <div class="subjects-sidebar" style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 5px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 12px; color: #a47070; letter-spacing: 2px; text-transform: uppercase; margin: 0;">Subjects</h3>
+            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 12px; color: #ff0000; letter-spacing: 2px; text-transform: uppercase; margin: 0;">Subjects</h3>
             <button id="addSubjectBtn" class="btn" style="padding: 2px 6px; font-size: 9px; line-height: 1.2;">+ Add</button>
           </div>
-          <div id="acadSubjectsList" style="display: flex; flex-direction: column; gap: 10px;">
-            <!-- Rendered dynamically -->
-          </div>
+          <div id="acadSubjectsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
         </div>
         
-        <!-- Right Column: Subject details, syllabus and action console -->
-        <div class="subject-workspace" style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-left: 10px; border-left: 1px solid rgba(0, 229, 255, 0.1);">
-          
-          <div id="noSubjectSelectedView" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #a47070; text-align: center; gap: 10px;">
+        <!-- Right Column: Subject details -->
+        <div class="subject-workspace" style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-left: 10px; border-left: 1px solid rgba(255, 0, 0, 0.1);">
+          <div id="noSubjectSelectedView" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; text-align: center; gap: 10px;">
             <div style="font-size: 36px;">📚</div>
             <p>Select a subject from the left panel to start studying with VOID.</p>
           </div>
           
           <div id="subjectActiveView" class="hidden" style="display: flex; flex-direction: column; gap: 15px; height: 100%;">
-            <!-- Header with Title, streak & progress -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 10px;">
               <div>
-                <h2 id="activeSubjectTitle" style="font-family: 'Orbitron', sans-serif; font-size: 20px; color: #00e5ff;">--</h2>
-                <div style="display: flex; gap: 15px; margin-top: 5px; font-size: 11px; color: #a47070;">
+                <h2 id="activeSubjectTitle" style="font-family: 'Orbitron', sans-serif; font-size: 20px; color: #ff0000;">--</h2>
+                <div style="display: flex; gap: 15px; margin-top: 5px; font-size: 11px; color: #888;">
                   <span>Level: <strong id="activeSubjectLevel" style="color: #39ff14;">Novice</strong></span>
                   <span>Streak: <strong id="activeSubjectStreak" style="color: #ffb300;">0 days 🔥</strong></span>
-                  <span>Avg Score: <strong id="activeSubjectAvg" style="color: #ff007f;">--</strong></span>
+                  <span>Avg Score: <strong id="activeSubjectAvg" style="color: #ff003c;">--</strong></span>
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 15px;">
-                <div class="donut-chart-wrap" style="width: 46px; height: 46px;">
-                  <svg id="academicDonutChart" viewBox="0 0 36 36" class="donut-chart"></svg>
-                </div>
                 <div style="width: 120px; text-align: right;">
-                  <div style="font-size: 11px; margin-bottom: 3px; color: #a47070;">Progress: <span id="activeSubjectProgressText">0%</span></div>
-                  <div class="metric-bar" style="height: 6px;"><div id="activeSubjectProgressBar" class="metric-fill" style="width: 0%; background: #00e5ff; box-shadow: 0 0 8px #00e5ff;"></div></div>
+                  <div style="font-size: 11px; margin-bottom: 3px; color: #888;">Progress: <span id="activeSubjectProgressText">0%</span></div>
+                  <div class="metric-bar" style="height: 6px;"><div id="activeSubjectProgressBar" class="metric-fill" style="width: 0%; background: #ff0000; box-shadow: 0 0 8px #ff0000;"></div></div>
                 </div>
               </div>
             </div>
             
-            <!-- Research Status Warning if not researched -->
             <div id="subjectResearchRequiredCard" class="hidden card" style="border-color: #ffb300; background: rgba(255, 179, 0, 0.03); padding: 15px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center;">
               <div style="color: #ffb300; font-weight: bold; font-size: 14px;">⚠️ Research Needed</div>
               <p style="font-size: 12px; line-height: 1.4; color: #ccc; max-width: 400px;">
@@ -312,31 +929,22 @@
               <button id="startResearchBtn" class="btn" style="border-color: #ffb300; color: #ffb300;">Start Deep Research</button>
             </div>
             
-            <!-- Researching loading state -->
-            <div id="subjectResearchingCard" class="hidden card" style="border-color: #ff007f; padding: 15px; text-align: center; display: flex; flex-direction: column; gap: 10px;">
-              <div style="color: #ff007f; font-family: 'Orbitron', sans-serif;" id="researchStatusText">Performing Deep Research...</div>
-              <div class="boot-bar" style="width: 100%; margin: 5px 0;"><div id="researchProgressBar" class="boot-bar-fill" style="background: #ff007f; box-shadow: 0 0 10px #ff007f; animation: none; width: 0%;"></div></div>
-              <div id="researchLogsContainer" style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; text-align: left; color: #a47070;">
-                <!-- Logs rendered here -->
-              </div>
+            <div id="subjectResearchingCard" class="hidden card" style="border-color: #ff0000; padding: 15px; text-align: center; display: flex; flex-direction: column; gap: 10px;">
+              <div style="color: #ff0000; font-family: 'Orbitron', sans-serif;" id="researchStatusText">Performing Deep Research...</div>
+              <div class="boot-bar" style="width: 100%; margin: 5px 0;"><div id="researchProgressBar" class="boot-bar-fill" style="background: #ff0000; box-shadow: 0 0 10px #ff0000; animation: none; width: 0%;"></div></div>
+              <div id="researchLogsContainer" style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; text-align: left; color: #888;"></div>
             </div>
             
-            <!-- Active Subject content layout -->
             <div id="subjectResearchedContent" class="hidden" style="display: grid; grid-template-columns: 1fr 240px; gap: 15px; flex-grow: 1; overflow: hidden;">
-              <!-- Left: Accordion curriculum tree -->
               <div style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 5px;">
-                <h4 style="font-family: 'Orbitron', sans-serif; font-size: 12px; color: #a47070; text-transform: uppercase;">Curriculum Index</h4>
-                <div id="curriculumAccordion" style="display: flex; flex-direction: column; gap: 8px;">
-                  <!-- Collapsible Units -->
-                </div>
+                <h4 style="font-family: 'Orbitron', sans-serif; font-size: 12px; color: #ff0000; text-transform: uppercase;">Curriculum Index</h4>
+                <div id="curriculumAccordion" style="display: flex; flex-direction: column; gap: 8px;"></div>
               </div>
               
-              <!-- Right: Actions/Quizzes/Tutors console -->
               <div style="display: flex; flex-direction: column; gap: 15px;">
                 <div class="card">
                   <div class="card-title">Study Actions</div>
-                  <div style="font-size: 11px; color: #a47070; margin-bottom: 5px;">Active Topic: <br><strong id="activeStudyTopicLabel" style="color: #00e5ff;">--</strong></div>
-                  
+                  <div style="font-size: 11px; color: #888; margin-bottom: 5px;">Active Topic: <br><strong id="activeStudyTopicLabel" style="color: #ff0000;">--</strong></div>
                   <div style="display: flex; flex-direction: column; gap: 8px;">
                     <button id="actionTeachBtn" class="btn" style="justify-content: flex-start; gap: 8px;">📖 Teach Me</button>
                     <button id="actionPracticeBtn" class="btn" style="justify-content: flex-start; gap: 8px;">✏️ Practice Mode</button>
@@ -348,128 +956,113 @@
                 <div class="card" style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px; overflow-y: auto;">
                   <div class="card-title">Struggles &amp; Strengths</div>
                   <div style="font-size: 11px; font-weight: bold; color: #ff003c; margin-top: 5px;">Weak Areas:</div>
-                  <ul id="activeSubjectWeakList" style="font-size: 11px; padding-left: 15px; color: #ccc; display: flex; flex-direction: column; gap: 3px;">
-                    <!-- Weak topics -->
-                  </ul>
+                  <ul id="activeSubjectWeakList" style="font-size: 11px; padding-left: 15px; color: #ccc; display: flex; flex-direction: column; gap: 3px;"></ul>
                   <div style="font-size: 11px; font-weight: bold; color: #39ff14; margin-top: 5px;">Strong Areas:</div>
-                  <ul id="activeSubjectStrongList" style="font-size: 11px; padding-left: 15px; color: #ccc; display: flex; flex-direction: column; gap: 3px;">
-                    <!-- Strong topics -->
-                  </ul>
+                  <ul id="activeSubjectStrongList" style="font-size: 11px; padding-left: 15px; color: #ccc; display: flex; flex-direction: column; gap: 3px;"></ul>
                 </div>
               </div>
             </div>
-            
           </div>
         </div>
-        
       </div>
     </div>
   </div>
-  
-  <!-- Dynamic Test Screen Overlay Modal -->
+
+  <!-- Adaptive Topic Assessment Modal -->
   <div id="academicTestModal" class="modal hidden" role="dialog" aria-modal="true" style="z-index: 5100;">
-    <div class="modal-content" style="max-width: 650px; text-align: left; border-color: #ffb300; box-shadow: 0 0 25px rgba(255, 179, 0, 0.25);">
-      <div class="panel-title" style="color: #ffb300; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div class="modal-content" style="max-width: 650px; text-align: left; border-color: #ff0000; box-shadow: 0 0 25px rgba(255, 0, 0, 0.25);">
+      <div class="panel-title" style="color: #ff0000; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <span id="testModalTitle">Adaptive Topic Assessment</span>
         <span id="testModalTimer" style="font-family: monospace; font-size: 14px; color: #ff007f;">00:00</span>
       </div>
-      
-      <div id="testQuestionContainer" style="min-height: 180px; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
-        <!-- Question text & options rendered here -->
-      </div>
-      
+      <div id="testQuestionContainer" style="min-height: 180px; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;"></div>
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div style="font-size: 12px; color: #a47070;">Question <span id="currentQuestionNum">1</span> of <span id="totalQuestionsNum">5</span></div>
-        <button id="testNextBtn" class="btn" style="border-color: #ffb300; color: #ffb300;">Next Question</button>
+        <div style="font-size: 12px; color: #888;">Question <span id="currentQuestionNum">1</span> of <span id="totalQuestionsNum">5</span></div>
+        <button id="testNextBtn" class="btn" style="border-color: #ff0000; color: #ff0000;">Next Question</button>
       </div>
     </div>
   </div>
-  
-  <!-- Viva Voice Dialog Box Modal -->
+
+  <!-- Interactive Examiner Session Modal -->
   <div id="vivaModal" class="modal hidden" role="dialog" aria-modal="true" style="z-index: 5200;">
-    <div class="modal-content" style="max-width: 500px; text-align: center; border-color: #39ff14; box-shadow: 0 0 25px rgba(57, 255, 20, 0.25);">
-      <div class="panel-title" style="color: #39ff14; margin-bottom: 15px;">Interactive Examiner Session</div>
-      <p id="vivaQuestionText" style="font-size: 14px; line-height: 1.5; color: #fff; margin-bottom: 20px; font-style: italic;">
-        --
-      </p>
-      
+    <div class="modal-content" style="max-width: 500px; text-align: center; border-color: #ff0000; box-shadow: 0 0 25px rgba(255, 0, 0, 0.25);">
+      <div class="panel-title" style="color: #ff0000; margin-bottom: 15px;">Interactive Examiner Session</div>
+      <p id="vivaQuestionText" style="font-size: 14px; line-height: 1.5; color: #fff; margin-bottom: 20px; font-style: italic;">--</p>
       <div id="vivaAnswerContainer" style="margin-bottom: 20px;">
         <textarea id="vivaAnswerInput" style="width: 100%; height: 80px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 6px; padding: 10px; color: #fff; outline: none; font-size: 13px; resize: none;" placeholder="Type your answer, or click mic to speak it..."></textarea>
       </div>
-      
-      <div id="vivaFeedbackBox" class="hidden" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(57, 255, 20, 0.2); padding: 12px; border-radius: 6px; text-align: left; margin-bottom: 20px; font-size: 12px; line-height: 1.4;">
-        <div style="font-weight: bold; color: #39ff14; margin-bottom: 5px;" id="vivaFeedbackScore">Score: --</div>
+      <div id="vivaFeedbackBox" class="hidden" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 0, 0, 0.2); padding: 12px; border-radius: 6px; text-align: left; margin-bottom: 20px; font-size: 12px; line-height: 1.4;">
+        <div style="font-weight: bold; color: #ff0000; margin-bottom: 5px;" id="vivaFeedbackScore">Score: --</div>
         <div id="vivaFeedbackText" style="color: #ccc;">--</div>
       </div>
-      
       <div style="display: flex; gap: 10px; justify-content: center;">
-        <button id="vivaMicBtn" class="btn" style="border-color: #39ff14; color: #39ff14;">🎤 Mic Input</button>
-        <button id="vivaSubmitBtn" class="btn btn-primary" style="background: #39ff14; color: #000; border-color: #39ff14;">Submit Answer</button>
-        <button id="vivaNextBtn" class="btn hidden" style="border-color: #39ff14; color: #39ff14;">Next Question</button>
+        <button id="vivaMicBtn" class="btn" style="border-color: #ff0000; color: #ff0000;">🎤 Mic Input</button>
+        <button id="vivaSubmitBtn" class="btn btn-primary" style="background: #ff0000; color: #000; border-color: #ff0000;">Submit Answer</button>
+        <button id="vivaNextBtn" class="btn hidden" style="border-color: #ff0000; color: #ff0000;">Next Question</button>
         <button id="vivaCloseBtn" class="btn btn-secondary">Close</button>
       </div>
     </div>
   </div>
 
-  </main>
-
-  <!-- Hidden compatibility stubs — do not remove -->
-  <div id="welcomeOverlay"    class="hidden"></div>
   <!-- Face Lock Modal -->
   <div id="faceLockModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-content face-scan-container">
+    <div class="modal-content face-scan-container" style="border-color: #ff0000;">
       <div class="panel-title">Biometric Authentication</div>
-      <div class="face-scanner" style="position: relative;">
+      <div class="face-scanner" style="position: relative; border-color: rgba(255,0,0,0.2);">
         <video id="faceLockVideo" autoplay playsinline muted class="hidden" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; position: absolute; top: 0; left: 0; transform: scaleX(-1);"></video>
         <canvas id="faceLockCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;"></canvas>
-        <div class="scan-grid"></div>
-        <div class="scan-bar"></div>
-        <div id="faceLockPlaceholder" class="face-placeholder">
-          <div class="eye left"></div>
-          <div class="eye right"></div>
-          <div class="mouth"></div>
+        <div class="scan-grid" style="background-image: linear-gradient(rgba(255,0,0,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,0,0,0.08) 1px, transparent 1px);"></div>
+        <div class="scan-bar" style="background: #ff0000; box-shadow: 0 0 20px #ff0000;"></div>
+        <div id="faceLockPlaceholder" class="face-placeholder" style="border-color: rgba(255,0,0,0.35);">
+          <div class="eye left" style="background: #ff0000; box-shadow: 0 0 8px #ff0000;"></div>
+          <div class="eye right" style="background: #ff0000; box-shadow: 0 0 8px #ff0000;"></div>
+          <div class="mouth" style="border-bottom-color: #ff0000;"></div>
         </div>
       </div>
-      <div id="faceScanStatus" class="scan-status">Scanning for authorized user...</div>
+      <div id="faceScanStatus" class="scan-status" style="color: #ff0000;">Scanning for authorized user...</div>
       <button id="closeFaceLock" class="btn btn-secondary">Abort Access</button>
     </div>
   </div>
 
   <!-- CVCS Confirmation Modal -->
   <div id="cvcsConfirmModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width: 400px; text-align: center; border: 1px solid #39ff14; box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);">
-      <div class="panel-title" style="color: #39ff14; margin-bottom: 15px;">Safety Action Request</div>
+    <div class="modal-content" style="max-width: 400px; text-align: center; border: 1px solid #ff0000; box-shadow: 0 0 15px rgba(255, 0, 0, 0.2);">
+      <div class="panel-title" style="color: #ff0000; margin-bottom: 15px;">Safety Action Request</div>
       <p style="font-size: 14px; margin-bottom: 10px; line-height: 1.4; color: #ccc;">
         VOID is requesting permission to perform the following action:
       </p>
       <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid #222; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 13px; text-align: left; margin-bottom: 20px; color: #fff;">
-        <div style="margin-bottom: 5px;"><strong>Action:</strong> <span id="cvcsConfirmAction" style="color: #39ff14;">--</span></div>
-        <div style="margin-bottom: 5px;"><strong>Target:</strong> <span id="cvcsConfirmTarget" style="color: #00e5ff;">--</span></div>
+        <div style="margin-bottom: 5px;"><strong>Action:</strong> <span id="cvcsConfirmAction" style="color: #ff0000;">--</span></div>
+        <div style="margin-bottom: 5px;"><strong>Target:</strong> <span id="cvcsConfirmTarget" style="color: #ff0000;">--</span></div>
         <div id="cvcsConfirmCoordsRow" style="margin-bottom: 5px;"><strong>Coords:</strong> <span id="cvcsConfirmCoords">--</span></div>
       </div>
       <div style="display: flex; gap: 10px; justify-content: center;">
-        <button id="cvcsConfirmApproveBtn" class="btn btn-primary" style="background: #39ff14; color: #000; border-color: #39ff14;">Approve</button>
+        <button id="cvcsConfirmApproveBtn" class="btn btn-primary" style="background: #ff0000; color: #000; border-color: #ff0000;">Approve</button>
         <button id="cvcsConfirmDenyBtn" class="btn btn-secondary">Deny</button>
       </div>
     </div>
   </div>
 
-  <div id="fileStatusPanel"   class="hidden"></div>
-  <button id="setupRefresh"   class="hidden">Refresh</button>
-  <div id="setupInstructions" class="hidden"></div>
-  <span id="setupPython"      class="hidden"></span>
-  <span id="setupRequirements" class="hidden"></span>
-  <span id="setupOllama"      class="hidden"></span>
-  <span id="setupModel"       class="hidden"></span>
-  <button id="fileStatusBtn"  class="hidden"></button>
-  <button id="closeFileStatus" class="hidden"></button>
-  <button id="scanBtn"        class="hidden"></button>
-  <input  id="fileSearchInput" class="hidden">
-  <select id="scopeSelect"    class="hidden"><option value="root">root</option></select>
-  <tbody  id="fileTableBody"  class="hidden"></tbody>
-  <button id="networkToolsBtn"    class="hidden"></button>
-  <button id="closeNetworkTools"  class="hidden"></button>
-  <select id="voidModeSelect"     class="hidden"><option value="normal">normal</option></select>
+  <!-- Compatibility Stubs and Placeholders (Keep hidden but available for JS) -->
+  <div class="hidden">
+    <div id="welcomeOverlay"></div>
+    <div id="fileStatusPanel"></div>
+    <button id="setupRefresh">Refresh</button>
+    <div id="setupInstructions"></div>
+    <span id="setupPython"></span>
+    <span id="setupRequirements"></span>
+    <span id="setupOllama"></span>
+    <span id="setupModel"></span>
+    <button id="fileStatusBtn"></button>
+    <button id="closeFileStatus"></button>
+    <button id="scanBtn"></button>
+    <input id="fileSearchInput">
+    <select id="scopeSelect"><option value="root">root</option></select>
+    <tbody id="fileTableBody"></tbody>
+    <button id="networkToolsBtn"></button>
+    <button id="closeNetworkTools"></button>
+    <select id="voidModeSelect"><option value="normal">normal</option></select>
+  </div>
 
   <script src="app.js"></script>
 </body>

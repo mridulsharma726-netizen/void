@@ -187,7 +187,7 @@ class ScreenMonitor:
                 if self.watch_mode_active:
                     # Take primary screen capture
                     shot = take_screenshot("monitor_inspect.png")
-                    if shot["status"] == "ok" and "vscode" in title.lower() or "visual studio code" in title.lower():
+                    if shot["status"] == "ok" and ("vscode" in title.lower() or "visual studio code" in title.lower()):
                         # Inspect code terminal segment for failures
                         error_alert = self.scan_terminal_for_errors(shot["filepath"])
                         if error_alert and error_alert != self.last_error_signature:

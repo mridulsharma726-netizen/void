@@ -192,8 +192,9 @@ class IntentRouter:
             PREFIX + r"which\s+(?:tasks|action\s+items)\s+are\s+(?:overdue|pending)" + SUFFIX
         ],
         "register_project": [
-            PREFIX + r"(?:track|register|monitor)\s+(?:this\s+)?(?:project|folder)(?:\s+(.+))?" + SUFFIX,
-            PREFIX + r"start\s+tracking\s+(?:project\s+)?(.+)?" + SUFFIX
+            PREFIX + r"(?:track|register|monitor|analyze)\s+(?:this\s+)?(?:project|folder|codebase)(?:\s+(.+))?" + SUFFIX,
+            PREFIX + r"start\s+tracking\s+(?:project\s+)?(.+)?" + SUFFIX,
+            PREFIX + r"analyze\s+(?:project\s+)?(.+)" + SUFFIX
         ],
         "scan_project_changes": [
             PREFIX + r"(?:scan|check|detect)\s+(?:project\s+)?changes?(?:\s+(?:in|for)\s+(.+))?" + SUFFIX,
@@ -206,6 +207,9 @@ class IntentRouter:
         "query_recent_work": [
             PREFIX + r"what\s+did\s+(?:i|we)\s+work\s+on\s+(.+)" + SUFFIX,
             PREFIX + r"(?:show|get)\s+(?:my\s+)?recent\s+(?:work|changes|activity)(?:\s+(.+))?" + SUFFIX
+        ],
+        "continue_where_left_off": [
+            PREFIX + r"(?:continue\s+where\s+(?:i|we)\s+left\s+off|what\s+was\s+i\s+working\s+on\s+yesterday|what\s+was\s+i\s+working\s+on|show\s+today's\s+progress)" + SUFFIX
         ],
         "screenshot": [
             PREFIX + r"(?:take\s+)?screenshot" + SUFFIX
@@ -307,6 +311,8 @@ class IntentRouter:
             r"\b(?:tell|explain|describe)\s+(?:me|us)\s+(?:about|how|why|what)\b",
             r"\bdo\s+you\s+(?:know|think|believe|remember)\b",
             r"\b(?:is|are)\s+(?:it|there|this|that)\b",
+            r"\b(?:which|how\s+much|how\s+close|what\s+is\s+the\s+biggest|what\s+is\s+left)\b",
+            r"\b(?:blocker|blockers|auth|authentication|database|payment|payments|sqlite|launch|completion|completed)\b",
             r"\b(?:write|create|draft|generate|make|plan|summarize|explain)\s+(?:[\w\s]{0,20})\s*(?:email|proposal|story|poem|essay|letter|report|article|post|blog|summary|meeting|plan|code|function|program|script|class|test|ui|app|dashboard|website|readme|codebase|architecture|project)\b"
         ]
         for pattern in conversational_phrases:
@@ -338,7 +344,7 @@ class IntentRouter:
             "cvcs_read_screen", "cvcs_set_permission",
             "agent_scan", "agent_explain", "agent_code", "agent_run_tests", "agent_fix_errors", "agent_refactor",
             "start_meeting", "stop_meeting", "recall_meeting", "get_action_items",
-            "register_project", "scan_project_changes", "get_project_status", "query_recent_work",
+            "register_project", "scan_project_changes", "get_project_status", "query_recent_work", "continue_where_left_off",
             "screenshot", "lock_computer", "press_key", "mouse_control", "check_file_exists", "list_directory"
         ]:
             if action in self.COMMAND_PATTERNS:
@@ -567,6 +573,8 @@ class IntentRouter:
             return {"project_name": target if target else ""}
         elif action == "query_recent_work":
             return {"timeframe": target if target else "today"}
+        elif action == "continue_where_left_off":
+            return {"project_id": target if target else ""}
         return {"raw": raw}
     
     @staticmethod

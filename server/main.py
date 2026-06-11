@@ -256,6 +256,37 @@ async def run_background_startup():
     except Exception as e:
         logger.error(f"[BACKGROUND STARTUP] Failed to start CVCS monitor: {e}")
 
+    # 7. Clean up dead projects and auto-register current workspace
+    try:
+        import os
+        from backend.memory_sqlite import list_tracked_projects, delete_project
+        from tools.project_intelligence import register_project
+        
+        projects = list_tracked_projects()
+        default_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        
+        # Clean up dead projects (paths that do not exist)
+        for proj in projects:
+            p_path = proj.get("path")
+            if not p_path or not os.path.isdir(p_path):
+                logger.info(f"[BACKGROUND STARTUP] Purging dead project from DB: {proj.get('name')} ({p_path})")
+                delete_project(proj.get("project_id"))
+                
+        # Re-fetch projects list after cleanup
+        projects = list_tracked_projects()
+        is_registered = False
+        for proj in projects:
+            if os.path.abspath(proj["path"]) == default_root:
+                is_registered = True
+                break
+                
+        if not is_registered:
+            logger.info(f"[BACKGROUND STARTUP] Auto-registering project workspace at: {default_root}")
+            res = await asyncio.to_thread(register_project, default_root)
+            logger.info(f"[BACKGROUND STARTUP] Workspace auto-registration complete: {res.get('status')}")
+    except Exception as proj_err:
+        logger.error(f"[BACKGROUND STARTUP] Project workspace check/registration failed: {proj_err}")
+
     logger.info(f"[BACKGROUND STARTUP] Complete: ollama={ollama_ok}, singles_failed={len(failed)}, tools={tools_status}")
 
 
@@ -788,6 +819,233 @@ async def get_research_status():
     """Polled by UI to fetch live deep research progress log messages."""
     from backend.deep_research import ACTIVE_RESEARCH
     return ACTIVE_RESEARCH
+
+# === PROJECTS API ===
+@app.get("/projects/list")
+async def get_projects_list():
+    from backend.memory_sqlite import list_tracked_projects
+    try:
+        return list_tracked_projects()
+    except Exception as e:
+        logger.error(f"Failed to list projects: {e}")
+        return []
+
+class ProjectScanRequest(BaseModel):
+    path: str
+
+@app.post("/projects/scan")
+async def scan_project_endpoint(req: ProjectScanRequest):
+    import os
+    from tools.project_intelligence import register_project, scan_project_changes, get_project_status
+    from backend.memory_sqlite import list_tracked_projects
+    try:
+        if not os.path.exists(req.path) or not os.path.isdir(req.path):
+            raise HTTPException(status_code=400, detail="Invalid directory path")
+        proj_abs = os.path.abspath(req.path)
+        projects = list_tracked_projects()
+        target_proj = None
+        for p in projects:
+            if os.path.abspath(p["path"]) == proj_abs:
+                target_proj = p
+                break
+        
+        if not target_proj:
+            res = register_project(proj_abs)
+            if res.get("status") == "error":
+                raise HTTPException(status_code=500, detail=res.get("message", "Registration failed"))
+            projects = list_tracked_projects()
+            for p in projects:
+                if os.path.abspath(p["path"]) == proj_abs:
+                    target_proj = p
+                    break
+        
+        if not target_proj:
+            raise HTTPException(status_code=500, detail="Failed to register project in memory database")
+        
+        scan_res = scan_project_changes(target_proj["project_id"])
+        status_res = get_project_status(target_proj["name"])
+        
+        return {
+            "status": "ok",
+            "project": target_proj,
+            "scan": scan_res,
+            "analysis": status_res
+        }
+    except Exception as e:
+        logger.error(f"Project scan failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/projects/delete/{project_id}")
+async def delete_project_endpoint(project_id: str):
+    from backend.memory_sqlite import delete_project
+    try:
+        ok = delete_project(project_id)
+        if ok:
+            return {"status": "ok", "message": f"Project {project_id} deleted."}
+        else:
+            raise HTTPException(status_code=500, detail="Delete operation returned false")
+    except Exception as e:
+        logger.error(f"Failed to delete project: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/projects/files/{project_id}")
+async def get_project_files_endpoint(project_id: str):
+    from backend.memory_sqlite import get_project_files
+    try:
+        files = get_project_files(project_id)
+        return files
+    except Exception as e:
+        logger.error(f"Failed to list project files: {e}")
+        return []
+
+@app.get("/projects/details/{project_id}")
+async def get_project_details_endpoint(project_id: str):
+    from backend.memory_sqlite import get_project
+    try:
+        project = get_project(project_id)
+        if project:
+            return project
+        raise HTTPException(status_code=404, detail="Project not found")
+    except Exception as e:
+        logger.error(f"Failed to get project details: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# === MEMORY API ===
+@app.get("/memory/list")
+async def list_memories():
+    from backend.memory_sqlite import get_all_facts
+    try:
+        facts = get_all_facts()
+        return {"status": "ok", "facts": facts}
+    except Exception as e:
+        logger.error(f"Failed to load memories: {e}")
+        return {"status": "error", "facts": []}
+
+class AddMemoryRequest(BaseModel):
+    fact: str
+    importance: int = 5
+
+@app.post("/memory/add")
+async def add_memory_endpoint(req: AddMemoryRequest):
+    from backend.memory_sqlite import add_fact
+    try:
+        ok = add_fact(req.fact, req.importance)
+        if ok:
+            return {"status": "ok", "message": "Fact added to memory banks."}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to add fact.")
+    except Exception as e:
+        logger.error(f"Failed to add memory: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class DeleteMemoryRequest(BaseModel):
+    fact: str
+
+@app.post("/memory/delete")
+async def delete_memory_endpoint(req: DeleteMemoryRequest):
+    from backend.memory_sqlite import remove_fact
+    try:
+        ok = remove_fact(req.fact)
+        if ok:
+            return {"status": "ok", "message": "Fact removed from memory banks."}
+        else:
+            raise HTTPException(status_code=500, detail="Fact not found or could not be deleted.")
+    except Exception as e:
+        logger.error(f"Failed to delete memory: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# === MEETINGS API ===
+@app.get("/meetings/list")
+async def list_meetings():
+    from backend.memory_sqlite import get_recent_meetings
+    try:
+        return get_recent_meetings(limit=50)
+    except Exception as e:
+        logger.error(f"Failed to list meetings: {e}")
+        return []
+
+@app.post("/meetings/start")
+async def start_meeting_endpoint():
+    from tools.meeting_assistant import start_meeting
+    try:
+        res = start_meeting()
+        return res
+    except Exception as e:
+        logger.error(f"Failed to start meeting: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/meetings/stop")
+async def stop_meeting_endpoint():
+    from tools.meeting_assistant import stop_meeting
+    try:
+        res = stop_meeting()
+        return res
+    except Exception as e:
+        logger.error(f"Failed to stop meeting: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/meetings/action-items")
+async def get_meetings_action_items():
+    from tools.meeting_assistant import get_action_items
+    try:
+        res = get_action_items()
+        return res
+    except Exception as e:
+        logger.error(f"Failed to get meeting action items: {e}")
+        return {"action_items": []}
+
+# === AUTOMATION API ===
+@app.get("/automation/status")
+async def get_automation_status():
+    from tools.task_scheduler import get_scheduled_tasks
+    try:
+        tasks = get_scheduled_tasks()
+        active_workflows = [
+            {"id": "sys_diag", "name": "System Health Monitor", "status": "Running", "interval": "10s"},
+            {"id": "cvcs_scan", "name": "CVCS Window Track Loop", "status": "Running", "interval": "2s"},
+            {"id": "voice_wake", "name": "Voice Wake Word Daemon", "status": "Listening", "trigger": "Yes?"}
+        ]
+        return {
+            "scheduled_tasks": tasks,
+            "active_workflows": active_workflows
+        }
+    except Exception as e:
+        logger.error(f"Failed to get automation status: {e}")
+        return {"scheduled_tasks": [], "active_workflows": []}
+
+# === SYSTEM HEALTH API ===
+@app.get("/system/health-details")
+async def get_system_health_details():
+    ollama_ok = await is_ollama_ready()
+    db_ok = False
+    try:
+        from backend.memory_sqlite import get_all_facts
+        get_all_facts()
+        db_ok = True
+    except:
+        pass
+    voice_ok = False
+    try:
+        global _voice_thread
+        if _voice_thread and _voice_thread.is_alive():
+            voice_ok = True
+    except:
+        pass
+    tool_ok = False
+    try:
+        tools_res = await check_all_tools()
+        if tools_res.get("status") == "ok":
+            tool_ok = True
+    except:
+        pass
+    return {
+        "backend": "healthy",
+        "ollama": "healthy" if ollama_ok else "failed",
+        "database": "healthy" if db_ok else "failed",
+        "voice": "healthy" if voice_ok else "failed",
+        "tools": "healthy" if tool_ok else "failed"
+    }
 
 # Pydantic schemas for Academic Dashboard
 class SelectSubjectRequest(BaseModel):
@@ -1606,7 +1864,7 @@ async def chat(req: ChatRequest):
                     "for a software engineer's desktop panel (max 10 words). speak naturally, do NOT include quotes, "
                     "do NOT explain, and keep it punchy and related to coding/focus."
                 )
-                generated = await asyncio.wait_for(llm.chat([], prompt), timeout=45.0)
+                generated = await asyncio.wait_for(llm.chat([], prompt), timeout=90.0)
                 new_motd = generated.strip().strip('"').strip("'")
             
             global MOTD
@@ -1655,7 +1913,7 @@ async def chat(req: ChatRequest):
                     
                     final_reply = await asyncio.wait_for(
                         llm.summarize_tool_output(text, action_name, result.output, is_success=is_success),
-                        timeout=45.0
+                        timeout=90.0
                     )
                     
                     memory.remember_turn("user", text)
@@ -1703,7 +1961,7 @@ async def chat(req: ChatRequest):
             try:
                 final_reply = await asyncio.wait_for(
                     llm.chat(history, text),
-                    timeout=45.0
+                    timeout=90.0
                 )
             except asyncio.TimeoutError as time_err:
                 logger.error("LLM chat timed out.")

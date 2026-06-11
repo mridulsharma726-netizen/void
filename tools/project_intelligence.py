@@ -162,7 +162,8 @@ def _build_file_summary_batch(file_contents: Dict[str, str]) -> str:
 
 
 def _analyze_with_llm(project_name: str, folder_structure: str,
-                      file_batch: str, todos: List[Dict]) -> Dict[str, Any]:
+                      file_batch: str, todos: List[Dict],
+                      static_tech: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Use the local LLM to analyze the project and extract structured data."""
     try:
         from server.backend.llm_client import OllamaClient
@@ -174,6 +175,10 @@ def _analyze_with_llm(project_name: str, folder_structure: str,
             for t in todos[:20]:
                 todos_text += f"- [{t['file']}:{t['line']}] {t['text']}\n"
 
+        static_tech_text = ""
+        if static_tech:
+            static_tech_text = f"\nStatically Detected Technologies:\n{json.dumps(static_tech, indent=2)}\n"
+
         system_prompt = """You are a project analysis expert. Analyze the provided project files and return a JSON object with these keys:
 - "purpose": A 1-2 sentence description of the project's purpose.
 - "architecture": The tech stack / architecture pattern (e.g., "FastAPI backend + React frontend + SQLite").
@@ -181,11 +186,14 @@ def _analyze_with_llm(project_name: str, folder_structure: str,
 - "features_completed": A JSON array of features that appear fully implemented.
 - "features_progress": A JSON array of features that appear to be in progress or partially done.
 - "features_planned": A JSON array of features that appear planned but not yet started (from TODOs, comments, etc.).
+- "goals": A JSON array of the primary business/technical goals of the project.
+- "known_bugs": A JSON array of known bugs or issues found in TODOs/comments/source files.
+- "development_history": A JSON array of development history events (e.g., "Initial commit", "Added voice STT").
 - "blockers": A JSON array of potential blockers or issues found.
 Return ONLY valid JSON."""
 
         prompt = f"""Project: {project_name}
-
+{static_tech_text}
 Folder Structure:
 {folder_structure}
 
@@ -193,7 +201,7 @@ Source Files:
 {file_batch}
 {todos_text}"""
 
-        response = client.generate(prompt=prompt, system_prompt=system_prompt, format="json")
+        response = client.generate(prompt=prompt, system_prompt=system_prompt, format="json", timeout=35.0)
 
         try:
             return json.loads(response)
@@ -225,17 +233,52 @@ def register_project(path: str = "") -> Dict[str, Any]:
     Register and perform initial deep scan of a project directory.
     Scans files, extracts TODOs, analyzes with LLM, and saves to memory.
     """
-    if not path:
-        return {"status": "error", "message": "Project path is required."}
+    # Path resolution intelligence
+    clean_path = path.lower().strip() if path else ""
+    if clean_path:
+        import re
+        # Strip leading and trailing quotes first
+        clean_path = clean_path.strip("'\"")
+        # Remove leading 'the ', 'this ', 'current ', 'my '
+        clean_path = re.sub(r'^(the|this|current|my)\s+', '', clean_path)
+        # Remove trailing ' project', ' codebase', ' folder', ' directory' (along with optional trailing dot/s or quotes/spaces)
+        clean_path = re.sub(r'\s+(project|codebase|folder|directory)[\s.\'"]*$', '', clean_path)
+        # Strip trailing dot, quotes, and whitespace again
+        clean_path = clean_path.strip(". '\"")
 
+    default_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if not path or clean_path in [
+        "this project", "this codebase", "current project", "current codebase", 
+        "void", "current folder", "this folder", "codebase", "project", "."
+    ]:
+        # Resolve to current workspace directory
+        path = default_root
+    elif clean_path:
+        path = clean_path
+    
     path = os.path.abspath(path)
     if not os.path.isdir(path):
-        return {"status": "error", "message": f"Directory not found: {path}"}
+        # Fallback for void references if path not found
+        if "void" in clean_path:
+            path = default_root
+            
+        if not os.path.isdir(path):
+            # Check parent directory (e.g. for sister projects like SkipIt on user's desktop)
+            parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            test_path = os.path.join(parent_dir, os.path.basename(path))
+            if os.path.isdir(test_path):
+                path = test_path
+            else:
+                return {"status": "error", "message": f"Directory not found: {path}"}
 
     project_name = os.path.basename(path)
     project_id = f"proj_{hashlib.md5(path.encode()).hexdigest()[:10]}"
 
     logger.info(f"[PROJECT INTELLIGENCE] Registering project: {project_name} at {path}")
+
+    # 0. Static Technology Detection
+    from tools.tech_detector import detect_technologies
+    static_tech = detect_technologies(path)
 
     # 1. Scan directory
     scan_result = _scan_directory(path)
@@ -249,9 +292,21 @@ def register_project(path: str = "") -> Dict[str, Any]:
     # 3. Build folder structure string
     folder_str = _format_folder_tree(folder_tree)
 
-    # 4. Analyze with LLM
+    # 4. Analyze with LLM (merging static tech detection context)
     file_batch = _build_file_summary_batch(file_contents)
-    analysis = _analyze_with_llm(project_name, folder_str, file_batch, todos)
+    analysis = _analyze_with_llm(project_name, folder_str, file_batch, todos, static_tech)
+
+    # Merge static tech and LLM analysis technologies
+    static_tech_list = []
+    if static_tech:
+        static_tech_list = static_tech.get("languages", []) + static_tech.get("frameworks", []) + static_tech.get("databases", [])
+    llm_tech = analysis.get("technologies", [])
+    merged_tech = sorted(list(set(static_tech_list + llm_tech)))
+
+    # Merge static blockers and LLM blockers
+    static_blockers = [b["message"] for b in detect_project_blockers(path) if b["severity"] == "High"]
+    llm_blockers = analysis.get("blockers", [])
+    merged_blockers = sorted(list(set(static_blockers + llm_blockers)))
 
     # 5. Save project profile to DB
     memory_sqlite.save_project(
@@ -260,12 +315,17 @@ def register_project(path: str = "") -> Dict[str, Any]:
         path=path,
         purpose=analysis.get("purpose", ""),
         architecture=analysis.get("architecture", ""),
-        technologies=json.dumps(analysis.get("technologies", [])),
+        technologies=json.dumps(merged_tech),
         features_completed=json.dumps(analysis.get("features_completed", [])),
         features_progress=json.dumps(analysis.get("features_progress", [])),
         features_planned=json.dumps(analysis.get("features_planned", [])),
-        blockers=json.dumps(analysis.get("blockers", [])),
+        blockers=json.dumps(merged_blockers),
         folder_structure=folder_str,
+        goals=json.dumps(analysis.get("goals", [])),
+        completed_modules=json.dumps(analysis.get("features_completed", [])),
+        pending_modules=json.dumps(analysis.get("features_planned", [])),
+        known_bugs=json.dumps(analysis.get("known_bugs", [])),
+        development_history=json.dumps(analysis.get("development_history", []))
     )
 
     # 6. Save individual file records for change detection
@@ -442,18 +502,37 @@ def get_project_status(project_name: str = "") -> Dict[str, Any]:
     except Exception:
         technologies = []
 
-    # Search for linked meetings
-    meetings = memory_sqlite.search_meetings(project_name, limit=3)
-
     # Get pending action items
     all_items = memory_sqlite.get_pending_action_items()
+
+    # Calculate completion percentage
+    total_features = len(features_done) + len(features_wip) + len(features_planned)
+    completion_pct = 0
+    if total_features > 0:
+        completion_pct = round((len(features_done) / total_features) * 100)
+    else:
+        # Fallback to code analysis estimation: base 90% minus 3% per pending TODO
+        files_count = len(memory_sqlite.get_project_files(project["project_id"]))
+        if files_count > 0:
+            todos_count = len(all_items)
+            completion_pct = max(20, 95 - (todos_count * 3))
+            completion_pct = min(95, completion_pct)
+
+    # Search for linked meetings
+    meetings = memory_sqlite.search_meetings(project_name, limit=3)
 
     status_report = f"## Project: {project['name']}\n\n"
     status_report += f"**Path:** {project['path']}\n"
     status_report += f"**Purpose:** {project.get('purpose', 'Unknown')}\n"
     status_report += f"**Architecture:** {project.get('architecture', 'Unknown')}\n"
     status_report += f"**Technologies:** {', '.join(technologies) if technologies else 'Unknown'}\n"
-    status_report += f"**Last Scanned:** {project.get('last_scan_date', 'Never')}\n\n"
+    status_report += f"**Last Scanned:** {project.get('last_scan_date', 'Never')}\n"
+    status_report += f"**Estimated Completion:** {completion_pct}%\n\n"
+    
+    # Progress Bar
+    bars = round(completion_pct / 5)
+    progress_bar = "█" * bars + "░" * (20 - bars)
+    status_report += f"`[{progress_bar}]`\n\n"
 
     if features_done:
         status_report += "**✅ Completed Features:**\n"
@@ -556,3 +635,664 @@ def get_recent_work(timeframe: str = "today") -> Dict[str, Any]:
         report += "\n"
 
     return {"status": "ok", "message": report, "results": results}
+
+
+def _get_git_branch(project_path: str) -> str:
+    """Gets the current active git branch for a project directory."""
+    try:
+        import subprocess
+        res = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], 
+                             cwd=project_path, capture_output=True, text=True, timeout=2)
+        if res.returncode == 0:
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return "main"
+
+
+def continue_where_left_off(project_id: str = "") -> Dict[str, Any]:
+    """
+    Find recently worked on files and recommend next actions/TODOs.
+    """
+    if not project_id:
+        # Get first tracked project
+        projects = memory_sqlite.list_tracked_projects()
+        if not projects:
+            return {"status": "error", "message": "No tracked projects found."}
+        project_id = projects[0]["project_id"]
+
+    project = memory_sqlite.get_project(project_id)
+    if not project:
+        return {"status": "error", "message": f"Project '{project_id}' not found."}
+
+    # Get recent work
+    recent = get_recent_work("today")
+    files_changed = []
+    if recent and "results" in recent:
+        for r in recent["results"]:
+            if r["project"] == project["name"]:
+                files_changed = [f["file"] for f in r["files"]]
+                break
+
+    # If no work today, try "week"
+    if not files_changed:
+        recent = get_recent_work("week")
+        if recent and "results" in recent:
+            for r in recent["results"]:
+                if r["project"] == project["name"]:
+                    files_changed = [f["file"] for f in r["files"]]
+                    break
+
+    # Find TODOs in the project
+    project_path = project["path"]
+    scan_result = _scan_directory(project_path, read_contents=True)
+    file_contents = scan_result.get("file_contents", {})
+    all_todos = _extract_todos(file_contents)
+
+    # Filter TODOs related to files changed or show top 5
+    relevant_todos = [t for t in all_todos if t["file"] in files_changed][:5]
+    if not relevant_todos:
+        relevant_todos = all_todos[:5]
+
+    git_branch = _get_git_branch(project_path)
+
+    # Build response message
+    msg = f"### Continue Where You Left Off ({project['name']})\n\n"
+    msg += f"**Current Branch:** `{git_branch}`\n\n"
+    
+    if files_changed:
+        msg += "**Recent Files Worked On:**\n"
+        for f in files_changed[:5]:
+            msg += f"- `{f}`\n"
+    else:
+        msg += "*No files recently modified in this project, Sir.*\n"
+        
+    msg += "\n**Suggested Next Actions:**\n"
+    if relevant_todos:
+        for idx, t in enumerate(relevant_todos, 1):
+            msg += f"{idx}. Fix TODO in `{t['file']}:{t['line']}`: *\"{t['text']}\"*\n"
+    else:
+        msg += "1. No pending TODO comments found in recently modified files. You can start a new feature or inspect project blockers, Sir.\n"
+
+    return {
+        "status": "ok",
+        "message": msg,
+        "git_branch": git_branch,
+        "files_changed": files_changed,
+        "relevant_todos": relevant_todos
+    }
+
+
+def generate_architecture_map(project_id: str = "") -> str:
+    """
+    Generate plain English architecture explanation and a Mermaid graph.
+    """
+    if not project_id:
+        projects = memory_sqlite.list_tracked_projects()
+        if not projects:
+            return "No tracked projects found, Sir."
+        project_id = projects[0]["project_id"]
+
+    project = memory_sqlite.get_project(project_id)
+    if not project:
+        return f"Project '{project_id}' not found."
+
+    project_path = project["path"]
+    
+    # 1. Parse tech stack and purpose
+    techs = []
+    try:
+        techs = json.loads(project.get("technologies", "[]"))
+    except:
+        pass
+    
+    purpose = project.get("purpose", "Unknown purpose")
+    architecture = project.get("architecture", "Unknown architecture")
+
+    # 2. Extract imports to build Mermaid dependency map
+    scan_result = _scan_directory(project_path, read_contents=True)
+    file_contents = scan_result.get("file_contents", {})
+
+    dependencies = {} # key: folder/module, value: set of imported folders/modules
+    
+    # Identify key high-level directories (e.g. backend, server, tools, core, workflows)
+    root_dirs = set()
+    for filepath in file_contents.keys():
+        parts = filepath.split('/')
+        if len(parts) > 1:
+            root_dirs.add(parts[0])
+
+    for filepath, content in file_contents.items():
+        parts = filepath.split('/')
+        if len(parts) <= 1:
+            current_module = "root"
+        else:
+            current_module = parts[0]
+            
+        if current_module not in dependencies:
+            dependencies[current_module] = set()
+            
+        # Parse imports
+        for line in content.splitlines():
+            line = line.strip()
+            # Match python imports: from x import y, import x
+            py_from_match = re.match(r'^from\s+([a-zA-Z0-9_\.]+)\s+import', line)
+            py_import_match = re.match(r'^import\s+([a-zA-Z0-9_\.]+)', line)
+            
+            # Match javascript/typescript imports: import x from 'y', require('y')
+            js_import_match = re.match(r'^import\s+.*\s+from\s+[\'"]([^\'"]+)[\'"]', line)
+            js_require_match = re.match(r'.*require\([\'"]([^\'"]+)[\'"]\)', line)
+            
+            imported_module = None
+            if py_from_match:
+                imported_module = py_from_match.group(1).split('.')[0]
+            elif py_import_match:
+                imported_module = py_import_match.group(1).split('.')[0]
+            elif js_import_match:
+                imp_path = js_import_match.group(1)
+                # handle relative path
+                if imp_path.startswith('.'):
+                    imported_module = "local_ref"
+                else:
+                    imported_module = imp_path.split('/')[0]
+            elif js_require_match:
+                imp_path = js_require_match.group(1)
+                if imp_path.startswith('.'):
+                    imported_module = "local_ref"
+                else:
+                    imported_module = imp_path.split('/')[0]
+                    
+            if imported_module and imported_module in root_dirs and imported_module != current_module:
+                dependencies[current_module].add(imported_module)
+
+    # Build Mermaid graph
+    mermaid = "```mermaid\ngraph TD\n"
+    edges_found = False
+    for mod, imports in sorted(dependencies.items()):
+        # Exclude common builtins or root folder
+        if mod == "root" or mod in IGNORED_DIRS:
+            continue
+        for imp in sorted(list(imports)):
+            if imp != "root" and imp not in IGNORED_DIRS:
+                mermaid += f"  {mod} --> {imp}\n"
+                edges_found = True
+                
+    if not edges_found:
+        # Fallback edges if no internal imports mapped
+        mermaid += "  Client[Desktop Application] --> Server[FastAPI Backend]\n"
+        mermaid += "  Server --> Memory[SQLite Database]\n"
+        mermaid += "  Server --> LLM[Ollama Client]\n"
+        
+    mermaid += "```"
+
+    # Build report
+    report = f"## Architecture Report: {project['name']}\n\n"
+    report += f"**Purpose:** {purpose}\n"
+    report += f"**Architecture Design:** {architecture}\n"
+    report += f"**Technologies Used:** {', '.join(techs) if techs else 'None detected'}\n\n"
+    report += "### Component Dependency Map\n"
+    report += mermaid + "\n\n"
+    report += "### Plain English Explanation\n"
+    report += f"The project '{project['name']}' follows a modular structure where components represent functional divisions:\n"
+    for mod, imports in sorted(dependencies.items()):
+        if mod == "root" or mod in IGNORED_DIRS:
+            continue
+        dep_str = f"imports modules from: {', '.join(imports)}" if imports else "has no internal dependencies"
+        report += f"- **{mod}**: This module handles logical operations for `{mod}` components and {dep_str}.\n"
+        
+    return report
+
+
+def detect_project_blockers(project_path: str) -> List[Dict[str, Any]]:
+    """
+    Scans the project to proactively identify blockers (broken imports, missing configs, TODOs, outdated APIs, empty stubs).
+    """
+    blockers = []
+    
+    # 1. Check for missing environment config
+    if os.path.exists(os.path.join(project_path, ".env.example")) and not os.path.exists(os.path.join(project_path, ".env")):
+        blockers.append({
+            "category": "Configuration",
+            "severity": "High",
+            "message": "Missing local environment configuration: '.env.example' exists but '.env' is missing.",
+            "file": ".env",
+            "line": 1
+        })
+        
+    # 2. Scan directory
+    scan_result = _scan_directory(project_path, read_contents=True)
+    file_contents = scan_result.get("file_contents", {})
+    
+    # Find all top-level folders
+    top_folders = {d for d in os.listdir(project_path) if os.path.isdir(os.path.join(project_path, d)) and d not in IGNORED_DIRS}
+    
+    # 3. Check for broken imports
+    broken_imports_count = 0
+    for filepath, content in file_contents.items():
+        if not filepath.endswith(".py"):
+            continue
+        for line_num, line in enumerate(content.splitlines(), 1):
+            line = line.strip()
+            # Match: from tools.abc import xyz
+            m_from = re.match(r'^from\s+([a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?\s+import', line)
+            # Match: import tools.abc
+            m_import = re.match(r'^import\s+([a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?', line)
+            
+            top_mod = None
+            sub_mod = None
+            if m_from:
+                top_mod = m_from.group(1)
+                sub_mod = m_from.group(2)
+            elif m_import:
+                top_mod = m_import.group(1)
+                sub_mod = m_import.group(2)
+                
+            if top_mod and top_mod in top_folders:
+                # Local module check
+                if sub_mod:
+                    sub_file = os.path.join(project_path, top_mod, f"{sub_mod}.py")
+                    sub_dir = os.path.join(project_path, top_mod, sub_mod)
+                    if not os.path.exists(sub_file) and not os.path.isdir(sub_dir):
+                        blockers.append({
+                            "category": "Broken Import",
+                            "severity": "High",
+                            "message": f"Broken local reference: Import of '{top_mod}.{sub_mod}' refers to a missing file.",
+                            "file": filepath,
+                            "line": line_num
+                        })
+                        broken_imports_count += 1
+                else:
+                    mod_dir = os.path.join(project_path, top_mod)
+                    if not os.path.isdir(mod_dir):
+                        blockers.append({
+                            "category": "Broken Import",
+                            "severity": "High",
+                            "message": f"Broken local reference: Import of '{top_mod}' refers to a missing directory.",
+                            "file": filepath,
+                            "line": line_num
+                        })
+                        broken_imports_count += 1
+                        
+            if broken_imports_count >= 5:  # Cap broken imports to avoid spam
+                break
+
+    # 4. Check for outdated Gemini references (e.g. gemini-1.0)
+    for filepath, content in file_contents.items():
+        if "gemini-1.0" in content.lower():
+            for line_num, line in enumerate(content.splitlines(), 1):
+                if "gemini-1.0" in line.lower():
+                    blockers.append({
+                        "category": "Outdated API Reference",
+                        "severity": "High",
+                        "message": "Outdated Gemini model reference: found 'gemini-1.0' which is deprecated.",
+                        "file": filepath,
+                        "line": line_num
+                    })
+
+    # 5. Check for empty function/class stubs (pass or NotImplementedError)
+    import ast
+    for filepath, content in file_contents.items():
+        if not filepath.endswith(".py"):
+            continue
+        try:
+            tree = ast.parse(content)
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    body = node.body
+                    is_empty = False
+                    if len(body) == 1:
+                        stmt = body[0]
+                        if isinstance(stmt, ast.Pass):
+                            is_empty = True
+                        elif isinstance(stmt, ast.Raise) and isinstance(stmt.exc, ast.Name) and stmt.exc.id == "NotImplementedError":
+                            is_empty = True
+                    elif len(body) == 2 and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) and isinstance(body[0].value.value, str):
+                        stmt = body[1]
+                        if isinstance(stmt, ast.Pass):
+                            is_empty = True
+                        elif isinstance(stmt, ast.Raise) and isinstance(stmt.exc, ast.Name) and stmt.exc.id == "NotImplementedError":
+                            is_empty = True
+                            
+                    if is_empty:
+                        blockers.append({
+                            "category": "Missing Implementation",
+                            "severity": "Medium",
+                            "message": f"Empty implementation: function '{node.name}' contains no active statements.",
+                            "file": filepath,
+                            "line": node.lineno
+                        })
+        except Exception:
+            pass
+
+    # 6. Check for missing package dependencies
+    STD_LIBS = {
+        "os", "sys", "re", "json", "hashlib", "logging", "datetime", "sqlite3", "time", "math",
+        "subprocess", "ctypes", "socket", "asyncio", "threading", "pathlib", "typing", "collections",
+        "functools", "itertools", "urllib", "uuid", "shutil", "platform", "select", "struct", "array",
+        "binascii", "base64", "csv", "xml", "html", "pickle", "copy", "tempfile", "traceback", "weakref",
+        "io", "gc", "sysconfig", "inspect", "ast", "importlib", "contextlib", "abc", "argparse",
+        "enum", "glob", "fnmatch", "random", "secrets", "string", "textwrap", "getpass", "errno", "signal",
+        "xmlrpc", "unittest", "timeit", "pdb", "pprint", "warnings", "ctypes", "distutils"
+    }
+    LIB_MAP = {
+        "sklearn": "scikit-learn",
+        "yaml": "pyyaml",
+        "PIL": "pillow",
+        "bs4": "beautifulsoup4",
+        "pg": "psycopg2",
+        "psycopg2_binary": "psycopg2"
+    }
+    
+    declared = set()
+    req_path = os.path.join(project_path, "requirements.txt")
+    if os.path.exists(req_path):
+        try:
+            with open(req_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        lib_name = re.split(r"==|>=|<=|>|<|~=", line)[0].strip().lower().replace("-", "_")
+                        declared.add(lib_name)
+        except Exception:
+            pass
+            
+    pkg_path = os.path.join(project_path, "package.json")
+    if os.path.exists(pkg_path):
+        try:
+            with open(pkg_path, "r", encoding="utf-8") as f:
+                pkg_data = json.load(f)
+                for dep_type in ["dependencies", "devDependencies"]:
+                    if dep_type in pkg_data:
+                        for dep in pkg_data[dep_type].keys():
+                            declared.add(dep.lower().replace("-", "_").replace("@", ""))
+        except Exception:
+            pass
+
+    for filepath, content in file_contents.items():
+        if not filepath.endswith(".py"):
+            continue
+        try:
+            tree = ast.parse(content)
+            for node in ast.walk(tree):
+                imported_modules = []
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        imported_modules.append(alias.name.split('.')[0])
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level == 0 and node.module:
+                        imported_modules.append(node.module.split('.')[0])
+                        
+                for mod in imported_modules:
+                    mod_lower = mod.lower()
+                    declared_name = LIB_MAP.get(mod, mod_lower)
+                    
+                    if (mod not in STD_LIBS and 
+                        mod_lower not in STD_LIBS and
+                        mod not in top_folders and 
+                        declared_name not in declared and 
+                        mod_lower not in declared):
+                        
+                        blockers.append({
+                            "category": "Missing Dependency",
+                            "severity": "Medium",
+                            "message": f"Missing package dependency: Module '{mod}' is imported but not declared in requirements.txt or package.json.",
+                            "file": filepath,
+                            "line": node.lineno
+                        })
+        except Exception:
+            pass
+
+    # 7. Gather TODO items
+    todos = _extract_todos(file_contents)
+    for todo in todos[:10]:
+        blockers.append({
+            "category": "Technical Debt",
+            "severity": "Low",
+            "message": f"Pending TODO: {todo['text']}",
+            "file": todo["file"],
+            "line": todo["line"]
+        })
+        
+    return blockers
+
+
+def get_workspace_state(project_path: str = "") -> Dict[str, Any]:
+    """
+    Retrieves the current working environment parameters (Workspace Awareness).
+    """
+    if not project_path:
+        from server.backend.memory_sqlite import get_active_project
+        active_proj = get_active_project()
+        if active_proj:
+            project_path = active_proj["path"]
+        else:
+            # Fallback to local VOID directory
+            project_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            
+    project_path = os.path.abspath(project_path)
+    project_name = os.path.basename(project_path)
+    
+    # 1. VS Code workspace window title detection
+    vscode_workspace = "Unknown Workspace"
+    try:
+        from server.backend.screen_monitor import get_monitor_instance
+        monitor = get_monitor_instance()
+        win_title = monitor.get_foreground_window_title()
+        if win_title and any(k in win_title.lower() for k in ["visual studio code", "vscode", "code"]):
+            vscode_workspace = win_title
+    except Exception:
+        pass
+        
+    # 2. Current Git branch
+    git_branch = _get_git_branch(project_path)
+    
+    # 3. Recently modified files (last 24 hours)
+    modified_files = []
+    try:
+        recent = get_recent_work("today")
+        if recent and "results" in recent:
+            for r in recent["results"]:
+                if r["project"] == project_name:
+                    modified_files = [f["file"] for f in r["files"]]
+                    break
+    except Exception:
+        pass
+                
+    # 4. Recent build alerts/failures from CVCS Monitor
+    recent_alerts = []
+    try:
+        from server.backend.screen_monitor import get_monitor_instance
+        monitor = get_monitor_instance()
+        unread = monitor.get_unread_notifications()
+        for n in unread:
+            if n.get("category") == "build":
+                recent_alerts.append(n.get("message"))
+    except Exception:
+        pass
+            
+    return {
+        "active_project_folder": project_path,
+        "vscode_workspace": vscode_workspace,
+        "current_git_branch": git_branch,
+        "recently_modified_files": modified_files,
+        "recent_build_alerts": recent_alerts
+    }
+
+
+def generate_project_report(report_type: str, project_id: str = "") -> str:
+    """
+    Generates structured markdown reports (daily, weekly, architecture, progress, technical_debt).
+    """
+    if not project_id:
+        projects = memory_sqlite.list_tracked_projects()
+        if not projects:
+            return "No tracked projects found, Sir."
+        project_id = projects[0]["project_id"]
+
+    project = memory_sqlite.get_project(project_id)
+    if not project:
+        return f"Project '{project_id}' not found."
+
+    project_path = project["path"]
+    report_type = report_type.lower().strip()
+
+    # Retrieve all elements
+    scan_result = _scan_directory(project_path, read_contents=True)
+    file_contents = scan_result.get("file_contents", {})
+    todos = _extract_todos(file_contents)
+    blockers = detect_project_blockers(project_path)
+
+    # Tech stack
+    techs = []
+    try:
+        techs = json.loads(project.get("technologies", "[]"))
+    except:
+        pass
+
+    # Features
+    try:
+        features_done = json.loads(project.get("features_completed", "[]"))
+    except:
+        features_done = []
+    try:
+        features_wip = json.loads(project.get("features_progress", "[]"))
+    except:
+        features_wip = []
+    try:
+        features_planned = json.loads(project.get("features_planned", "[]"))
+    except:
+        features_planned = []
+
+    # Completion calculation
+    total_features = len(features_done) + len(features_wip) + len(features_planned)
+    completion_pct = 0
+    if total_features > 0:
+        completion_pct = round((len(features_done) / total_features) * 100)
+    else:
+        # Fallback to code analysis estimation
+        all_items = memory_sqlite.get_pending_action_items()
+        files_count = len(memory_sqlite.get_project_files(project_id))
+        if files_count > 0:
+            todos_count = len(all_items)
+            completion_pct = max(20, 95 - (todos_count * 3))
+            completion_pct = min(95, completion_pct)
+
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    if report_type == "daily":
+        report = f"# Daily Status Report: {project['name']}\n"
+        report += f"Generated: {now_str}\n\n"
+        report += f"### Summary\n- **Project Name:** {project['name']}\n- **Git Branch:** `{_get_git_branch(project_path)}`\n- **Completion:** {completion_pct}%\n\n"
+        
+        # Recent modifications
+        recent = get_recent_work("today")
+        report += "### Today's Modifications\n"
+        files_modified = False
+        if recent and "results" in recent:
+            for r in recent["results"]:
+                if r["project"] == project["name"]:
+                    for f in r["files"][:10]:
+                        report += f"- `~ {f['file']}` (modified {f['modified_at']})\n"
+                    files_modified = True
+                    break
+        if not files_modified:
+            report += "- No files modified today, Sir.\n"
+
+        # Blockers
+        report += "\n### Current Blockers\n"
+        active_blockers = [b for b in blockers if b["severity"] == "High"]
+        if active_blockers:
+            for b in active_blockers:
+                report += f"- **[{b['category']}]** {b['message']} (`{b['file']}`)\n"
+        else:
+            report += "- No High-priority blockers detected, Sir!\n"
+
+    elif report_type == "weekly":
+        report = f"# Weekly Progress Report: {project['name']}\n"
+        report += f"Generated: {now_str}\n\n"
+        report += f"### Project Metrics\n- **Completion Percent:** {completion_pct}%\n- **Active Branch:** `{_get_git_branch(project_path)}`\n\n"
+        
+        recent = get_recent_work("week")
+        report += "### Weekly Modifications\n"
+        files_modified = False
+        if recent and "results" in recent:
+            for r in recent["results"]:
+                if r["project"] == project["name"]:
+                    report += f"- Total files changed this week: {r['files_changed']}\n"
+                    for f in r["files"][:10]:
+                        report += f"  - `{f['file']}`\n"
+                    files_modified = True
+                    break
+        if not files_modified:
+            report += "- No modifications detected this week, Sir.\n"
+
+        report += "\n### Task Tracking\n"
+        report += f"- **Completed Features:** {len(features_done)}\n"
+        report += f"- **In-Progress Features:** {len(features_wip)}\n"
+        report += f"- **Planned Features:** {len(features_planned)}\n"
+
+    elif report_type == "architecture":
+        report = generate_architecture_map(project_id)
+
+    elif report_type == "progress":
+        report = f"# Progress Report: {project['name']}\n"
+        report += f"Generated: {now_str}\n\n"
+        report += f"## Project Completion: **{completion_pct}%**\n\n"
+        
+        # ProgressBar
+        bars = round(completion_pct / 5)
+        progress_bar = "█" * bars + "░" * (20 - bars)
+        report += f"`[{progress_bar}]`\n\n"
+
+        report += "### Completed Features\n"
+        if features_done:
+            for f in features_done:
+                report += f"- [x] {f}\n"
+        else:
+            report += "- None recorded.\n"
+
+        report += "\n### In-Progress Features\n"
+        if features_wip:
+            for f in features_wip:
+                report += f"- [/] {f}\n"
+        else:
+            report += "- None recorded.\n"
+
+        report += "\n### Planned Features\n"
+        if features_planned:
+            for f in features_planned:
+                report += f"- [ ] {f}\n"
+        else:
+            report += "- None recorded.\n"
+
+    elif report_type == "technical_debt":
+        report = f"# Technical Debt Audit: {project['name']}\n"
+        report += f"Generated: {now_str}\n\n"
+        
+        # Blockers density
+        high_debt = [b for b in blockers if b["severity"] == "High"]
+        med_debt = [b for b in blockers if b["severity"] == "Medium"]
+        
+        report += f"### Debt Summary\n- **High Severity Issues:** {len(high_debt)}\n- **Medium Severity Issues:** {len(med_debt)}\n- **Unresolved TODOs:** {len(todos)}\n\n"
+        
+        if high_debt:
+            report += "### High Severity Config & Code Errors\n"
+            for b in high_debt:
+                report += f"- **[{b['category']}]** {b['message']} (`{b['file']}`)\n"
+                
+        if med_debt:
+            report += "\n### Medium Severity Stubs & Dependencies\n"
+            for b in med_debt:
+                report += f"- **[{b['category']}]** {b['message']} (`{b['file']}:{b['line']}`)\n"
+                
+        report += "\n### Active TODO & HACK Markers\n"
+        if todos:
+            for t in todos[:20]:
+                report += f"- `{t['file']}:{t['line']}`: *\"{t['text']}\"*\n"
+        else:
+            report += "- No pending TODO markers found, Sir.\n"
+            
+    else:
+        report = f"Unknown report type: {report_type}. Available types: daily, weekly, architecture, progress, technical_debt."
+
+    return report

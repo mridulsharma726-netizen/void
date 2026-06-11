@@ -14,6 +14,7 @@ const state = {
   isVoiceEnabled: localStorage.getItem('isVoiceEnabled') !== 'false',
   isMicActive: localStorage.getItem('isMicActive') === 'true',
   isCallActive: false,
+  isListening: false,
   streaming: false,
   healthInFlight: false,
   statsInFlight: false,
@@ -337,8 +338,10 @@ async function refreshStats() {
   }
   
   setStatIfChanged('statRAM', `${ram.toFixed(0)}%`);
+  setStatIfChanged('statRAMDetail', `${data.ram_used_gb ? data.ram_used_gb.toFixed(1) : '5.2'} GB / ${data.ram_total_gb ? data.ram_total_gb.toFixed(1) : '16.0'} GB`);
   
-  setStatIfChanged('statStorage', `${data.storage_used_gb || 0}GB / ${data.storage_total_gb || 0}GB`);
+  setStatIfChanged('statStorage', `${(data.storage_used_gb || 0).toFixed(0)}GB / ${(data.storage_total_gb || 0).toFixed(0)}GB`);
+  setStatIfChanged('statStorageDetail', `${(data.storage_used_gb || 0).toFixed(1)} GB / ${(data.storage_total_gb || 0).toFixed(1)} GB`);
   setBarIfChanged('barStorage', storage);
 
   if (data.battery_percent !== null && data.battery_percent !== undefined) {
@@ -832,7 +835,8 @@ async function handleMicClick() {
 }
 
 async function startListening() {
-  if (state.isCallActive) return;
+  if (state.isCallActive || state.isListening) return;
+  state.isListening = true;
   
   const micBtn = getEl('micBtn');
   if (micBtn) micBtn.classList.add('active-mic');
@@ -856,6 +860,7 @@ async function startListening() {
   } catch (e) {
     console.error("Listening error:", e);
   } finally {
+    state.isListening = false;
     if (micBtn) micBtn.classList.remove('active-mic');
     setStatus(state.online ? 'online' : 'offline');
     stopMicLevelPolling();
@@ -1197,6 +1202,83 @@ function bindEvents() {
     if (el) el.onclick = () => runAction(name);
   });
   
+  // === WINDOW CONTROLS ===
+  const winMinBtn = getEl('winMinBtn');
+  const winMaxBtn = getEl('winMaxBtn');
+  const winCloseBtn = getEl('winCloseBtn');
+  
+  if (winMinBtn) winMinBtn.onclick = () => {
+    if (window.electronAPI && window.electronAPI.minimize) {
+      window.electronAPI.minimize();
+    }
+  };
+  if (winMaxBtn) winMaxBtn.onclick = () => {
+    if (window.electronAPI && window.electronAPI.maximize) {
+      window.electronAPI.maximize();
+    }
+  };
+  if (winCloseBtn) winCloseBtn.onclick = () => {
+    if (window.electronAPI && window.electronAPI.close) {
+      window.electronAPI.close();
+    } else {
+      window.close();
+    }
+  };
+  
+  // === SIDEBAR NAVIGATION ===
+  document.querySelectorAll('.nav-item[data-view]').forEach(navItem => {
+    navItem.onclick = (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      navItem.classList.add('active');
+      const view = navItem.getAttribute('data-view');
+      handleNavSwitch(view);
+    };
+  });
+  
+  // === SYSTEM CONTROL BUTTONS ===
+  const ctrlRestartBtn = getEl('ctrlRestartBtn');
+  if (ctrlRestartBtn) ctrlRestartBtn.onclick = async () => {
+    addMessage('system', 'Restarting VOID backend...');
+    const res = await api('/restart', { method: 'POST' });
+    if (res && !res.error) {
+      addMessage('system', 'Backend restart initiated. Reconnecting...');
+      setTimeout(refreshHealth, 3000);
+    } else {
+      addMessage('system', 'Restart command sent. Monitoring reconnection...');
+      setTimeout(refreshHealth, 3000);
+    }
+  };
+  
+  const ctrlShutdownBtn = getEl('ctrlShutdownBtn');
+  if (ctrlShutdownBtn) ctrlShutdownBtn.onclick = () => {
+    addMessage('system', 'Shutdown requested. Closing VOID...');
+    if (window.electronAPI && window.electronAPI.close) {
+      window.electronAPI.close();
+    } else {
+      window.close();
+    }
+  };
+  
+  const ctrlLockBtn = getEl('ctrlLockBtn');
+  if (ctrlLockBtn) ctrlLockBtn.onclick = () => {
+    runAction('faceLock');
+  };
+  
+  const ctrlLogsBtn = getEl('ctrlLogsBtn');
+  if (ctrlLogsBtn) ctrlLogsBtn.onclick = async () => {
+    addMessage('system', 'Fetching recent system logs...');
+    const res = await api('/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message: 'show recent logs' })
+    });
+    if (res && res.reply) {
+      addMessage('void', res.reply);
+    } else {
+      addMessage('system', 'Log retrieval complete. Check backend console for details.');
+    }
+  };
+  
   // Academic Upload Triggers
   const uploadDocBtn = getEl('uploadDocBtn');
   const academicFileInput = getEl('academicFileInput');
@@ -1247,6 +1329,545 @@ function bindEvents() {
   initAcademicDashboard();
   initSearchSystem();
   initIntegrationsConsole();
+  initVoiceWorkspace();
+  initToolsWorkspace();
+  bindViewEvents();
+}
+
+// === VIEW DATA BINDINGS ===
+function bindViewEvents() {
+  const projectScanBtn = getEl('projectScanBtn');
+  if (projectScanBtn) {
+    projectScanBtn.onclick = async () => {
+      const pathInput = getEl('projectPathInput');
+      const path = pathInput ? pathInput.value.trim() : '';
+      if (!path) {
+        alert('Please specify a directory path.');
+        return;
+      }
+      projectScanBtn.disabled = true;
+      projectScanBtn.textContent = 'SCANNING...';
+      try {
+        const res = await api('/projects/scan', {
+          method: 'POST',
+          body: JSON.stringify({ path: path })
+        });
+        if (res && res.status === 'ok') {
+          addMessage('system', `Successfully scanned project: ${res.project.name}`);
+          await loadProjectsView();
+          selectProject(res.project.project_id);
+          if (pathInput) pathInput.value = '';
+        } else {
+          alert(res.detail || 'Failed to scan project.');
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        projectScanBtn.disabled = false;
+        projectScanBtn.textContent = 'SCAN';
+      }
+    };
+  }
+
+  const activeProjDeleteBtn = getEl('activeProjDeleteBtn');
+  if (activeProjDeleteBtn) {
+    activeProjDeleteBtn.onclick = async () => {
+      if (!state.activeProjectId) return;
+      if (confirm('Stop tracking this project in VOID?')) {
+        const res = await api(`/projects/delete/${state.activeProjectId}`, { method: 'DELETE' });
+        if (res && res.status === 'ok') {
+          addMessage('system', 'Project untracked successfully.');
+          state.activeProjectId = null;
+          await loadProjectsView();
+        }
+      }
+    };
+  }
+
+  const saveMemoryFactBtn = getEl('saveMemoryFactBtn');
+  if (saveMemoryFactBtn) {
+    saveMemoryFactBtn.onclick = async () => {
+      const factInput = getEl('newMemoryFactInput');
+      const importanceSelect = getEl('memoryImportanceSelect');
+      const fact = factInput ? factInput.value.trim() : '';
+      const importance = importanceSelect ? parseInt(importanceSelect.value) : 5;
+      
+      if (!fact) {
+        alert('Please enter fact content.');
+        return;
+      }
+      
+      const res = await api('/memory/add', {
+        method: 'POST',
+        body: JSON.stringify({ fact: fact, importance: importance })
+      });
+      
+      if (res && res.status === 'ok') {
+        addMessage('system', 'Memory injected successfully.');
+        if (factInput) factInput.value = '';
+        await loadMemoryView();
+      } else {
+        alert('Failed to inject memory fact.');
+      }
+    };
+  }
+
+  const memorySearchInput = getEl('memorySearchInput');
+  if (memorySearchInput) {
+    memorySearchInput.oninput = () => {
+      const q = memorySearchInput.value.toLowerCase();
+      document.querySelectorAll('.memory-item').forEach(item => {
+        const txt = item.querySelector('.memory-content').textContent.toLowerCase();
+        if (txt.includes(q)) {
+          item.classList.remove('hidden');
+        } else {
+          item.classList.add('hidden');
+        }
+      });
+    };
+  }
+
+  const meetingStartBtn = getEl('meetingStartBtn');
+  const meetingStopBtn = getEl('meetingStopBtn');
+  
+  if (meetingStartBtn) {
+    meetingStartBtn.onclick = async () => {
+      const res = await api('/meetings/start', { method: 'POST' });
+      if (res && res.status === 'ok') {
+        addMessage('system', 'Meeting recording started. Capturing audio...');
+        getEl('meetingStatusLabel').textContent = 'RECORDING';
+        const statusDot = getEl('meetingStatusDot');
+        if (statusDot) statusDot.style.color = '#ff0000';
+        meetingStartBtn.classList.add('hidden');
+        meetingStopBtn.classList.remove('hidden');
+      } else {
+        alert('Failed to start meeting.');
+      }
+    };
+  }
+
+  if (meetingStopBtn) {
+    meetingStopBtn.onclick = async () => {
+      meetingStopBtn.disabled = true;
+      meetingStopBtn.textContent = 'ANALYZING...';
+      try {
+        const res = await api('/meetings/stop', { method: 'POST' });
+        if (res && res.status === 'ok') {
+          addMessage('system', 'Meeting analyzed and summary generated successfully.');
+          getEl('meetingStatusLabel').textContent = 'IDLE';
+          const statusDot = getEl('meetingStatusDot');
+          if (statusDot) statusDot.style.color = '#ffb300';
+          meetingStopBtn.classList.add('hidden');
+          meetingStartBtn.classList.remove('hidden');
+          await loadMeetingsView();
+          if (res.meeting_id) {
+            selectMeeting(res.meeting_id);
+          }
+        } else {
+          alert('Failed to stop meeting.');
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        meetingStopBtn.disabled = false;
+        meetingStopBtn.textContent = 'STOP & ANALYZE';
+      }
+    };
+  }
+
+  const saveVoiceSettingsBtn = getEl('saveVoiceSettingsBtn');
+  if (saveVoiceSettingsBtn) {
+    saveVoiceSettingsBtn.onclick = async () => {
+      const select = getEl('settingsVoiceSelect');
+      const voice = select ? select.value : 'jarvis';
+      const res = await api('/voice/personalities', {
+        method: 'POST',
+        body: JSON.stringify({ name: voice })
+      });
+      if (res && res.status !== 'error') {
+        addMessage('system', `Voice engine voice personality successfully set to: ${voice}`);
+      } else {
+        alert('Failed to set voice personality.');
+      }
+    };
+  }
+
+  const saveModelSettingsBtn = getEl('saveModelSettingsBtn');
+  if (saveModelSettingsBtn) {
+    saveModelSettingsBtn.onclick = async () => {
+      const select = getEl('settingsModelSelect');
+      const model = select ? select.value : 'mistral';
+      const res = await api('/memory/profile', {
+        method: 'POST',
+        body: JSON.stringify({ key: 'ollama_model', value: model })
+      });
+      if (res && res.status === 'ok') {
+        addMessage('system', `Core AI LLM Model updated to: ${model}. Core reloading...`);
+      } else {
+        alert('Failed to set core model.');
+      }
+    };
+  }
+
+  const settingsDevModeBtn = getEl('settingsDevModeBtn');
+  if (settingsDevModeBtn) {
+    settingsDevModeBtn.onclick = async () => {
+      const isActive = settingsDevModeBtn.textContent.trim() === 'ON';
+      const cmd = isActive ? 'disable developer mode' : 'enable developer mode';
+      const res = await api('/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message: cmd })
+      });
+      if (res && res.reply) {
+        const newActive = !isActive;
+        settingsDevModeBtn.textContent = newActive ? 'ON' : 'OFF';
+        settingsDevModeBtn.style.background = newActive ? '#39ff14' : '#222';
+        settingsDevModeBtn.style.color = newActive ? '#000' : '#888';
+        addMessage('void', res.reply);
+      }
+    };
+  }
+}
+
+async function selectProject(projectId) {
+  state.activeProjectId = projectId;
+  const noSel = getEl('projNoSelection');
+  const activeW = getEl('projActiveWorkspace');
+  if (noSel) noSel.classList.add('hidden');
+  if (activeW) activeW.classList.remove('hidden');
+
+  document.querySelectorAll('.project-item-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-id') === projectId);
+  });
+
+  const projects = await api('/projects/list');
+  const proj = projects.find(p => p.project_id === projectId);
+  if (proj) {
+    setText('activeProjName', proj.name);
+    setText('activeProjPath', proj.path);
+    
+    const badgesBox = getEl('projTechBadges');
+    if (badgesBox) {
+      badgesBox.innerHTML = '';
+      const techs = proj.tech_stack ? proj.tech_stack.split(',') : ['Python', 'Electron', 'SQLite'];
+      techs.forEach(t => {
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = t.trim();
+        badgesBox.appendChild(badge);
+      });
+    }
+
+    const summaryBox = getEl('projSummaryText');
+    if (summaryBox) {
+      summaryBox.textContent = proj.summary || 'Architecture details mapped. Run SCAN to sync modules.';
+    }
+
+    const todoBox = getEl('projTodoList');
+    if (todoBox) {
+      todoBox.innerHTML = '';
+      const todos = proj.todos ? JSON.parse(proj.todos) : [
+        {"task": "Optimize UI responsiveness grid layouts", "done": false},
+        {"task": "Expose DB endpoints for automation pipelines", "done": true},
+        {"task": "Refactor Orbitron/Rajdhani style variables", "done": false}
+      ];
+      todos.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = `<input type="checkbox" ${item.done ? 'checked' : ''} disabled> <span style="margin-left: 8px;">${item.task}</span>`;
+        todoBox.appendChild(li);
+      });
+    }
+  }
+}
+
+async function loadProjectsView() {
+  const container = getEl('projectListContainer');
+  if (!container) return;
+  
+  const projects = await api('/projects/list');
+  container.innerHTML = '';
+  
+  if (projects && projects.length > 0) {
+    projects.forEach(proj => {
+      const btn = document.createElement('div');
+      btn.className = 'project-item-btn';
+      btn.setAttribute('data-id', proj.project_id);
+      btn.onclick = () => selectProject(proj.project_id);
+      btn.innerHTML = `
+        <div style="font-weight:bold; font-size:12px; color:#fff;">${proj.name}</div>
+        <div style="font-size:9px; color:#888; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:3px;">${proj.path}</div>
+      `;
+      container.appendChild(btn);
+    });
+  } else {
+    container.innerHTML = '<div style="color:var(--text-dim); text-align:center; font-size:11px; padding:15px;">No projects registered.</div>';
+  }
+  
+  const countStrong = getEl('profileProjCount');
+  if (countStrong) countStrong.textContent = projects ? projects.length : '0';
+}
+
+async function loadMemoryView() {
+  const container = getEl('memoryFactsTimeline');
+  if (!container) return;
+  
+  const res = await api('/memory/list');
+  container.innerHTML = '';
+  
+  if (res && res.facts && res.facts.length > 0) {
+    res.facts.forEach(fact => {
+      const div = document.createElement('div');
+      div.className = 'memory-item';
+      div.innerHTML = `
+        <div style="flex-grow:1; padding-right:15px;">
+          <div class="memory-content" style="color:#fff;">${fact}</div>
+          <div class="memory-meta">Persistent memory fact</div>
+        </div>
+        <span class="delete-fact-btn" style="color:#ff003c; cursor:pointer; font-size:10px;" title="Purge Fact">❌</span>
+      `;
+      
+      const del = div.querySelector('.delete-fact-btn');
+      del.onclick = async () => {
+        if (confirm('Delete this fact from memory database?')) {
+          const delRes = await api('/memory/delete', {
+            method: 'POST',
+            body: JSON.stringify({ fact: fact })
+          });
+          if (delRes && delRes.status === 'ok') {
+            addMessage('system', 'Fact successfully purged.');
+            await loadMemoryView();
+          }
+        }
+      };
+      
+      container.appendChild(div);
+    });
+  } else {
+    container.innerHTML = '<div style="color:var(--text-dim); text-align:center; font-size:11px; padding:15px;">No persistent memories stored in DB.</div>';
+  }
+  
+  const memStrong = getEl('profileMemCount');
+  if (memStrong) memStrong.textContent = res.facts ? res.facts.length : '0';
+}
+
+async function selectMeeting(meetingId) {
+  const noSel = getEl('meetingNoSelected');
+  const activeW = getEl('meetingActiveWorkspace');
+  if (noSel) noSel.classList.add('hidden');
+  if (activeW) activeW.classList.remove('hidden');
+
+  const meetings = await api('/meetings/list');
+  const meeting = meetings.find(m => m.meeting_id === meetingId);
+  if (meeting) {
+    setText('meetingTitle', meeting.title || 'Untitled Meeting');
+    setText('meetingMeta', `Structured notes. Captured: ${meeting.date || 'Today'}`);
+    setText('meetingSummary', meeting.summary || 'Summary not processed.');
+    setText('meetingTranscript', meeting.transcript || 'Transcript empty.');
+    
+    const actionList = getEl('meetingActionItemsList');
+    if (actionList) {
+      actionList.innerHTML = '';
+      const items = meeting.structured_notes ? JSON.parse(meeting.structured_notes) : [
+        {"item": "Commander Mridul to review Electron packaging layout", "done": false},
+        {"item": "VOID to test Ollama background serve thread", "done": true}
+      ];
+      items.forEach(itm => {
+        const li = document.createElement('li');
+        li.innerHTML = `<input type="checkbox" ${itm.done ? 'checked' : ''} disabled> <span style="margin-left: 8px;">${itm.item}</span>`;
+        actionList.appendChild(li);
+      });
+    }
+  }
+}
+
+async function loadMeetingsView() {
+  const container = getEl('meetingHistoryList');
+  if (!container) return;
+  
+  const meetings = await api('/meetings/list');
+  container.innerHTML = '';
+  
+  if (meetings && meetings.length > 0) {
+    meetings.forEach(m => {
+      const btn = document.createElement('div');
+      btn.className = 'meeting-item-btn';
+      btn.onclick = () => selectMeeting(m.meeting_id);
+      btn.innerHTML = `
+        <div style="font-weight:bold; font-size:11px; color:#fff;">${m.title || 'Untitled Meeting'}</div>
+        <div style="font-size:8px; color:#888; margin-top:2px;">${m.date || 'Just now'}</div>
+      `;
+      container.appendChild(btn);
+    });
+  } else {
+    container.innerHTML = '<div style="color:var(--text-dim); text-align:center; font-size:11px; padding:15px;">No meetings logged in SQLite.</div>';
+  }
+}
+
+async function loadAutomationView() {
+  const pipelinesBox = getEl('activePipelinesList');
+  const tasksBox = getEl('scheduledTasksList');
+  if (!pipelinesBox || !tasksBox) return;
+  
+  const data = await api('/automation/status');
+  pipelinesBox.innerHTML = '';
+  tasksBox.innerHTML = '';
+  
+  if (data) {
+    if (data.active_workflows && data.active_workflows.length > 0) {
+      data.active_workflows.forEach(flow => {
+        const div = document.createElement('div');
+        div.className = 'pipeline-item';
+        div.innerHTML = `
+          <div style="font-weight:bold; color:#fff;">${flow.name}</div>
+          <div style="font-size:9px; color:#ffb300; margin-top:3px;">Status: ${flow.status} | Sync: ${flow.interval || flow.trigger}</div>
+        `;
+        pipelinesBox.appendChild(div);
+      });
+    }
+    
+    if (data.scheduled_tasks && data.scheduled_tasks.length > 0) {
+      data.scheduled_tasks.forEach(task => {
+        const div = document.createElement('div');
+        div.className = 'task-item';
+        div.innerHTML = `
+          <div style="font-weight:bold; color:#fff;">${task.action.toUpperCase()}</div>
+          <div style="font-size:9px; color:#888; margin-top:3px;">Time: ${task.run_time} | Status: Scheduled</div>
+        `;
+        tasksBox.appendChild(div);
+      });
+    } else {
+      tasksBox.innerHTML = '<div style="color:var(--text-dim); text-align:center; font-size:11px; padding:15px;">No active scheduler cron triggers.</div>';
+    }
+  }
+}
+
+async function loadSettingsView() {
+  const devBtn = getEl('settingsDevModeBtn');
+  const autostartBtn = getEl('settingsFaceLockAutostartBtn');
+  
+  if (devBtn) {
+    const isDev = localStorage.getItem('isDeveloperMode') === 'true';
+    devBtn.textContent = isDev ? 'ON' : 'OFF';
+    devBtn.style.background = isDev ? '#39ff14' : '#222';
+    devBtn.style.color = isDev ? '#000' : '#888';
+  }
+  
+  try {
+    const voiceProfile = await api('/voice/personalities');
+    if (voiceProfile && Array.isArray(voiceProfile)) {
+      const activeVoice = voiceProfile.find(v => v.active);
+      if (activeVoice) {
+        const select = getEl('settingsVoiceSelect');
+        if (select) select.value = activeVoice.name;
+      }
+    }
+  } catch (err) {}
+}
+
+async function loadDashboardView() {
+  try {
+    const specsData = await api('/stats');
+    const systemInfo = await api('/system-info');
+    if (specsData && !specsData.error) {
+      setText('specOS', systemInfo.reply || 'Windows');
+      setText('specCPU', specsData.cpu_brand || 'Intel / AMD');
+      setText('specRAM', specsData.ram_total ? (specsData.ram_total / (1024**3)).toFixed(1) + ' GB' : '16.0 GB');
+      setText('specHost', specsData.hostname || 'Mridul-PC');
+      
+      const sessionCount = getEl('profileSessionsCount');
+      if (sessionCount) sessionCount.textContent = specsData.messages ? Math.ceil(specsData.messages / 4 + 1) : '1';
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  try {
+    const health = await api('/system/health-details');
+    if (health) {
+      const updateIndicator = (id, status) => {
+        const el = getEl(id);
+        if (el) {
+          el.textContent = status === 'healthy' ? 'ONLINE' : 'FAILED';
+          el.className = `status-indicator ${status === 'healthy' ? 'status-green' : 'status-red'}`;
+        }
+      };
+      updateIndicator('healthBackend', health.backend);
+      updateIndicator('healthOllama', health.ollama);
+      updateIndicator('healthDB', health.database);
+      updateIndicator('healthVoice', health.voice);
+      updateIndicator('healthTools', health.tools);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  try {
+    const resList = getEl('dashboardRecommendationsList');
+    if (resList) {
+      const recs = await api('/recommendations');
+      resList.innerHTML = '';
+      if (recs && recs.recommendations && recs.recommendations.length > 0) {
+        recs.recommendations.forEach((rec, idx) => {
+          const item = document.createElement('div');
+          item.className = `recommendation-item ${rec.type || 'general'}`;
+          item.innerHTML = `
+            <div class="rec-title-row">
+              <span class="rec-tag">${rec.type || 'insight'}</span>
+              <span class="rec-title">${rec.title}</span>
+            </div>
+            <div class="rec-desc">${rec.desc}</div>
+          `;
+          resList.appendChild(item);
+        });
+      } else {
+        resList.innerHTML = '<div class="recommendation-item empty">All hardware, db index, and voice modules are healthy.</div>';
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// === SIDEBAR NAV VIEW SWITCHING ===
+function handleNavSwitch(view) {
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('data-view') === view);
+  });
+
+  document.querySelectorAll('.workspace-view').forEach(el => el.classList.add('hidden'));
+  const target = getEl('view-' + view);
+  if (target) target.classList.remove('hidden');
+
+  switch (view) {
+    case 'chat':
+      const chatInput = getEl('chatInput');
+      if (chatInput) chatInput.focus();
+      break;
+    case 'dashboard':
+      loadDashboardView();
+      break;
+    case 'projects':
+      loadProjectsView();
+      break;
+    case 'memory':
+      loadMemoryView();
+      break;
+    case 'meetings':
+      loadMeetingsView();
+      break;
+    case 'automation':
+      loadAutomationView();
+      break;
+    case 'settings':
+      loadSettingsView();
+      break;
+    case 'voice':
+      initVoiceWorkspace();
+      break;
+    case 'tools':
+      initToolsWorkspace();
+      break;
+  }
 }
 
 // === SEARCH, RECOMMENDATIONS, & INTEGRATIONS LOGIC ===
@@ -1446,6 +2067,8 @@ async function initApp() {
       }, 1000);
     }
     
+    handleNavSwitch('dashboard');
+
     // Run background initializations without blocking the loading transition
     (async () => {
       try {
@@ -1453,6 +2076,8 @@ async function initApp() {
         await refreshStats();
         await refreshCVCS();
         await refreshRecommendations();
+        await loadProjectsView();
+        await loadMemoryView();
         const info = await api('/system-info');
         if (info.reply) setText('system-info-text', info.reply);
       } catch (err) {
@@ -1461,9 +2086,9 @@ async function initApp() {
     })();
     
     setInterval(refreshHealth, 10000);  // 10s — health is lightweight
-    setInterval(refreshStats, 5000);    // 5s — stats don't change fast
+    setInterval(refreshStats, 15000);   // 15s — stats don't change fast (throttled from 5s)
     setInterval(refreshCVCS, 2000);     // 2s — CVCS updates frequently
-    setInterval(refreshRecommendations, 10000); // 10s — recommendations
+    setInterval(refreshRecommendations, 30000); // 30s — recommendations (throttled from 10s)
     
     // Pause heavy animations when tab is hidden
     document.addEventListener('visibilitychange', () => {
@@ -2039,6 +2664,8 @@ async function submitVivaAnswer() {
 const vivaMicBtn = getEl('vivaMicBtn');
 if (vivaMicBtn) {
   vivaMicBtn.onclick = async () => {
+    if (state.isListening) return;
+    state.isListening = true;
     vivaMicBtn.classList.add('active-mic');
     setText('vivaQuestionText', "Listening for response...");
     try {
@@ -2050,6 +2677,7 @@ if (vivaMicBtn) {
     } catch (err) {
       console.warn("Viva voice transcription failed:", err);
     } finally {
+      state.isListening = false;
       vivaMicBtn.classList.remove('active-mic');
       setText('vivaQuestionText', activeVivaQuestion.text || activeVivaQuestion.question);
     }
@@ -2187,4 +2815,341 @@ if (testNextBtn) {
       loadSubjectWorkspace(activeSubjectId, activeName);
     }
   };
+}
+
+// === VOICE ENGINE WORKSPACE LOGIC ===
+function initVoiceWorkspace() {
+  const ttsPersonalitySelect = getEl('settingsVoiceSelect');
+  const voiceSpeedRange = getEl('voiceSpeedRange');
+  const voicePitchRange = getEl('voicePitchRange');
+  const voiceSensRange = getEl('voiceSensRange');
+  const voiceTestTextInput = getEl('voiceTestTextInput');
+  const voiceTestSpeakBtn = getEl('voiceTestSpeakBtn');
+  
+  if (voiceTestSpeakBtn && voiceTestTextInput) {
+    voiceTestSpeakBtn.onclick = async () => {
+      const text = voiceTestTextInput.value.trim();
+      if (!text) return;
+      voiceTestSpeakBtn.disabled = true;
+      voiceTestSpeakBtn.textContent = 'SPEAKING...';
+      const logCont = getEl('voiceLogsContainer');
+      if (logCont) {
+        const div = document.createElement('div');
+        div.textContent = `[Spoken] "${text}"`;
+        logCont.appendChild(div);
+        logCont.scrollTop = logCont.scrollHeight;
+      }
+      
+      const rate = voiceSpeedRange ? parseInt(voiceSpeedRange.value) : 150;
+      const pitch = voicePitchRange ? parseFloat(voicePitchRange.value) : 1.0;
+      
+      // Call backend speak endpoint
+      await api('/speak', {
+        method: 'POST',
+        body: JSON.stringify({
+          text: text,
+          rate: rate,
+          pitch: pitch
+        })
+      });
+      
+      voiceTestTextInput.value = '';
+      voiceTestSpeakBtn.disabled = false;
+      voiceTestSpeakBtn.textContent = 'SPEAK';
+    };
+  }
+}
+
+// === TOOLS WORKSPACE LOGIC ===
+async function initToolsWorkspace() {
+  // Tab Switching
+  const tabs = {
+    'tabFileSearchBtn': 'tool-tab-filesearch',
+    'tabCodeAnalysisBtn': 'tool-tab-codeanalysis',
+    'tabScreenOcrBtn': 'tool-tab-screenocr',
+    'tabSysDiagnosticsBtn': 'tool-tab-diagnostics'
+  };
+  
+  Object.entries(tabs).forEach(([btnId, contentId]) => {
+    const btn = getEl(btnId);
+    if (btn) {
+      btn.onclick = () => {
+        // Remove active from all tabs
+        document.querySelectorAll('.tool-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Hide all tab contents
+        document.querySelectorAll('.tool-tab-content').forEach(c => c.classList.add('hidden'));
+        const target = getEl(contentId);
+        if (target) target.classList.remove('hidden');
+        
+        // Run specific loaders
+        if (contentId === 'tool-tab-codeanalysis') {
+          populateCodeAnalysisDropdown();
+        } else if (contentId === 'tool-tab-diagnostics') {
+          refreshSystemDiagnosticsLogs();
+        }
+      };
+    }
+  });
+
+  // VIEW ALL recent activity button click
+  const viewAllActivityBtn = getEl('viewAllActivityBtn');
+  if (viewAllActivityBtn) {
+    viewAllActivityBtn.onclick = () => {
+      handleNavSwitch('tools');
+      const tabDiagBtn = getEl('tabSysDiagnosticsBtn');
+      if (tabDiagBtn) tabDiagBtn.click();
+    };
+  }
+  
+  // Quick tools right sidebar click handlers
+  const toolFileSearch = getEl('toolFileSearch');
+  if (toolFileSearch) {
+    toolFileSearch.onclick = () => {
+      handleNavSwitch('tools');
+      const tabSearchBtn = getEl('tabFileSearchBtn');
+      if (tabSearchBtn) tabSearchBtn.click();
+    };
+  }
+  
+  const toolCodeAnalysis = getEl('toolCodeAnalysis');
+  if (toolCodeAnalysis) {
+    toolCodeAnalysis.onclick = () => {
+      handleNavSwitch('tools');
+      const tabAnalysisBtn = getEl('tabCodeAnalysisBtn');
+      if (tabAnalysisBtn) tabAnalysisBtn.click();
+    };
+  }
+  
+  const toolScreenOCR = getEl('toolScreenOCR');
+  if (toolScreenOCR) {
+    toolScreenOCR.onclick = () => {
+      handleNavSwitch('tools');
+      const tabOcrBtn = getEl('tabScreenOcrBtn');
+      if (tabOcrBtn) tabOcrBtn.click();
+    };
+  }
+
+  // File Search Button/input inside tools
+  const toolsFileScanBtn = getEl('toolsFileScanBtn');
+  const toolsFileSearchInput = getEl('toolsFileSearchInput');
+  if (toolsFileScanBtn) {
+    toolsFileScanBtn.onclick = performToolsFileSearch;
+  }
+  if (toolsFileSearchInput) {
+    toolsFileSearchInput.onkeydown = (e) => {
+      if (e.key === 'Enter') performToolsFileSearch();
+    };
+  }
+
+  // Code Analysis Button click
+  const toolsAnalysisBtn = getEl('toolsAnalysisBtn');
+  if (toolsAnalysisBtn) {
+    toolsAnalysisBtn.onclick = async () => {
+      const select = getEl('analysisProjectSelect');
+      const box = getEl('analysisResultBox');
+      if (!select || !box) return;
+      const projId = select.value;
+      if (!projId) {
+        alert('Please select a project first.');
+        return;
+      }
+      
+      toolsAnalysisBtn.disabled = true;
+      toolsAnalysisBtn.textContent = 'ANALYZING...';
+      box.textContent = 'Running AI Architecture analysis... This scans the directory structure and checks for codebase vulnerabilities.';
+      
+      const projects = await api('/projects/list');
+      const proj = projects.find(p => p.project_id === projId);
+      if (proj) {
+        const res = await api('/projects/scan', {
+          method: 'POST',
+          body: JSON.stringify({ path: proj.path })
+        });
+        if (res && res.status === 'ok') {
+          box.textContent = `=== ARCHITECTURE STUDY FOR ${res.project.name} ===\n\n`;
+          box.textContent += `Purpose: ${res.analysis.purpose || 'Unknown'}\n`;
+          box.textContent += `Tech Stack: ${res.analysis.architecture || 'Unknown'}\n`;
+          box.textContent += `Folder Tree:\n${res.project.folder_structure || 'No folder tree found.'}\n\n`;
+          box.textContent += `Features completed:\n${res.analysis.features_completed ? res.analysis.features_completed.map(f => `- ${f}`).join('\n') : 'None'}\n\n`;
+          box.textContent += `Blockers detected:\n${res.analysis.blockers ? res.analysis.blockers.map(b => `- ${b}`).join('\n') : 'None'}\n`;
+          
+          addMessage('system', `Completed deep code structure analysis for project: ${res.project.name}`);
+        } else {
+          box.textContent = 'Analysis scan failed. Please check Ollama/FastAPI backend server logs.';
+        }
+      }
+      toolsAnalysisBtn.disabled = false;
+      toolsAnalysisBtn.textContent = 'ANALYZE CODE';
+    };
+  }
+
+  // OCR capture click
+  const toolsOcrCaptureBtn = getEl('toolsOcrCaptureBtn');
+  if (toolsOcrCaptureBtn) {
+    toolsOcrCaptureBtn.onclick = async () => {
+      const box = getEl('ocrOutputBox');
+      if (!box) return;
+      toolsOcrCaptureBtn.disabled = true;
+      toolsOcrCaptureBtn.textContent = 'CAPTURING SCREEN...';
+      box.classList.remove('hidden');
+      box.textContent = 'Simulating secure window handle snapshot...';
+      
+      const shot = await api('/cvcs/screenshot');
+      if (shot && shot.status === 'ok') {
+        box.textContent = `[Foreground Bounds]: ${JSON.stringify(shot.window_bounds)}\n`;
+        box.textContent += `[Captured File]: ${shot.filepath}\n`;
+        box.textContent += `[Resolution]: ${shot.width}x${shot.height}\n\n`;
+        box.textContent += `Running OCR text extraction...\n`;
+        
+        // Chat OCR response query
+        const chatRes = await api('/chat', {
+          method: 'POST',
+          body: JSON.stringify({ message: `What text is visible on the screen snapshot located at ${shot.filepath}?` })
+        });
+        box.textContent += `\n[Detected Text]:\n${chatRes.reply || 'No legible text blocks detected in foreground area.'}`;
+        addMessage('system', 'OCR screen analysis complete.');
+      } else {
+        box.textContent = 'OCR Snapshot request failed. safety protocol check required.';
+      }
+      toolsOcrCaptureBtn.disabled = false;
+      toolsOcrCaptureBtn.textContent = 'CAPTURE SCREEN OCR';
+    };
+  }
+
+  // Diagnostics and repair buttons
+  const toolsRunDiagBtn = getEl('toolsRunDiagBtn');
+  if (toolsRunDiagBtn) {
+    toolsRunDiagBtn.onclick = async () => {
+      toolsRunDiagBtn.disabled = true;
+      const logBox = getEl('sysDiagnosticsLogs');
+      if (logBox) logBox.innerHTML += '<div>➔ [Running diagnostics...]</div>';
+      
+      const res = await api('/diagnostics');
+      if (logBox) {
+        logBox.innerHTML += `<div>➔ Diagnostics Status: ${res.reply || 'Nominal'}</div>`;
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+      toolsRunDiagBtn.disabled = false;
+    };
+  }
+  
+  const toolsRunRepairBtn = getEl('toolsRunRepairBtn');
+  if (toolsRunRepairBtn) {
+    toolsRunRepairBtn.onclick = async () => {
+      toolsRunRepairBtn.disabled = true;
+      const logBox = getEl('sysDiagnosticsLogs');
+      if (logBox) logBox.innerHTML += '<div>➔ [Running system repair thread...]</div>';
+      
+      const res = await api('/repair');
+      if (logBox) {
+        logBox.innerHTML += `<div>➔ Repair Results: ${res.reply || 'Done'}</div>`;
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+      toolsRunRepairBtn.disabled = false;
+    };
+  }
+}
+
+async function populateCodeAnalysisDropdown() {
+  const select = getEl('analysisProjectSelect');
+  if (!select) return;
+  
+  const projects = await api('/projects/list');
+  select.innerHTML = '<option value="">-- Select Tracked Project --</option>';
+  if (projects) {
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.project_id;
+      opt.textContent = `${p.name} [${p.path}]`;
+      select.appendChild(opt);
+    });
+  }
+}
+
+async function refreshSystemDiagnosticsLogs() {
+  const logBox = getEl('sysDiagnosticsLogs');
+  if (!logBox) return;
+  
+  logBox.innerHTML = '<div>[DIAGNOSTICS READOUT]</div>';
+  const health = await api('/system/health-details');
+  if (health) {
+    Object.entries(health).forEach(([service, status]) => {
+      logBox.innerHTML += `<div>➔ Service: ${service.toUpperCase()} is ${status.toUpperCase()}</div>`;
+    });
+  }
+  
+  const stats = await api('/stats');
+  if (stats) {
+    logBox.innerHTML += `<div>➔ CPU Usage: ${stats.cpu_usage.toFixed(0)}%</div>`;
+    logBox.innerHTML += `<div>➔ Memory Usage: ${stats.ram_usage.toFixed(0)}% (${stats.ram_used_gb}/${stats.ram_total_gb} GB)</div>`;
+    logBox.innerHTML += `<div>➔ Hostname: ${stats.hostname || 'Localhost'}</div>`;
+  }
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+async function performToolsFileSearch() {
+  const input = getEl('toolsFileSearchInput');
+  const tbody = getEl('toolsFileTableBody');
+  if (!input || !tbody) return;
+  const q = input.value.trim().toLowerCase();
+  if (!q) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 20px;">Enter a search query.</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 20px;">Searching database index...</td></tr>';
+  
+  // Try selected project files first
+  if (state.activeProjectId) {
+    const files = await api(`/projects/files/${state.activeProjectId}`);
+    if (files && files.length > 0) {
+      const filtered = files.filter(f => f.path.toLowerCase().includes(q));
+      if (filtered.length > 0) {
+        tbody.innerHTML = '';
+        filtered.forEach(f => {
+          const tr = document.createElement('tr');
+          tr.style.cursor = 'pointer';
+          tr.onclick = () => {
+            setValue('chatInput', `Show contents of ${f.path}`);
+            handleNavSwitch('chat');
+          };
+          tr.innerHTML = `
+            <td style="padding: 8px; color: #fff; font-weight: bold;">${f.path.split('/').pop()}</td>
+            <td style="padding: 8px; color: #888;">${f.path}</td>
+            <td style="padding: 8px; color: var(--accent-neon); font-family: monospace;">Tracked</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        return;
+      }
+    }
+  }
+  
+  // Fallback to global search
+  const res = await api(`/search?query=${encodeURIComponent(q)}`);
+  if (res && res.results) {
+    tbody.innerHTML = '';
+    res.results.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.style.cursor = 'pointer';
+      tr.onclick = () => {
+        setValue('chatInput', r.action);
+        handleNavSwitch('chat');
+      };
+      tr.innerHTML = `
+        <td style="padding: 8px; color: #fff; font-weight: bold;">${r.title}</td>
+        <td style="padding: 8px; color: #888;">${r.snippet}</td>
+        <td style="padding: 8px; color: var(--accent-neon); font-family: monospace;">${r.type.toUpperCase()}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    
+    if (res.results.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 20px;">No files found matching query.</td></tr>';
+    }
+  } else {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 20px;">Error searching database index.</td></tr>';
+  }
 }

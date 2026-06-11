@@ -94,7 +94,10 @@ class ToolManager:
             "skipit_assistant", "smart_cart_assistant", "business_intelligence", "agent_network",
             "self_modifier", "self_optimizer", "start_meeting", "stop_meeting", "recall_meeting",
             "get_action_items", "register_project", "scan_project_changes", "get_project_status",
-            "query_recent_work"
+            "query_recent_work", "run_command", "file_manager", "cvcs_click", "cvcs_type",
+            "cvcs_read_screen", "cvcs_set_permission", "agent_scan", "agent_code",
+            "agent_run_tests", "agent_fix_errors", "continue_where_left_off", "screenshot",
+            "lock_computer", "press_key", "mouse_control"
         }
         
         for name in self.specs:

@@ -89,6 +89,11 @@
       "suffix": ".py"
     },
     {
+      "path": "test_project_intelligence_upgrade.py",
+      "size_bytes": 8458,
+      "suffix": ".py"
+    },
+    {
       "path": "test_safety.py",
       "size_bytes": 2275,
       "suffix": ".py"
@@ -165,17 +170,17 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 70440,
+      "size_bytes": 105441,
       "suffix": ".js"
     },
     {
       "path": "app/ui/index.html",
-      "size_bytes": 28257,
+      "size_bytes": 61455,
       "suffix": ".html"
     },
     {
       "path": "app/ui/style.css",
-      "size_bytes": 30755,
+      "size_bytes": 46250,
       "suffix": ".css"
     },
     {
@@ -295,17 +300,17 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 23617,
+      "size_bytes": 24189,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 39257,
+      "size_bytes": 40563,
       "suffix": ".json"
     },
     {
       "path": "desktop/main.js",
-      "size_bytes": 6119,
+      "size_bytes": 7416,
       "suffix": ".js"
     },
     {
@@ -319,8 +324,13 @@
       "suffix": ".json"
     },
     {
+      "path": "desktop/preload.js",
+      "size_bytes": 377,
+      "suffix": ".js"
+    },
+    {
       "path": "logs/agent_terminal.log",
-      "size_bytes": 5298,
+      "size_bytes": 6188,
       "suffix": ".log"
     },
     {
@@ -382,6 +392,11 @@
       "path": "memory/academic_documents/maths/unit_4_study_guide.md",
       "size_bytes": 3128,
       "suffix": ".md"
+    },
+    {
+      "path": "memory/academic_documents/os/rag_index_cache.json",
+      "size_bytes": 71,
+      "suffix": ".json"
     },
     {
       "path": "memory/data/cvcs_config.json",
@@ -584,6 +599,11 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/test_robust_path.py",
+      "size_bytes": 762,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/test_router.py",
       "size_bytes": 825,
       "suffix": ".py"
@@ -650,7 +670,7 @@
     },
     {
       "path": "server/main.py",
-      "size_bytes": 80307,
+      "size_bytes": 90357,
       "suffix": ".py"
     },
     {
@@ -695,12 +715,12 @@
     },
     {
       "path": "server/backend/intent_router.py",
-      "size_bytes": 32060,
+      "size_bytes": 32720,
       "suffix": ".py"
     },
     {
       "path": "server/backend/llm_client.py",
-      "size_bytes": 11340,
+      "size_bytes": 31299,
       "suffix": ".py"
     },
     {
@@ -710,7 +730,7 @@
     },
     {
       "path": "server/backend/memory_sqlite.py",
-      "size_bytes": 34044,
+      "size_bytes": 38630,
       "suffix": ".py"
     },
     {
@@ -740,22 +760,22 @@
     },
     {
       "path": "server/backend/screen_monitor.py",
-      "size_bytes": 8113,
+      "size_bytes": 8115,
       "suffix": ".py"
     },
     {
       "path": "server/backend/tools_runtime.py",
-      "size_bytes": 40394,
+      "size_bytes": 40969,
       "suffix": ".py"
     },
     {
       "path": "server/backend/tool_manager.py",
-      "size_bytes": 6072,
+      "size_bytes": 6367,
       "suffix": ".py"
     },
     {
       "path": "server/backend/tool_schemas.py",
-      "size_bytes": 11902,
+      "size_bytes": 12159,
       "suffix": ".py"
     },
     {
@@ -795,7 +815,7 @@
     },
     {
       "path": "tools/browser_helper.py",
-      "size_bytes": 5905,
+      "size_bytes": 5906,
       "suffix": ".py"
     },
     {
@@ -910,12 +930,12 @@
     },
     {
       "path": "tools/project_intelligence.py",
-      "size_bytes": 20062,
+      "size_bytes": 51167,
       "suffix": ".py"
     },
     {
       "path": "tools/registry.py",
-      "size_bytes": 41214,
+      "size_bytes": 41626,
       "suffix": ".py"
     },
     {
@@ -960,7 +980,7 @@
     },
     {
       "path": "tools/system_stats.py",
-      "size_bytes": 8725,
+      "size_bytes": 8939,
       "suffix": ".py"
     },
     {
@@ -971,6 +991,11 @@
     {
       "path": "tools/task_scheduler.py",
       "size_bytes": 12271,
+      "suffix": ".py"
+    },
+    {
+      "path": "tools/tech_detector.py",
+      "size_bytes": 7724,
       "suffix": ".py"
     },
     {
@@ -1000,12 +1025,12 @@
     },
     {
       "path": "tools/voice_stt.py",
-      "size_bytes": 20754,
+      "size_bytes": 21664,
       "suffix": ".py"
     },
     {
       "path": "tools/voice_tts.py",
-      "size_bytes": 8926,
+      "size_bytes": 10331,
       "suffix": ".py"
     },
     {

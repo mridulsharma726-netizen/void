@@ -178,6 +178,9 @@ class GetProjectStatusInput(ToolInput):
 class QueryRecentWorkInput(ToolInput):
     timeframe: Optional[str] = Field("today", description="Timeframe to query (e.g. today, yesterday, week)")
 
+class ContinueWhereLeftOffInput(ToolInput):
+    project_id: Optional[str] = Field(None, description="Optional ID of the project to resume. Uses active project if omitted.")
+
 class ScreenshotInput(ToolInput):
     pass
 
@@ -247,10 +250,11 @@ TOOL_REGISTRY = {
     "stop_meeting": (StopMeetingInput, ToolOutput, 95.0),
     "recall_meeting": (RecallMeetingInput, ToolOutput, 10.0),
     "get_action_items": (GetActionItemsInput, ToolOutput, 10.0),
-    "register_project": (RegisterProjectInput, ToolOutput, 95.0),
+    "register_project": (RegisterProjectInput, ToolOutput, 180.0),
     "scan_project_changes": (ScanProjectChangesInput, ToolOutput, 15.0),
     "get_project_status": (GetProjectStatusInput, ToolOutput, 10.0),
     "query_recent_work": (QueryRecentWorkInput, ToolOutput, 15.0),
+    "continue_where_left_off": (ContinueWhereLeftOffInput, ToolOutput, 15.0),
     "screenshot": (ScreenshotInput, ToolOutput, 10.0),
     "lock_computer": (LockComputerInput, ToolOutput, 5.0),
     "press_key": (PressKeyInput, ToolOutput, 5.0),

@@ -25,6 +25,7 @@ class SystemStats:
     Handles missing libraries gracefully by returning None for unavailable stats.
     Compatible with Python 3.12.
     """
+    _cached_processor_info = None
     
     def __init__(self):
         self._stats_cache: Dict[str, Any] = {}
@@ -32,13 +33,15 @@ class SystemStats:
         self._last_update = 0.0
         
         # Resolve processor info once to prevent heavy CPU overhead on stats refresh
-        self._processor_info = platform.processor()
-        if CPUINFO_AVAILABLE:
-            try:
-                info = cpuinfo.get_cpu_info()
-                self._processor_info = info.get("brand_raw", platform.processor())
-            except Exception:
-                pass
+        if SystemStats._cached_processor_info is None:
+            SystemStats._cached_processor_info = platform.processor()
+            if CPUINFO_AVAILABLE:
+                try:
+                    info = cpuinfo.get_cpu_info()
+                    SystemStats._cached_processor_info = info.get("brand_raw", platform.processor())
+                except Exception:
+                    pass
+        self._processor_info = SystemStats._cached_processor_info
     
     def _should_refresh(self) -> bool:
         """Check if cache should be refreshed."""

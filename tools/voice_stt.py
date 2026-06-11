@@ -188,6 +188,7 @@ class VoiceSTT:
     _listening_thread = None
     _running = False
     _current_rms = 0.0
+    _lock = threading.Lock()
     
     def __new__(cls):
         if cls._instance is None:
@@ -383,140 +384,148 @@ class VoiceSTT:
         Retrieves next voice transaction from Queue (Offline-First).
         If offline Vosk is missing, fallbacks dynamically to online Google API.
         """
-        # Ensure loops are active
-        self.start_listening_loop()
+        acquired = self._lock.acquire(blocking=False)
+        if not acquired:
+            logger.warning("[STT] Already listening. Rejecting concurrent listen request.")
+            return {"status": "error", "text": "STT busy", "confidence": 0.0, "error": "STT engine is busy."}
         
-        # Clear old audio chunks first
-        while not self._audio_queue.empty():
-            try:
-                self._audio_queue.get_nowait()
-            except queue.Empty:
-                break
-                
-        logger.info(f"[STT] Awaiting active input stream (timeout={timeout}s)...")
-        start_time = time.time()
-        speech_start_time = None
-        
-        # We accumulate buffer strings or feed the Vosk recognizer
-        collected_data = bytearray()
-        
-        while time.time() - start_time < timeout:
-            # Check interruption
-            if is_tts_speaking():
-                # Discard and sleep
-                time.sleep(0.1)
-                continue
-                
-            try:
-                data = self._audio_queue.get(timeout=0.5)
-                if speech_start_time is None:
-                    speech_start_time = time.time()
-                collected_data.extend(data)
-                
-                # If we have Vosk active, stream process the chunk
-                if self._recognizer is not None:
-                    if self._recognizer.AcceptWaveform(bytes(data)):
-                        res = json.loads(self._recognizer.Result())
-                        text = res.get("text", "").strip()
-                        if text:
-                            # User spoke! Interrupt TTS just in case
-                            stop_tts_speaking()
-                            logger.info(f"[STT OFFLINE VOSK] Heard: {text}")
-                            
-                            # Run emotion analysis in a background thread to prevent lag
-                            audio_snapshot = bytes(collected_data)
-                            duration = time.time() - (speech_start_time or start_time)
-                            threading.Thread(
-                                target=self._analyze_and_process_emotion,
-                                args=(text, audio_snapshot, duration),
-                                daemon=True
-                            ).start()
-                            
-                            return {"status": "ok", "text": text, "status_code": "OK", "confidence": 1.0}
-            except queue.Empty:
-                continue
-                
-        # Handle final Vosk result if data exists
-        if self._recognizer is not None and len(collected_data) > 0:
-            res = json.loads(self._recognizer.FinalResult())
-            text = res.get("text", "").strip()
-            if text:
-                logger.info(f"[STT OFFLINE VOSK FINAL] Heard: {text}")
-                
-                # Run emotion analysis in a background thread to prevent lag
-                audio_snapshot = bytes(collected_data)
-                duration = time.time() - (speech_start_time or start_time)
-                threading.Thread(
-                    target=self._analyze_and_process_emotion,
-                    args=(text, audio_snapshot, duration),
-                    daemon=True
-                ).start()
-                
-                return {"status": "ok", "text": text, "status_code": "OK", "confidence": 1.0}
-                
-        # --- ONLINE GOOGLE API FALLBACK ---
-        if SR_AVAILABLE and len(collected_data) > 0:
-            try:
-                logger.info("[STT] Falling back to Online Google STT APIs...")
-                audio_data = sr.AudioData(bytes(collected_data), 16000, 2)
-                
-                # Fetch dialects from owner profile
+        try:
+            # Ensure loops are active
+            self.start_listening_loop()
+            
+            # Clear old audio chunks first
+            while not self._audio_queue.empty():
                 try:
-                    from backend.owner_profile import OWNER_PROFILE
-                    dialects = OWNER_PROFILE.get("preferences", {}).get("preferred_dialects", ["en-US", "en-IN", "en-GB"])
-                except Exception:
-                    dialects = ["en-US", "en-IN", "en-GB"]
-                
-                # Recognize multiple dialects in parallel
-                import concurrent.futures
-                results = []
-                
-                def recognize_one(dialect):
+                    self._audio_queue.get_nowait()
+                except queue.Empty:
+                    break
+                    
+            logger.info(f"[STT] Awaiting active input stream (timeout={timeout}s)...")
+            start_time = time.time()
+            speech_start_time = None
+            
+            # We accumulate buffer strings or feed the Vosk recognizer
+            collected_data = bytearray()
+            
+            while time.time() - start_time < timeout:
+                # Check interruption
+                if is_tts_speaking():
+                    # Discard and sleep
+                    time.sleep(0.1)
+                    continue
+                    
+                try:
+                    data = self._audio_queue.get(timeout=0.5)
+                    if speech_start_time is None:
+                        speech_start_time = time.time()
+                    collected_data.extend(data)
+                    
+                    # If we have Vosk active, stream process the chunk
+                    if self._recognizer is not None:
+                        if self._recognizer.AcceptWaveform(bytes(data)):
+                            res = json.loads(self._recognizer.Result())
+                            text = res.get("text", "").strip()
+                            if text:
+                                # User spoke! Interrupt TTS just in case
+                                stop_tts_speaking()
+                                logger.info(f"[STT OFFLINE VOSK] Heard: {text}")
+                                
+                                # Run emotion analysis in a background thread to prevent lag
+                                audio_snapshot = bytes(collected_data)
+                                duration = time.time() - (speech_start_time or start_time)
+                                threading.Thread(
+                                    target=self._analyze_and_process_emotion,
+                                    args=(text, audio_snapshot, duration),
+                                    daemon=True
+                                ).start()
+                                
+                                return {"status": "ok", "text": text, "status_code": "OK", "confidence": 1.0}
+                except queue.Empty:
+                    continue
+                    
+            # Handle final Vosk result if data exists
+            if self._recognizer is not None and len(collected_data) > 0:
+                res = json.loads(self._recognizer.FinalResult())
+                text = res.get("text", "").strip()
+                if text:
+                    logger.info(f"[STT OFFLINE VOSK FINAL] Heard: {text}")
+                    
+                    # Run emotion analysis in a background thread to prevent lag
+                    audio_snapshot = bytes(collected_data)
+                    duration = time.time() - (speech_start_time or start_time)
+                    threading.Thread(
+                        target=self._analyze_and_process_emotion,
+                        args=(text, audio_snapshot, duration),
+                        daemon=True
+                    ).start()
+                    
+                    return {"status": "ok", "text": text, "status_code": "OK", "confidence": 1.0}
+                    
+            # --- ONLINE GOOGLE API FALLBACK ---
+            if SR_AVAILABLE and len(collected_data) > 0:
+                try:
+                    logger.info("[STT] Falling back to Online Google STT APIs...")
+                    audio_data = sr.AudioData(bytes(collected_data), 16000, 2)
+                    
+                    # Fetch dialects from owner profile
                     try:
-                        res = self._sr_recognizer.recognize_google(audio_data, language=dialect, show_all=True)
-                        if isinstance(res, dict) and "alternative" in res:
-                            alternatives = res["alternative"]
-                            if alternatives:
-                                best_alt = max(alternatives, key=lambda x: x.get("confidence", 0.0))
-                                return {
-                                    "text": best_alt.get("transcript", ""),
-                                    "confidence": best_alt.get("confidence", 0.8)
-                                }
-                        elif isinstance(res, str):
-                            return {"text": res, "confidence": 0.8}
+                        from backend.owner_profile import OWNER_PROFILE
+                        dialects = OWNER_PROFILE.get("preferences", {}).get("preferred_dialects", ["en-US", "en-IN", "en-GB"])
                     except Exception:
-                        pass
-                    return None
+                        dialects = ["en-US", "en-IN", "en-GB"]
+                    
+                    # Recognize multiple dialects in parallel
+                    import concurrent.futures
+                    results = []
+                    
+                    def recognize_one(dialect):
+                        try:
+                            res = self._sr_recognizer.recognize_google(audio_data, language=dialect, show_all=True)
+                            if isinstance(res, dict) and "alternative" in res:
+                                alternatives = res["alternative"]
+                                if alternatives:
+                                    best_alt = max(alternatives, key=lambda x: x.get("confidence", 0.0))
+                                    return {
+                                        "text": best_alt.get("transcript", ""),
+                                        "confidence": best_alt.get("confidence", 0.8)
+                                    }
+                            elif isinstance(res, str):
+                                return {"text": res, "confidence": 0.8}
+                        except Exception:
+                            pass
+                        return None
 
-                with concurrent.futures.ThreadPoolExecutor(max_workers=len(dialects)) as executor:
-                    futures = [executor.submit(recognize_one, d) for d in dialects]
-                    for f in concurrent.futures.as_completed(futures):
-                        res = f.result()
-                        if res and res["text"]:
-                            results.append(res)
-                
-                if results:
-                    best_res = max(results, key=lambda x: x["confidence"])
-                    text = best_res["text"]
-                else:
-                    text = self._sr_recognizer.recognize_google(audio_data) # final fallback
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=len(dialects)) as executor:
+                        futures = [executor.submit(recognize_one, d) for d in dialects]
+                        for f in concurrent.futures.as_completed(futures):
+                            res = f.result()
+                            if res and res["text"]:
+                                results.append(res)
+                    
+                    if results:
+                        best_res = max(results, key=lambda x: x["confidence"])
+                        text = best_res["text"]
+                    else:
+                        text = self._sr_recognizer.recognize_google(audio_data) # final fallback
 
-                logger.info(f"[STT ONLINE GOOGLE] Heard: {text}")
-                
-                # Run emotion analysis in a background thread to prevent lag
-                audio_snapshot = bytes(collected_data)
-                duration = time.time() - (speech_start_time or start_time)
-                threading.Thread(
-                    target=self._analyze_and_process_emotion,
-                    args=(text, audio_snapshot, duration),
-                    daemon=True
-                ).start()
-                
-                return {"status": "ok", "text": text, "status_code": "OK", "confidence": 1.0}
-            except Exception as e:
-                logger.warning(f"[STT ONLINE GOOGLE FAILED] resolution error: {e}")
-                
-        return {"status": "timeout", "text": "", "status_code": "TIMEOUT", "confidence": 0.0}
+                    logger.info(f"[STT ONLINE GOOGLE] Heard: {text}")
+                    
+                    # Run emotion analysis in a background thread to prevent lag
+                    audio_snapshot = bytes(collected_data)
+                    duration = time.time() - (speech_start_time or start_time)
+                    threading.Thread(
+                        target=self._analyze_and_process_emotion,
+                        args=(text, audio_snapshot, duration),
+                        daemon=True
+                    ).start()
+                    
+                    return {"status": "ok", "text": text, "status_code": "OK", "confidence": 1.0}
+                except Exception as e:
+                    logger.warning(f"[STT ONLINE GOOGLE FAILED] resolution error: {e}")
+                    
+            return {"status": "timeout", "text": "", "status_code": "TIMEOUT", "confidence": 0.0}
+        finally:
+            self._lock.release()
 
 # Global singleton
 stt = None

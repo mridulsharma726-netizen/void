@@ -27,6 +27,9 @@ DB_FILE = DB_DIR / "memory.db"
 OLLAMA_EMBED_URL = "http://127.0.0.1:11434/api/embeddings"
 OLLAMA_EMBED_FALLBACK = "http://127.0.0.1:11434/api/embed"
 
+_DB_INITIALIZED = False
+_EMBEDDING_CACHE = {}
+
 def get_ollama_model() -> str:
     """Helper to detect currently active Ollama model or default to llama3.2:3b."""
     try:
@@ -38,6 +41,9 @@ def get_ollama_model() -> str:
 
 def init_db():
     """Create structural SQLite database tables for persistence."""
+    global _DB_INITIALIZED
+    if _DB_INITIALIZED:
+        return
     DB_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_FILE))
     cursor = conn.cursor()
@@ -150,7 +156,12 @@ def init_db():
             features_planned TEXT DEFAULT '[]',
             blockers TEXT DEFAULT '[]',
             recent_changes TEXT DEFAULT '[]',
-            folder_structure TEXT
+            folder_structure TEXT,
+            goals TEXT DEFAULT '',
+            completed_modules TEXT DEFAULT '',
+            pending_modules TEXT DEFAULT '',
+            known_bugs TEXT DEFAULT '',
+            development_history TEXT DEFAULT ''
         )
     """)
     
@@ -193,6 +204,16 @@ def init_db():
             cursor.execute("ALTER TABLE action_items ADD COLUMN priority TEXT DEFAULT 'normal'")
     except Exception as e:
         logger.warning(f"[SQLITE MEMORY] action_items migration note: {e}")
+
+    # Migrate tracked_projects: add goals, completed_modules, pending_modules, known_bugs, development_history columns if missing
+    try:
+        cursor.execute("PRAGMA table_info(tracked_projects)")
+        existing_cols = {row[1] for row in cursor.fetchall()}
+        for col in ["goals", "completed_modules", "pending_modules", "known_bugs", "development_history"]:
+            if col not in existing_cols:
+                cursor.execute(f"ALTER TABLE tracked_projects ADD COLUMN {col} TEXT DEFAULT ''")
+    except Exception as e:
+        logger.warning(f"[SQLITE MEMORY] tracked_projects migration note: {e}")
     
     # Ensure default row in user_xp
     cursor.execute("SELECT COUNT(*) FROM user_xp")
@@ -201,6 +222,7 @@ def init_db():
         
     conn.commit()
     conn.close()
+    _DB_INITIALIZED = True
     logger.info(f"[SQLITE MEMORY] Database initialized at: {DB_FILE}")
 
 def set_profile_value(key: str, value: str) -> bool:
@@ -236,27 +258,37 @@ def get_profile_value(key: str) -> Optional[str]:
         conn.close()
 
 def get_embedding(text: str) -> List[float]:
-    """Generates embedding vector from local Ollama endpoint."""
+    """Generates embedding vector from local Ollama endpoint, with in-memory caching."""
+    text_key = text.strip().lower() if text else ""
+    if not text_key:
+        return [0.0] * 128
+    if text_key in _EMBEDDING_CACHE:
+        return _EMBEDDING_CACHE[text_key]
+        
     model = get_ollama_model()
+    vector = None
     try:
         # Option 1: Classic embeddings API
         resp = requests.post(OLLAMA_EMBED_URL, json={"model": model, "prompt": text}, timeout=4.0)
         if resp.status_code == 200:
             vector = resp.json().get("embedding", [])
-            if vector:
-                return vector
     except Exception:
         pass
         
-    try:
-        # Option 2: Newer embed API
-        resp = requests.post(OLLAMA_EMBED_FALLBACK, json={"model": model, "input": [text]}, timeout=4.0)
-        if resp.status_code == 200:
-            vectors = resp.json().get("embeddings", [])
-            if vectors:
-                return vectors[0]
-    except Exception:
-        pass
+    if not vector:
+        try:
+            # Option 2: Newer embed API
+            resp = requests.post(OLLAMA_EMBED_FALLBACK, json={"model": model, "input": [text]}, timeout=4.0)
+            if resp.status_code == 200:
+                vectors = resp.json().get("embeddings", [])
+                if vectors:
+                    vector = vectors[0]
+        except Exception:
+            pass
+            
+    if vector:
+        _EMBEDDING_CACHE[text_key] = vector
+        return vector
         
     # Return placeholder small vector on failures
     return [0.0] * 128
@@ -778,7 +810,9 @@ def save_project(project_id: str, name: str, path: str, purpose: str = "",
                  architecture: str = "", technologies: str = "",
                  features_completed: str = "[]", features_progress: str = "[]",
                  features_planned: str = "[]", blockers: str = "[]",
-                 folder_structure: str = "") -> bool:
+                 folder_structure: str = "", goals: str = "",
+                 completed_modules: str = "", pending_modules: str = "",
+                 known_bugs: str = "", development_history: str = "") -> bool:
     """Saves or updates a tracked project profile."""
     init_db()
     conn = sqlite3.connect(str(DB_FILE))
@@ -788,11 +822,13 @@ def save_project(project_id: str, name: str, path: str, purpose: str = "",
             """INSERT OR REPLACE INTO tracked_projects
                (project_id, name, path, last_scan_date, purpose, architecture,
                 technologies, features_completed, features_progress, features_planned,
-                blockers, folder_structure)
-               VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                blockers, folder_structure, goals, completed_modules, pending_modules,
+                known_bugs, development_history)
+               VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (project_id, name, path, purpose, architecture, technologies,
              features_completed, features_progress, features_planned,
-             blockers, folder_structure)
+             blockers, folder_structure, goals, completed_modules, pending_modules,
+             known_bugs, development_history)
         )
         conn.commit()
         return True
@@ -809,7 +845,11 @@ def get_project(project_id: str) -> Optional[Dict[str, Any]]:
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT project_id, name, path, created_at, last_scan_date, purpose, architecture, technologies, features_completed, features_progress, features_planned, blockers, recent_changes, folder_structure FROM tracked_projects WHERE project_id = ?",
+            """SELECT project_id, name, path, created_at, last_scan_date, purpose, architecture, 
+                      technologies, features_completed, features_progress, features_planned, 
+                      blockers, recent_changes, folder_structure, goals, completed_modules, 
+                      pending_modules, known_bugs, development_history 
+               FROM tracked_projects WHERE project_id = ?""",
             (project_id,)
         )
         row = cursor.fetchone()
@@ -820,7 +860,10 @@ def get_project(project_id: str) -> Optional[Dict[str, Any]]:
                 "purpose": row[5], "architecture": row[6], "technologies": row[7],
                 "features_completed": row[8], "features_progress": row[9],
                 "features_planned": row[10], "blockers": row[11],
-                "recent_changes": row[12], "folder_structure": row[13]
+                "recent_changes": row[12], "folder_structure": row[13],
+                "goals": row[14], "completed_modules": row[15],
+                "pending_modules": row[16], "known_bugs": row[17],
+                "development_history": row[18]
             }
         return None
     except Exception as e:
@@ -836,7 +879,11 @@ def get_project_by_name(name: str) -> Optional[Dict[str, Any]]:
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT project_id, name, path, created_at, last_scan_date, purpose, architecture, technologies, features_completed, features_progress, features_planned, blockers, recent_changes, folder_structure FROM tracked_projects WHERE LOWER(name) = LOWER(?)",
+            """SELECT project_id, name, path, created_at, last_scan_date, purpose, architecture, 
+                      technologies, features_completed, features_progress, features_planned, 
+                      blockers, recent_changes, folder_structure, goals, completed_modules, 
+                      pending_modules, known_bugs, development_history 
+               FROM tracked_projects WHERE LOWER(name) = LOWER(?)""",
             (name,)
         )
         row = cursor.fetchone()
@@ -847,7 +894,10 @@ def get_project_by_name(name: str) -> Optional[Dict[str, Any]]:
                 "purpose": row[5], "architecture": row[6], "technologies": row[7],
                 "features_completed": row[8], "features_progress": row[9],
                 "features_planned": row[10], "blockers": row[11],
-                "recent_changes": row[12], "folder_structure": row[13]
+                "recent_changes": row[12], "folder_structure": row[13],
+                "goals": row[14], "completed_modules": row[15],
+                "pending_modules": row[16], "known_bugs": row[17],
+                "development_history": row[18]
             }
         return None
     except Exception as e:
@@ -855,6 +905,43 @@ def get_project_by_name(name: str) -> Optional[Dict[str, Any]]:
         return None
     finally:
         conn.close()
+
+def get_active_project() -> Optional[Dict[str, Any]]:
+    """
+    Attempts to identify the active workspace project folder.
+    First tries to inspect active desktop foreground window titles.
+    Then falls back to the local workspace root or most recently scanned project.
+    """
+    init_db()
+    
+    # 1. Check if there are any tracked projects
+    projects = list_tracked_projects()
+    if not projects:
+        return None
+        
+    # 2. Try to get foreground window title (from screen_monitor if available)
+    try:
+        from server.backend.screen_monitor import get_monitor_instance
+        monitor = get_monitor_instance()
+        title = monitor.get_foreground_window_title().lower()
+        if title:
+            # Check if any tracked project name or basename is in the title
+            for proj in projects:
+                if proj["name"].lower() in title:
+                    return get_project(proj["project_id"])
+    except Exception:
+        pass
+
+    # 3. Check if current directory path corresponds to any tracked project path
+    import os
+    # Default local workspace root of VOID
+    default_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    for proj in projects:
+        if os.path.abspath(proj["path"]) == default_root:
+            return get_project(proj["project_id"])
+            
+    # 4. Fallback to the most recently scanned project
+    return get_project(projects[0]["project_id"])
 
 def list_tracked_projects() -> List[Dict[str, Any]]:
     """Lists all tracked projects."""
@@ -920,6 +1007,23 @@ def delete_project_file(file_id: str) -> bool:
     finally:
         conn.close()
 
+def delete_project(project_id: str) -> bool:
+    """Removes a project and its associated files and scan histories from the database."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM tracked_projects WHERE project_id = ?", (project_id,))
+        cursor.execute("DELETE FROM project_files WHERE project_id = ?", (project_id,))
+        cursor.execute("DELETE FROM project_scan_history WHERE project_id = ?", (project_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to delete project {project_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
 def save_scan_history(project_id: str, new_files: str, modified_files: str, deleted_files: str, summary: str = "") -> bool:
     """Records a project scan result for historical tracking."""
     init_db()
@@ -943,7 +1047,8 @@ def update_project_field(project_id: str, field: str, value: str) -> bool:
     allowed_fields = {
         "purpose", "architecture", "technologies", "features_completed",
         "features_progress", "features_planned", "blockers", "recent_changes",
-        "folder_structure", "last_scan_date"
+        "folder_structure", "last_scan_date", "goals", "completed_modules",
+        "pending_modules", "known_bugs", "development_history"
     }
     if field not in allowed_fields:
         logger.warning(f"Attempted to update disallowed field: {field}")

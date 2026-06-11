@@ -142,6 +142,8 @@ class ToolRuntime:
                 output = await self._get_project_status(data.get("project_name"))
             elif name == "query_recent_work":
                 output = await self._query_recent_work(data.get("timeframe"))
+            elif name == "continue_where_left_off":
+                output = await self._continue_where_left_off(data.get("project_id"))
             elif name == "screenshot":
                 output = await self._screenshot()
             elif name == "lock_computer":
@@ -750,6 +752,14 @@ class ToolRuntime:
             return res.get("message", "No recent work found.")
         except Exception as e:
             return f"Error querying recent work: {e}"
+
+    async def _continue_where_left_off(self, project_id: Optional[str]) -> str:
+        try:
+            from tools.project_intelligence import continue_where_left_off
+            res = await asyncio.to_thread(continue_where_left_off, project_id or "")
+            return res.get("message", "Could not continue where left off.")
+        except Exception as e:
+            return f"Error executing continue where left off: {e}"
 
     async def _screenshot(self) -> str:
         try:
