@@ -40,6 +40,13 @@ from tools.pc_control import open_app as launch
 from tools.voice_tts import speak as tts_speak, stop as tts_stop, is_speaking as tts_is_speaking
 from tools.voice_stt import listen_once
 
+# --- Real-Time Intelligence Upgrade imports (lazy — fail silently if deps missing) ---
+try:
+    from fastapi import WebSocket, WebSocketDisconnect
+    _WS_AVAILABLE = True
+except ImportError:
+    _WS_AVAILABLE = False
+
 # Singletons - lazy load
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(name)s | %(levelname)s | %(message)s")
 logger = logging.getLogger("void.main")
@@ -111,9 +118,10 @@ def _get_memory():
 # === OLLAMA HELPERS ===
 async def is_ollama_ready():
     try:
-        with socket.socket() as s:
-            s.settimeout(1)
-            return s.connect_ex(('127.0.0.1', 11434)) == 0
+        reader, writer = await asyncio.wait_for(asyncio.open_connection('127.0.0.1', 11434), timeout=1.0)
+        writer.close()
+        await writer.wait_closed()
+        return True
     except:
         return False
 
@@ -123,7 +131,7 @@ async def ensure_ollama():
         try:
             from backend.llm_client import OllamaClient
             llm = OllamaClient()
-            resp = requests.get(llm.tags_url, timeout=2)
+            resp = await asyncio.to_thread(requests.get, llm.tags_url, timeout=2)
             if resp.status_code == 200:
                 models = [m.get("name") for m in resp.json().get("models", [])]
                 if llm.model not in models and f"{llm.model}:latest" not in models:
@@ -302,10 +310,26 @@ async def lifespan(app: FastAPI):
     VoidSingletons._instances["main_loop"] = asyncio.get_running_loop()
     # Spawn startup tasks in background to keep startup time near zero
     asyncio.create_task(run_background_startup())
-    
+
+    # --- Real-Time Intelligence: start RSS background poller ---
+    try:
+        from news.rss_engine import get_engine as get_rss_engine
+        rss_engine = get_rss_engine()
+        rss_engine.start_background_fetch()
+        logger.info("[LIFESPAN] RSS news engine started (background polling active).")
+    except Exception as _rss_err:
+        logger.warning(f"[LIFESPAN] RSS engine could not start: {_rss_err}")
+
     yield
-    
+
     logger.info("VOID shutdown...")
+    # Stop RSS engine
+    try:
+        from news.rss_engine import get_engine as get_rss_engine
+        get_rss_engine().stop_background_fetch()
+    except Exception:
+        pass
+    
     # Stop voice loop on shutdown
     try:
         from tools.voice_listener import stop_voice_loop
@@ -419,6 +443,397 @@ async def health():
         "uptime": int(time.time() - APP_START)
     }
 
+# =============================================================================
+# REAL-TIME INTELLIGENCE ENDPOINTS
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Request/Response models for new endpoints
+# ---------------------------------------------------------------------------
+class SearchRequest(BaseModel):
+    query: str
+    max_results: int = 5
+    news_mode: bool = False
+
+class FSReadRequest(BaseModel):
+    path: str
+
+class FSWriteRequest(BaseModel):
+    path: str
+    content: str
+    encoding: str = "utf-8"
+
+class FSListRequest(BaseModel):
+    path: str = "."
+    max_entries: int = 200
+
+class TerminalRunRequest(BaseModel):
+    command: str
+    cwd: Optional[str] = None
+    timeout: int = 120
+
+class BuildPlanRequest(BaseModel):
+    requirements: str
+    target_dir: str = "."
+
+class BuildExecuteRequest(BaseModel):
+    plan_id: str
+    target_dir: str = "."
+    batch_approve: bool = True
+
+class ApprovalResponse(BaseModel):
+    request_id: str
+    approved: bool
+
+# ---------------------------------------------------------------------------
+# Search endpoint
+# ---------------------------------------------------------------------------
+@app.post("/api/search")
+async def api_search(req: SearchRequest):
+    """
+    DuckDuckGo web search (no API key required).
+    Returns structured results: title, url, snippet, source.
+    """
+    try:
+        from search.duckduckgo_provider import get_provider
+        provider = get_provider()
+        if req.news_mode:
+            results = provider.search_news(req.query, max_results=req.max_results)
+        else:
+            results = provider.search(req.query, max_results=req.max_results)
+
+        # Log to memory
+        try:
+            from backend.memory_sqlite import store_search
+            store_search(
+                query=req.query,
+                intent="news_query" if req.news_mode else "web_search",
+                source="duckduckgo",
+                result_count=len(results),
+                web_used=not req.news_mode,
+                news_used=req.news_mode,
+                latency_ms=provider._last_latency_ms,
+            )
+        except Exception:
+            pass
+
+        return {"status": "ok", "query": req.query, "results": results, "count": len(results)}
+    except Exception as e:
+        logger.error(f"[/api/search] Error: {e}")
+        return {"status": "error", "message": str(e), "results": []}
+
+
+# ---------------------------------------------------------------------------
+# News endpoints
+# ---------------------------------------------------------------------------
+@app.get("/api/news")
+async def api_news(n: int = 10, category: str = ""):
+    """Return the most recent cached RSS news articles."""
+    try:
+        from news.rss_engine import get_engine
+        engine = get_engine()
+        if category:
+            articles = engine.fetch_category(category)
+        else:
+            articles = engine.get_recent(n)
+        return {
+            "status": "ok",
+            "articles": [a.to_dict() for a in articles],
+            "count": len(articles),
+        }
+    except Exception as e:
+        logger.error(f"[/api/news] Error: {e}")
+        return {"status": "error", "message": str(e), "articles": []}
+
+
+@app.get("/api/news/search")
+async def api_news_search(q: str, n: int = 10):
+    """Full-text search over cached RSS articles."""
+    try:
+        from news.rss_engine import get_engine
+        engine = get_engine()
+        articles = engine.search_articles(q, n)
+        return {
+            "status": "ok",
+            "query": q,
+            "articles": [a.to_dict() for a in articles],
+            "count": len(articles),
+        }
+    except Exception as e:
+        logger.error(f"[/api/news/search] Error: {e}")
+        return {"status": "error", "message": str(e), "articles": []}
+
+
+# ---------------------------------------------------------------------------
+# File System endpoints
+# ---------------------------------------------------------------------------
+@app.post("/api/fs/read")
+async def api_fs_read(req: FSReadRequest):
+    """Read a file — no approval required."""
+    try:
+        from backend.fs_tools import get_fs_tools
+        return get_fs_tools().read_file(req.path)
+    except Exception as e:
+        logger.error(f"[/api/fs/read] Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/fs/write")
+async def api_fs_write(req: FSWriteRequest):
+    """Write a file — triggers user approval gate."""
+    try:
+        from backend.fs_tools import get_fs_tools
+        return await get_fs_tools().write_file(req.path, req.content, req.encoding)
+    except Exception as e:
+        logger.error(f"[/api/fs/write] Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/fs/list")
+async def api_fs_list(req: FSListRequest):
+    """List directory contents — no approval required."""
+    try:
+        from backend.fs_tools import get_fs_tools
+        return get_fs_tools().list_directory(req.path, req.max_entries)
+    except Exception as e:
+        logger.error(f"[/api/fs/list] Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Terminal endpoint
+# ---------------------------------------------------------------------------
+@app.post("/api/terminal/run")
+async def api_terminal_run(req: TerminalRunRequest):
+    """Execute a terminal command — triggers user approval gate."""
+    try:
+        from tools.terminal_tools import execute_sandboxed
+        return await execute_sandboxed(req.command, cwd=req.cwd, timeout=req.timeout)
+    except Exception as e:
+        logger.error(f"[/api/terminal/run] Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Builder Agent endpoints
+# ---------------------------------------------------------------------------
+_pending_build_plans: Dict[str, Any] = {}  # plan_id → BuildPlan
+
+@app.post("/api/build/plan")
+async def api_build_plan(req: BuildPlanRequest):
+    """Generate a project build plan. Does NOT write any files."""
+    try:
+        from backend.builder_agent import get_builder
+        builder = get_builder()
+        plan = builder.plan(req.requirements)
+        _pending_build_plans[plan.id] = plan
+
+        # Log build decision
+        try:
+            from backend.memory_sqlite import store_build_decision
+            store_build_decision(
+                project=plan.project_name,
+                decision=f"Generated {plan.project_type} scaffold",
+                rationale=req.requirements,
+                tech_stack=", ".join(plan.tech_stack),
+                approved=False,
+            )
+        except Exception:
+            pass
+
+        return {"status": "ok", "plan": builder.plan_to_dict(plan)}
+    except Exception as e:
+        logger.error(f"[/api/build/plan] Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/build/execute")
+async def api_build_execute(req: BuildExecuteRequest):
+    """Execute a previously generated build plan."""
+    plan = _pending_build_plans.get(req.plan_id)
+    if not plan:
+        return {"status": "error", "message": f"Plan '{req.plan_id}' not found. Generate a plan first."}
+    try:
+        from backend.builder_agent import get_builder
+        builder = get_builder()
+        result = await builder.execute_plan(plan, req.target_dir, req.batch_approve)
+
+        # Mark decision as approved
+        try:
+            from backend.memory_sqlite import store_build_decision
+            store_build_decision(
+                project=plan.project_name,
+                decision="Build plan executed",
+                rationale=f"Created {len(result.files_created)} files at {result.target_dir}",
+                tech_stack=", ".join(plan.tech_stack),
+                approved=result.success,
+            )
+        except Exception:
+            pass
+
+        return {
+            "status": "ok" if result.success else "partial",
+            "plan_id": result.plan_id,
+            "files_created": result.files_created,
+            "files_skipped": result.files_skipped,
+            "errors": result.errors,
+            "target_dir": result.target_dir,
+            "elapsed_seconds": result.elapsed_seconds,
+        }
+    except Exception as e:
+        logger.error(f"[/api/build/execute] Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Intelligence Status (monitoring dashboard)
+# ---------------------------------------------------------------------------
+@app.get("/api/intelligence-status")
+async def api_intelligence_status():
+    """Return real-time status of all intelligence subsystems."""
+    status: Dict[str, Any] = {"status": "ok", "components": {}}
+
+    # Ollama / LLM
+    ollama_ok = False
+    try:
+        ollama_ok = await is_ollama_ready()
+        llm = VoidSingletons.get("llm")
+        status["components"]["ollama"] = {
+            "status": "online" if ollama_ok else "offline",
+            "model": llm.model if llm else "unknown",
+        }
+    except Exception as e:
+        status["components"]["ollama"] = {"status": "error", "message": str(e)}
+
+    # DuckDuckGo Search
+    try:
+        from search.duckduckgo_provider import get_provider
+        status["components"]["search"] = get_provider().status()
+    except Exception as e:
+        status["components"]["search"] = {"status": "unavailable", "message": str(e)}
+
+    # RSS Engine
+    try:
+        from news.rss_engine import get_engine
+        status["components"]["rss"] = get_engine().status()
+    except Exception as e:
+        status["components"]["rss"] = {"status": "unavailable", "message": str(e)}
+
+    # Memory
+    try:
+        from backend.memory_sqlite import get_recent_searches, get_user_patterns
+        recent = get_recent_searches(5)
+        patterns = get_user_patterns(5)
+        status["components"]["memory"] = {
+            "status": "online",
+            "recent_searches": len(recent),
+            "top_intents": patterns,
+        }
+    except Exception as e:
+        status["components"]["memory"] = {"status": "error", "message": str(e)}
+
+    # Engineering Mode
+    try:
+        from backend.engineering_mode import get_engineering_mode
+        status["components"]["engineering"] = get_engineering_mode().status()
+    except Exception as e:
+        status["components"]["engineering"] = {"status": "unavailable", "message": str(e)}
+
+    # Builder Agent
+    try:
+        from backend.builder_agent import get_builder
+        status["components"]["builder"] = get_builder().status()
+    except Exception as e:
+        status["components"]["builder"] = {"status": "unavailable", "message": str(e)}
+
+    # FS Tools
+    try:
+        from backend.fs_tools import get_fs_tools
+        status["components"]["fs_tools"] = get_fs_tools().status()
+    except Exception as e:
+        status["components"]["fs_tools"] = {"status": "unavailable", "message": str(e)}
+
+    # Terminal Tools
+    try:
+        from tools.terminal_tools import get_terminal_status
+        status["components"]["terminal"] = get_terminal_status()
+    except Exception as e:
+        status["components"]["terminal"] = {"status": "unavailable", "message": str(e)}
+
+    # Flatten response for UI compatibility
+    flat_status = {
+        "status": "ok",
+        "ollama_model": status["components"].get("ollama", {}).get("model", "unknown"),
+        "ollama_online": ollama_ok,
+        "last_search_query": status["components"].get("search", {}).get("last_query", ""),
+        "search_online": status["components"].get("search", {}).get("status") == "ready",
+        "rss_article_count": status["components"].get("rss", {}).get("cache", {}).get("total_articles", 0),
+        "rss_last_fetch": status["components"].get("rss", {}).get("last_fetch", ""),
+        "rss_online": status["components"].get("rss", {}).get("status") == "running",
+        "memory_total_facts": 0,
+        "memory_searches": 0,
+        "engineering_status": "active" if status["components"].get("engineering", {}).get("active") else "idle",
+        "builder_last_project": status["components"].get("builder", {}).get("last_plan_name", "") or "--",
+        "components": status["components"]
+    }
+
+    try:
+        from backend.memory_sqlite import get_all_facts, DB_FILE
+        flat_status["memory_total_facts"] = len(get_all_facts())
+        
+        # Count searches from SQLite directly
+        import sqlite3
+        conn = sqlite3.connect(str(DB_FILE))
+        cursor = conn.cursor()
+        cursor.execute("SELECT count(*) FROM search_history")
+        flat_status["memory_searches"] = cursor.fetchone()[0]
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Failed to fetch memory status details: {e}")
+
+    return flat_status
+
+
+# ---------------------------------------------------------------------------
+# WebSocket — Approval Gate channel
+# ---------------------------------------------------------------------------
+@app.websocket("/ws/approval")
+async def ws_approval(websocket):
+    """
+    WebSocket channel for the user approval gate.
+
+    The Electron UI connects here to:
+    - RECEIVE approval_request events (show modal)
+    - SEND back user decisions {request_id, approved: true/false}
+    """
+    try:
+        await websocket.accept()
+        from backend.fs_tools import register_approval_ws, unregister_approval_ws, resolve_approval
+        register_approval_ws(websocket)
+        logger.info("[WS/approval] Client connected")
+        try:
+            while True:
+                data = await websocket.receive_text()
+                try:
+                    msg = json.loads(data)
+                    request_id = msg.get("request_id", "")
+                    approved = bool(msg.get("approved", False))
+                    if request_id:
+                        resolved = resolve_approval(request_id, approved)
+                        logger.info(
+                            f"[WS/approval] Resolved {request_id}: "
+                            f"{'APPROVED' if approved else 'DENIED'} (found={resolved})"
+                        )
+                except Exception as parse_err:
+                    logger.warning(f"[WS/approval] Invalid message: {parse_err}")
+        except Exception:
+            pass
+        finally:
+            unregister_approval_ws(websocket)
+            logger.info("[WS/approval] Client disconnected")
+    except Exception as e:
+        logger.error(f"[WS/approval] Error: {e}")
+
 MOTD = "Stay focused. Build fast. Keep it local."
 stats_collector = SystemStats()
 
@@ -434,6 +849,174 @@ async def stats():
     except Exception as e:
         logger.error(f"Stats failed: {e}")
         return {"error": str(e), "cpu_usage": 0, "ram_usage": 0, "motd": MOTD}
+
+class LLMConfigRequest(BaseModel):
+    routing_mode: Optional[str] = None
+    kimi_api_key: Optional[str] = None
+    kimi_model: Optional[str] = None
+    local_model: Optional[str] = None
+    fallback_enabled: Optional[bool] = None
+    cloud_fallback: Optional[bool] = None  # alias accepted from frontend
+
+@app.get("/api/llm/config")
+async def get_llm_config():
+    """Return the current LLM routing config for the settings form."""
+    llm = VoidSingletons.get("llm")
+    if llm and hasattr(llm, "router"):
+        cfg = getattr(llm.router, "config", {})
+        # Indicate whether a Kimi API key is configured without leaking it
+        has_key = bool(getattr(getattr(llm.router, "kimi_provider", None), "api_key", None))
+        return {
+            "routing_mode":  cfg.get("routing_mode", "AUTO"),
+            "cloud_fallback": cfg.get("fallback_enabled", True),
+            "has_api_key": has_key
+        }
+    return {"routing_mode": "LOCAL", "cloud_fallback": True, "has_api_key": False}
+
+class EngineeringProposeRequest(BaseModel):
+    goal: str
+
+@app.get("/api/llm/metrics")
+async def get_llm_metrics():
+    llm = VoidSingletons.get("llm")
+    if llm and hasattr(llm, "router"):
+        return llm.router.get_metrics()
+    return {"error": "LLM client router not initialized"}
+
+@app.post("/api/llm/config")
+async def update_llm_config(req: LLMConfigRequest):
+    llm = VoidSingletons.get("llm")
+    if llm and hasattr(llm, "router"):
+        clean_data = {k: v for k, v in req.dict().items() if v is not None}
+        # Coerce frontend alias into canonical name
+        if "cloud_fallback" in clean_data:
+            clean_data["fallback_enabled"] = clean_data.pop("cloud_fallback")
+        llm.router.update_config(clean_data)
+        return {"status": "ok", "config": llm.router.config}
+    return {"error": "LLM client router not initialized"}
+
+@app.get("/api/engineering/proposal")
+async def get_engineering_proposal():
+    proposal_path = DATA_DIR / "pending_proposal.json"
+    if proposal_path.exists():
+        try:
+            with open(proposal_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            return {"error": f"Failed to load proposal: {e}"}
+    return {"status": "empty", "message": "No pending proposals"}
+
+@app.post("/api/engineering/propose")
+async def propose_engineering_changes(req: EngineeringProposeRequest):
+    llm = VoidSingletons.get("llm")
+    if not llm:
+        return {"status": "error", "message": "LLM not initialized"}
+        
+    from backend.project_analyzer import ProjectContextCompressor
+    compressor = ProjectContextCompressor(str(ROOT_DIR))
+    context_str = compressor.build_compressed_context()
+    
+    sys_prompt = """You are the VOID Advanced Engineering Brain.
+Analyze the user's coding/architecture goal and generate a structured engineering proposal.
+You must respond with a single valid JSON object. Do not wrap it in markdown code blocks or add explanations.
+
+JSON Schema:
+{
+  "goal": "string",
+  "analysis": "string detailing dependencies and architecture design",
+  "affected_files": ["string"],
+  "required_changes": "string",
+  "risks": "string detailing risks and constraints",
+  "implementation_order": ["string"],
+  "testing_plan": "string",
+  "proposed_diffs": [
+    {
+      "file_path": "string (path relative to project root)",
+      "action": "create | modify | delete",
+      "description": "string describing what changes in this file",
+      "original_content": "string (the current file content, or empty if creating)",
+      "proposed_content": "string (the complete proposed content of the file)"
+    }
+  ]
+}
+"""
+    prompt = f"Project Context:\n{context_str}\n\nUser Goal: {req.goal}\n\nPlease generate the engineering proposal JSON."
+    
+    try:
+        provider = None
+        if hasattr(llm, "router"):
+            provider = llm.router.kimi_provider
+            
+        if not provider or not provider.api_key:
+            provider = llm
+            
+        res_str = await provider.chat([], prompt, system_prompt=sys_prompt)
+        
+        clean_str = res_str.strip()
+        if clean_str.startswith("```"):
+            lines = clean_str.splitlines()
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            clean_str = "\n".join(lines).strip()
+            
+        proposal = json.loads(clean_str)
+        
+        proposal_path = DATA_DIR / "pending_proposal.json"
+        with open(proposal_path, "w", encoding="utf-8") as f:
+            json.dump(proposal, f, indent=4)
+            
+        return proposal
+    except Exception as e:
+        logger.error(f"Failed to generate engineering proposal: {e}", exc_info=True)
+        return {"status": "error", "message": f"Proposal generation failed: {e}"}
+
+@app.post("/api/engineering/approve")
+async def approve_engineering_changes():
+    proposal_path = DATA_DIR / "pending_proposal.json"
+    if not proposal_path.exists():
+        return {"status": "error", "message": "No pending proposal to approve"}
+        
+    try:
+        with open(proposal_path, "r", encoding="utf-8") as f:
+            proposal = json.load(f)
+            
+        applied_files = []
+        import shutil
+        for diff in proposal.get("proposed_diffs", []):
+            f_path = ROOT_DIR / diff["file_path"]
+            action = diff.get("action", "modify").lower()
+            
+            f_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            if f_path.exists() and f_path.is_file():
+                backup = f_path.with_suffix(f_path.suffix + ".bak")
+                shutil.copy2(f_path, backup)
+                
+            if action in ["create", "modify"]:
+                with open(f_path, "w", encoding="utf-8") as file_out:
+                    file_out.write(diff["proposed_content"])
+                applied_files.append(diff["file_path"])
+            elif action == "delete":
+                if f_path.exists():
+                    f_path.unlink()
+                applied_files.append(f"{diff['file_path']} (Deleted)")
+                
+        proposal_path.unlink()
+        
+        return {"status": "ok", "message": f"Applied changes successfully to: {', '.join(applied_files)}"}
+    except Exception as e:
+        logger.error(f"Failed to apply proposed changes: {e}")
+        return {"status": "error", "message": f"Execution failed: {e}"}
+
+@app.post("/api/engineering/reject")
+async def reject_engineering_changes():
+    proposal_path = DATA_DIR / "pending_proposal.json"
+    if proposal_path.exists():
+        proposal_path.unlink()
+        return {"status": "ok", "message": "Proposal rejected and cleared"}
+    return {"status": "error", "message": "No pending proposal to reject"}
 
 @app.get("/time")
 async def get_time():
@@ -845,7 +1428,7 @@ async def scan_project_endpoint(req: ProjectScanRequest):
         projects = list_tracked_projects()
         target_proj = None
         for p in projects:
-            if os.path.abspath(p["path"]) == proj_abs:
+            if os.path.normcase(p["path"]) == os.path.normcase(proj_abs):
                 target_proj = p
                 break
         
@@ -855,7 +1438,7 @@ async def scan_project_endpoint(req: ProjectScanRequest):
                 raise HTTPException(status_code=500, detail=res.get("message", "Registration failed"))
             projects = list_tracked_projects()
             for p in projects:
-                if os.path.abspath(p["path"]) == proj_abs:
+                if os.path.normcase(p["path"]) == os.path.normcase(proj_abs):
                     target_proj = p
                     break
         
@@ -1035,7 +1618,7 @@ async def get_system_health_details():
     tool_ok = False
     try:
         tools_res = await check_all_tools()
-        if tools_res.get("status") == "ok":
+        if tools_res.get("status") and tools_res.get("status").upper() == "OK":
             tool_ok = True
     except:
         pass
@@ -1200,6 +1783,11 @@ async def submit_test_endpoint(req: SubmitTestRequest):
         req.correct_count, req.wrong_count, req.skipped_count,
         req.time_taken, req.feedback
     )
+    try:
+        from backend import memory_sqlite
+        memory_sqlite.add_xp(int(req.score * 5))
+    except Exception as e:
+        logger.error(f"Failed to award XP for MCQ test: {e}")
     return {"status": "ok", "message": "Test result recorded successfully."}
 
 @app.post("/academic/test/submit-viva")
@@ -1222,6 +1810,11 @@ async def submit_viva_endpoint(req: SubmitVivaRequest):
         1 if passed else 0, 0 if passed else 1, 0,
         30, feedback
     )
+    try:
+        from backend import memory_sqlite
+        memory_sqlite.add_xp(int(score * 8))
+    except Exception as e:
+        logger.error(f"Failed to award XP for viva test: {e}")
     
     return {
         "status": "ok",
@@ -1578,7 +2171,7 @@ DIRECT_TOOLS = {
 
 
 @app.post("/chat")
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, background_tasks: BackgroundTasks = None):
     start_time = time.perf_counter()
     STATS["messages"] += 1
     text = (req.message or req.text or "").strip()
@@ -1586,12 +2179,57 @@ async def chat(req: ChatRequest):
         log_chat_request("empty", "DIRECT_TOOL", "None", "Success", start_time)
         return {"reply": "?", "meta": {"intent": "empty"}}
         
+    # Zero-latency greetings/identity intercept check
+    norm_text = clean_intercept_text(text)
+    intercept_reply = GREETINGS_INTERCEPTS.get(norm_text)
+    
+    if not intercept_reply:
+        if norm_text in ["hello", "hi", "hey", "greetings", "yo"]:
+            intercept_reply = GREETINGS_INTERCEPTS["hello"]
+        elif norm_text in ["who are you", "whats your name"]:
+            intercept_reply = GREETINGS_INTERCEPTS["who are you"]
+        elif norm_text in ["who created you", "who is your creator", "who made you"]:
+            intercept_reply = GREETINGS_INTERCEPTS["who created you"]
+
+    if intercept_reply:
+        def run_background_logging():
+            try:
+                from core.analytics.productivity_tracker import ProductivityTracker
+                tracker = ProductivityTracker()
+                tracker.log_event("chat", {"message_preview": text[:50]})
+            except Exception as e:
+                logger.error(f"Failed to log chat event in analytics: {e}")
+            try:
+                from backend import memory_sqlite
+                memory_sqlite.add_xp(5)
+            except Exception as e:
+                logger.error(f"Failed to award XP for chat: {e}")
+            try:
+                memory = _get_memory()
+                memory.remember_turn("user", text)
+                memory.remember_turn("void", intercept_reply)
+            except Exception as e:
+                logger.error(f"Failed to record greeting in memory: {e}")
+                
+        if background_tasks:
+            background_tasks.add_task(run_background_logging)
+        else:
+            asyncio.create_task(asyncio.to_thread(run_background_logging))
+            
+        log_chat_request("intercept", "DIRECT_TOOL", "None", "Success", start_time)
+        return {"reply": intercept_reply, "meta": {"intent": "intercept", "latency_ms": 0}}
+
     try:
         from core.analytics.productivity_tracker import ProductivityTracker
         tracker = ProductivityTracker()
         tracker.log_event("chat", {"message_preview": text[:50]})
     except Exception as e:
         logger.error(f"Failed to log chat event in analytics: {e}")
+    try:
+        from backend import memory_sqlite
+        memory_sqlite.add_xp(5)
+    except Exception as e:
+        logger.error(f"Failed to award XP for chat: {e}")
     
     memory = _get_memory()
     
@@ -1724,23 +2362,7 @@ async def chat(req: ChatRequest):
         log_chat_request("rewrite_module", "LLM_REQUIRED", "self_modifier", "Success" if res.get('status') == 'ok' else "Failure", start_time)
         return {"reply": reply, "meta": {"intent": "system", "result": res}}
 
-    # Zero-latency greetings/identity intercept check
-    norm_text = clean_intercept_text(text)
-    intercept_reply = GREETINGS_INTERCEPTS.get(norm_text)
-    
-    if not intercept_reply:
-        if norm_text in ["hello", "hi", "hey", "greetings", "yo"]:
-            intercept_reply = GREETINGS_INTERCEPTS["hello"]
-        elif norm_text in ["who are you", "whats your name"]:
-            intercept_reply = GREETINGS_INTERCEPTS["who are you"]
-        elif norm_text in ["who created you", "who is your creator", "who made you"]:
-            intercept_reply = GREETINGS_INTERCEPTS["who created you"]
 
-    if intercept_reply:
-        memory.remember_turn("user", text)
-        memory.remember_turn("void", intercept_reply)
-        log_chat_request("intercept", "DIRECT_TOOL", "None", "Success", start_time)
-        return {"reply": intercept_reply, "meta": {"intent": "intercept", "latency_ms": 0}}
 
     # Local Math Intercept
     math_reply = evaluate_math_locally(text)
@@ -1864,7 +2486,7 @@ async def chat(req: ChatRequest):
                     "for a software engineer's desktop panel (max 10 words). speak naturally, do NOT include quotes, "
                     "do NOT explain, and keep it punchy and related to coding/focus."
                 )
-                generated = await asyncio.wait_for(llm.chat([], prompt), timeout=90.0)
+                generated = await asyncio.wait_for(llm.chat([], prompt), timeout=150.0)
                 new_motd = generated.strip().strip('"').strip("'")
             
             global MOTD
@@ -1913,7 +2535,7 @@ async def chat(req: ChatRequest):
                     
                     final_reply = await asyncio.wait_for(
                         llm.summarize_tool_output(text, action_name, result.output, is_success=is_success),
-                        timeout=90.0
+                        timeout=150.0
                     )
                     
                     memory.remember_turn("user", text)
@@ -1958,10 +2580,26 @@ async def chat(req: ChatRequest):
             # Pure chat — send to LLM with conversation history and a timeout guard
             intent_name = intent.intent if intent else "pure_chat"
             action_name = intent.action if intent else None
+            # --- Ollama readiness pre-check ---
+            try:
+                ollama_up = await asyncio.wait_for(is_ollama_ready(), timeout=2.0)
+                if not ollama_up:
+                    logger.warning("[CHAT] Ollama not reachable — attempting auto-restart")
+                    await asyncio.wait_for(ensure_ollama(), timeout=25.0)
+                    ollama_up = await is_ollama_ready()
+                if not ollama_up:
+                    reply = "Ollama service is offline, Sir. I've attempted to restart it — please try again in a few seconds."
+                    memory.remember_turn("user", text)
+                    memory.remember_turn("void", reply)
+                    log_chat_request(intent_name, "LLM_REQUIRED", "None", "Failure", start_time)
+                    return {"reply": reply, "meta": {"intent": intent_name, "status": "error", "error": "OllamaOffline"}}
+            except asyncio.TimeoutError:
+                logger.error("[CHAT] Ollama readiness check timed out")
+            # ----------------------------------
             try:
                 final_reply = await asyncio.wait_for(
                     llm.chat(history, text),
-                    timeout=90.0
+                    timeout=150.0
                 )
             except asyncio.TimeoutError as time_err:
                 logger.error("LLM chat timed out.")
@@ -2040,6 +2678,66 @@ async def execute_explicit_workflow(req: WorkflowRequest):
         return {"reply": "Workflow executed", "meta": res}
     except Exception as e:
         return {"reply": f"Workflow failed: {str(e)}", "meta": {"status": "error"}}
+
+@app.post("/restart")
+async def restart_server():
+    import sys
+    import os
+    import time
+    import threading
+    
+    def do_restart():
+        time.sleep(0.5)
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+        
+    threading.Thread(target=do_restart, daemon=True).start()
+    return {"status": "ok", "message": "Restarting server..."}
+
+@app.get("/system/ping-services")
+async def ping_services():
+    import httpx
+    ollama_ok = False
+    try:
+        async with httpx.AsyncClient(timeout=1.5) as client:
+            res = await client.get("http://127.0.0.1:11434")
+            ollama_ok = (res.status_code == 200 or "Ollama" in res.text)
+    except Exception:
+        pass
+        
+    search_ok = False
+    try:
+        async with httpx.AsyncClient(timeout=1.5) as client:
+            res = await client.get("https://www.google.com")
+            search_ok = (res.status_code == 200)
+    except Exception:
+        pass
+        
+    return {
+        "ollama": "connected" if ollama_ok else "offline",
+        "google": "connected" if search_ok else "offline"
+    }
+
+@app.get("/gamification/xp")
+async def get_gamification_xp():
+    try:
+        from backend import memory_sqlite
+        xp_data = memory_sqlite.get_xp()
+        streaks = memory_sqlite.get_streaks()
+        max_streak = 0
+        if streaks:
+            max_streak = max([s.get("streak_count", 0) for s in streaks])
+        return {"status": "ok", "points": xp_data.get("points", 0), "level": xp_data.get("level", 1), "streak": max_streak}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/gamification/achievements")
+async def get_gamification_achievements():
+    try:
+        from backend import memory_sqlite
+        achievements = memory_sqlite.get_achievements()
+        return {"status": "ok", "achievements": achievements}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     import uvicorn

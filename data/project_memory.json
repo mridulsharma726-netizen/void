@@ -149,19 +149,19 @@
       "size": 170
     },
     "app/ui/app.js": {
-      "hash": "dfc757d287a9d87578306f32762a4454ba1ac9ad29508893721a0269a1058da7",
-      "mtime": 1781164260.646587,
-      "size": 105441
+      "hash": "2c329a0dd7280a69ca3a6eebd261b8ff96b53542d9955d0b725c604344b73c8d",
+      "mtime": 1781184853.680652,
+      "size": 113643
     },
     "app/ui/index.html": {
-      "hash": "8e7c9bbcee937f396b2af25eb5bc88be66469a88caa2e6da63a60e115f50201e",
-      "mtime": 1781160765.2936144,
-      "size": 61455
+      "hash": "0ef0281fbb079032f02a229747fa14a404291f49a91580db889a6d79c0e83822",
+      "mtime": 1781184801.3562648,
+      "size": 68917
     },
     "app/ui/style.css": {
-      "hash": "7c689226fee82f25e58ef52dd7f51535be78e77d2d7c733acfc317ae13918188",
-      "mtime": 1781164222.0707598,
-      "size": 46250
+      "hash": "4e3659869c232c94f5599183dcd65ae79df396fe0cafe55ce11f90420d8d56f8",
+      "mtime": 1781184813.2077563,
+      "size": 48179
     },
     "core/brain.py": {
       "hash": "ab9905331b0c6d2ae05f04c3baa53fc363ec62e72c1c6c1b9cfeb2b9a16cd3d7",
@@ -249,9 +249,9 @@
       "size": 37
     },
     "data/project_map.json": {
-      "hash": "1a75fbf89ef879c4559b3f86d454e7d757688538d62d2ece57c81b1b74d5d477",
-      "mtime": 1781169682.772388,
-      "size": 24189
+      "hash": "9819f5a2870368a4a7de0acf53b5668667f9af464e7405caef17387a6676b9f0",
+      "mtime": 1781429395.0215714,
+      "size": 24824
     },
     "desktop/main.js": {
       "hash": "09408ecab9287677b398fb2180d61f1f6ea59ba4990d2cc387aab450e96a14dd",
@@ -444,9 +444,9 @@
       "size": 3498
     },
     "scratch/test_endpoints.py": {
-      "hash": "84472c9b9b05307dcbe3c2e6c32f3a7a0b82eb9ddacad3798515dbb2f339d2ac",
-      "mtime": 1780428056.4302714,
-      "size": 6803
+      "hash": "0d2702ce4261271a76941e4d01bd6cd51f0aa7fdb84d19a51c8705cf06435dc4",
+      "mtime": 1781429338.0313554,
+      "size": 2556
     },
     "scratch/test_founder.py": {
       "hash": "f21d8f58e1c2426efe638ef8d4e927bce4fa6ff11af61e903ac8a780c4df59f0",
@@ -534,9 +534,9 @@
       "size": 3593
     },
     "server/main.py": {
-      "hash": "1845f9b0e9a5363c3f809554fe14f9048425e4110de51d01ed5852463fb8767e",
-      "mtime": 1781160736.051361,
-      "size": 90357
+      "hash": "4bd0fa6160e9174e656bf8ea2ec76b7b5e2123a833dced6de3fa4ef7fe5982ec",
+      "mtime": 1781428305.0686905,
+      "size": 95134
     },
     "server/backend/academic_engine.py": {
       "hash": "4a2ba3520ab83ff207636fcb23c9b0cedc8472612ca4fcb7d41f94cec6af0e1e",
@@ -584,9 +584,9 @@
       "size": 32720
     },
     "server/backend/llm_client.py": {
-      "hash": "0e4e64f6fc516d9588f46f2e56a170f1ed4a24fbe39cfdecc3325b8752be8c9a",
-      "mtime": 1781091145.675024,
-      "size": 31299
+      "hash": "126ac27e0895ffbb8f83631e04cb569954eb68daf3e5deaf38bf49d7a92c4337",
+      "mtime": 1781428794.598713,
+      "size": 32592
     },
     "server/backend/memory_manager.py": {
       "hash": "f0b41f4547807052a6f18baf99b702ff337ba9410e0b88a961beceb6ab0b9f22",
@@ -634,9 +634,9 @@
       "size": 40969
     },
     "server/backend/tool_manager.py": {
-      "hash": "039721b01cc14c0b7e4c5903e42ba6e07917792c0cf78cf1cb5d46ea78b2b99c",
-      "mtime": 1781084476.7952666,
-      "size": 6367
+      "hash": "11404b20d21bc1b23b1a23cc14a66b7018c981c9da58b7c2831f1734a95c711d",
+      "mtime": 1781429384.9723647,
+      "size": 5403
     },
     "server/backend/tool_schemas.py": {
       "hash": "e692cbfdeec6410613869882a4e29f5fa4cc534fcc8dde3dbeabe428f1ff714c",
@@ -939,9 +939,9 @@
       "size": 19
     },
     "data/project_memory.json": {
-      "hash": "a0f4451515a0783b5db0cfb3ec78c60eebbdd2d8c9e44a13cc3f129df5db8326",
-      "mtime": 1781184265.7311482,
-      "size": 40563
+      "hash": "bc6bce5059bd112eadd8a23360f20108e9d29545f7c6eea9ec0de72c0320bd2d",
+      "mtime": 1781429427.8269515,
+      "size": 41640
     },
     "logs/agent_terminal.log": {
       "hash": "b2bb6e79e80fcd43646a89a811a2446a3c053358687b2d0b467cb15439467662",
@@ -954,9 +954,9 @@
       "size": 4884
     },
     "test_gamification.py": {
-      "hash": "4eea79e62e11e92a2467558ab373fd73f3ef47099eed575423a7c9e31cd71011",
-      "mtime": 1780830264.9737504,
-      "size": 4247
+      "hash": "09f5ae398c01f3bc82e550c0cda0e21bbfa80ed0ec6c6aac1d36730fa3033259",
+      "mtime": 1781184513.86354,
+      "size": 4286
     },
     "core/academic/textbook_extractor.py": {
       "hash": "379f622ff70ed8057fbd31c654c82465f88a919983c6f72a451b455ec1bfa862",
@@ -1102,6 +1102,36 @@
       "hash": "8538ce0061117a793cf038ee0114eac177fe0e1fda3a9876b0ff811a6fa412f3",
       "mtime": 1781089337.4792004,
       "size": 71
+    },
+    "scratch/read_db.py": {
+      "hash": "34af4b527db00169ed24f787385b5cfba7d28fb12cd639f2d76be90c3cecfac2",
+      "mtime": 1781428932.630828,
+      "size": 631
+    },
+    "scratch/read_history.py": {
+      "hash": "684c6e8b569dfc96ee6a4097820987fba8aa94665439e58c0add618d660e65dd",
+      "mtime": 1781428941.026079,
+      "size": 398
+    },
+    "scratch/list_routes.py": {
+      "hash": "a855616348b2fff3c967157033bdf23ed4427b82787e051ff1a0de63b207ef13",
+      "mtime": 1781429330.0093482,
+      "size": 306
+    },
+    "scratch/inspect_health.py": {
+      "hash": "d3041c0b7fdd7641b8ed79824791e5e79ca603b7f7d405988b2a40ff30f50357",
+      "mtime": 1781429363.0088282,
+      "size": 535
+    },
+    "scratch/inspect_listen.py": {
+      "hash": "bc347a4c84ed839db9e8d7912a2897386ff81fa3b3eaf94a6590c1543c51226d",
+      "mtime": 1781429359.8924973,
+      "size": 293
+    },
+    "scratch/search_app_js.py": {
+      "hash": "c956d677e69ffbd9d6495fd2314db552c33a73682532e44486638699cc4f94e1",
+      "mtime": 1781429374.2320018,
+      "size": 194
     }
   }
 }

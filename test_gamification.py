@@ -24,6 +24,7 @@ class TestGamification(unittest.TestCase):
                 pass
                 
         # Initialize tables
+        mem_db._DB_INITIALIZED = False
         mem_db.init_db()
 
     def tearDown(self):

@@ -5,13 +5,18 @@ VOID Terminal Execution Tool
 Safe terminal command execution for self-engineering system.
 
 Features:
-- run_command(cmd) - Execute safe terminal commands
-- Command whitelist: python, pip, ollama, git
+- run_command(cmd)          - Execute safe terminal commands (sync)
+- execute_sandboxed(cmd)    - Approval-gated async execution with streaming
+- Command allowlist:        python, pip, ollama, git, npm, npx, node,
+                            flutter, yarn, cargo, dotnet, uvicorn, fastapi
 
 Security:
-- Only allows specific commands
+- Only allows allowlisted commands (prefix match)
+- Blocklist of destructive patterns (rm -rf, del /f, format, shutdown, etc.)
+- User approval required for all sandboxed executions (30s timeout → auto-deny)
 - No shell=True for dangerous commands
-- Timeout protection
+- Timeout protection (120s default)
+- Full execution history logged to logs/terminal_history.log
 - Output sanitization
 
 """
@@ -27,7 +32,7 @@ from datetime import datetime
 # CONSTANTS
 # ============================================================================
 
-# Allowed commands (whitelist)
+# Allowed commands (allowlist — matched as prefix of the command string)
 ALLOWED_COMMANDS = [
     "python",
     "pip",
@@ -38,6 +43,35 @@ ALLOWED_COMMANDS = [
     "node",
     "npm",
     "npx",
+    "flutter",
+    "yarn",
+    "cargo",
+    "dotnet",
+    "docker",
+    "pytest",
+]
+
+# Blocklist: destructive patterns that are NEVER allowed, even if prefix matches
+BLOCKED_PATTERNS = [
+    "rm -rf",
+    "rm -fr",
+    "del /f",
+    "del /q",
+    "format c",
+    "format d",
+    "shutdown",
+    "reg delete",
+    "reg add",
+    "netsh",
+    "net user",
+    "sc delete",
+    "taskkill /f",
+    "rmdir /s",
+    "rd /s",
+    "cipher /w",
+    "diskpart",
+    "bcdedit",
+    "sfc /scannow",
 ]
 
 # Command aliases for safety
@@ -57,6 +91,7 @@ MAX_TIMEOUT = 120
 log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs")
 os.makedirs(log_dir, exist_ok=True)
 log_file = os.path.join(log_dir, "terminal.log")
+history_log_file = os.path.join(log_dir, "terminal_history.log")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -67,6 +102,13 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("VOID-TerminalTools")
+_history_logger = logging.getLogger("VOID-TerminalHistory")
+_history_handler = logging.FileHandler(history_log_file, encoding='utf-8')
+_history_handler.setFormatter(logging.Formatter('%(asctime)s | %(message)s'))
+_history_logger.addHandler(_history_logger.handlers[0] if _history_logger.handlers else _history_handler)
+if not _history_logger.handlers:
+    _history_logger.addHandler(_history_handler)
+_history_logger.setLevel(logging.INFO)
 
 
 # ============================================================================
@@ -81,22 +123,34 @@ def _log_command(cmd: str, result: Dict[str, Any]):
 
 def _is_command_allowed(cmd: str) -> bool:
     """
-    Check if command is in the whitelist.
+    Check if command is in the allowlist AND not matching the blocklist.
     
     Args:
         cmd: Command string to check
         
     Returns:
-        True if allowed, False otherwise
+        True if allowed and not destructive, False otherwise
     """
     cmd_lower = cmd.lower().strip()
     
-    # Check if starts with allowed command
+    # Check blocklist first (takes priority)
+    for blocked in BLOCKED_PATTERNS:
+        if blocked in cmd_lower:
+            logger.warning(f"[TERMINAL] Blocked destructive pattern '{blocked}' in: {cmd}")
+            return False
+    
+    # Check if starts with an allowed command
     for allowed in ALLOWED_COMMANDS:
         if cmd_lower.startswith(allowed):
             return True
     
     return False
+
+
+def _is_destructive(cmd: str) -> bool:
+    """Check if command matches any destructive blocked pattern."""
+    cmd_lower = cmd.lower().strip()
+    return any(p in cmd_lower for p in BLOCKED_PATTERNS)
 
 
 def _sanitize_output(output: str, max_length: int = 10000) -> str:
@@ -348,6 +402,122 @@ def get_available_commands() -> List[str]:
 
 
 # ============================================================================
+# SANDBOXED EXECUTION WITH APPROVAL GATE
+# ============================================================================
+
+async def execute_sandboxed(
+    command: str,
+    cwd: Optional[str] = None,
+    timeout: int = MAX_TIMEOUT,
+    approval_required: bool = True,
+) -> Dict[str, Any]:
+    """
+    Execute a terminal command with user approval gate.
+
+    All commands go through:
+    1. Blocklist check (immediate reject if destructive)
+    2. Allowlist check (reject if not in approved list)
+    3. User approval via Electron WebSocket modal (30s timeout → auto-deny)
+    4. Execution with output captured
+    5. Logging to terminal_history.log
+
+    Args:
+        command:          The command string to execute.
+        cwd:              Working directory (defaults to project root).
+        timeout:          Execution timeout in seconds (default 120).
+        approval_required: Set False only for trusted internal calls.
+
+    Returns:
+        Dict with status, output, error, exit_code, approved fields.
+    """
+    cmd_clean = command.strip()
+
+    # 1. Blocklist check
+    if _is_destructive(cmd_clean):
+        logger.warning(f"[TERMINAL-SANDBOX] BLOCKED destructive command: {cmd_clean}")
+        _history_logger.info(f"BLOCKED | {cmd_clean}")
+        return {
+            "status": "blocked",
+            "message": "Command matches a destructive pattern and was blocked by VOID's security policy.",
+            "cmd": cmd_clean,
+            "output": "",
+            "error": "Security block",
+            "exit_code": -1,
+            "approved": False,
+        }
+
+    # 2. Allowlist check
+    if not _is_command_allowed(cmd_clean):
+        logger.warning(f"[TERMINAL-SANDBOX] NOT ALLOWED: {cmd_clean}")
+        _history_logger.info(f"DENIED(allowlist) | {cmd_clean}")
+        return {
+            "status": "error",
+            "message": (
+                f"Command not allowed. Permitted prefixes: "
+                f"{', '.join(ALLOWED_COMMANDS)}"
+            ),
+            "cmd": cmd_clean,
+            "output": "",
+            "error": "Command not in allowlist",
+            "exit_code": -1,
+            "approved": False,
+        }
+
+    # 3. User approval
+    if approval_required:
+        try:
+            from server.backend.fs_tools import request_approval
+            approved = await request_approval(
+                operation="Run Terminal Command",
+                path=cwd or os.getcwd(),
+                details=f"Command: `{cmd_clean}`",
+                timeout=30.0,
+            )
+        except ImportError:
+            # fs_tools not available — default deny
+            logger.warning("[TERMINAL-SANDBOX] fs_tools.request_approval unavailable — denying")
+            approved = False
+
+        if not approved:
+            _history_logger.info(f"DENIED(user) | {cmd_clean}")
+            return {
+                "status": "denied",
+                "message": "User did not approve command execution.",
+                "cmd": cmd_clean,
+                "output": "",
+                "error": "User denied",
+                "exit_code": -1,
+                "approved": False,
+            }
+
+    # 4. Execute
+    logger.info(f"[TERMINAL-SANDBOX] Executing: {cmd_clean}")
+    _history_logger.info(f"EXEC | {cmd_clean} | cwd={cwd}")
+    result = run_command(cmd_clean, timeout=timeout)
+    result["approved"] = True
+
+    # 5. Log outcome
+    outcome = "SUCCESS" if result.get("status") == "ok" else "FAILED"
+    _history_logger.info(f"{outcome} | exit={result.get('exit_code')} | {cmd_clean}")
+    return result
+
+
+# ============================================================================
+# STATUS
+# ============================================================================
+
+def get_terminal_status() -> Dict[str, Any]:
+    """Return terminal tools status for the monitoring dashboard."""
+    available = get_available_commands()
+    return {
+        "allowed_commands": ALLOWED_COMMANDS,
+        "available_commands": available,
+        "blocked_patterns_count": len(BLOCKED_PATTERNS),
+        "history_log": history_log_file,
+    }
+
+
+# ============================================================================
 # TEST
 # ============================================================================
 
@@ -355,16 +525,18 @@ if __name__ == "__main__":
     # Test terminal tools
     print("VOID Terminal Tools Test")
     print("=" * 50)
-    
+
     # Test allowed command
     result = run_command("python --version")
     print(f"\nPython version: {result.get('output', result.get('error', 'N/A'))}")
-    
+
     # Test blocked command
     result = run_command(r"del /f /s /q C:\\*")
     print(f"\nBlocked command test: {result.get('message')}")
-    
+
     # Check available commands
     available = get_available_commands()
     print(f"\nAvailable commands: {available}")
 
+    # Status
+    print(f"\nStatus: {get_terminal_status()}")

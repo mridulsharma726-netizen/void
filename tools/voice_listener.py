@@ -192,6 +192,9 @@ def start_voice_loop_thread() -> threading.Thread:
     Returns:
         The thread object
     """
+    global _running
+    with _state_lock:
+        _running = True
     thread = threading.Thread(
         target=voice_loop_wrapper,
         daemon=True,

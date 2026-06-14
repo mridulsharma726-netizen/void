@@ -2405,3 +2405,222 @@ body {
 .tools-workspace-layout table tbody tr:hover {
   background: rgba(255, 255, 255, 0.02);
 }
+
+/* ── PRODUCTIVITY FOCUS CIRCLE GAUGE ── */
+.focus-gauge-wrap svg {
+  transform: rotate(-90deg);
+}
+.gauge-bg {
+  stroke: rgba(255, 255, 255, 0.03);
+}
+.gauge-fill {
+  stroke: #ff003c;
+  filter: drop-shadow(0 0 3px rgba(255, 0, 60, 0.5));
+}
+
+/* ── SOCIAL MEDIA SCHEDULER QUEUE ── */
+.social-post-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+}
+.social-post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.social-platform-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.social-platform-badge.twitter { background: rgba(29, 161, 242, 0.15); color: #1da1f2; }
+.social-platform-badge.linkedin { background: rgba(10, 102, 194, 0.15); color: #0a66c2; }
+.social-platform-badge.github { background: rgba(240, 81, 51, 0.15); color: #f05133; }
+
+.social-post-status {
+  font-size: 8px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-family: 'Share Tech Mono', monospace;
+}
+.social-post-status.pending { background: rgba(255, 179, 0, 0.1); color: #ffb300; }
+.social-post-status.posted { background: rgba(57, 255, 20, 0.1); color: #39ff14; }
+
+/* ── ACHIEVEMENTS BADGES ── */
+.achievements-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.badge-item {
+  background: rgba(255, 0, 85, 0.03);
+  border: 1px solid rgba(255, 0, 85, 0.15);
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.badge-icon {
+  font-size: 20px;
+}
+.badge-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.badge-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ff0055;
+  font-family: 'Orbitron', sans-serif;
+}
+.badge-date {
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+/* ── MODEL DASHBOARD CARD & DIFFS ── */
+.model-dashboard-card {
+  border: 1px solid rgba(255, 26, 26, 0.15) !important;
+  background: rgba(5, 5, 5, 0.85) !important;
+  box-shadow: 0 0 10px rgba(255, 26, 26, 0.05);
+  margin-bottom: 12px;
+}
+
+.diff-file {
+  border: 1px solid #1a1a1a;
+  background: #080808;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.diff-header {
+  background: #111;
+  padding: 8px 12px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  border-bottom: 1px solid #222;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.diff-header .action-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
+  font-size: 9px;
+}
+
+.diff-header .action-badge.create { background: rgba(57, 255, 20, 0.15); color: var(--success); }
+.diff-header .action-badge.modify { background: rgba(255, 179, 0, 0.15); color: var(--warning); }
+.diff-header .action-badge.delete { background: rgba(255, 26, 26, 0.15); color: var(--accent-neon); }
+
+.diff-code {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  overflow-x: auto;
+  max-height: 250px;
+  overflow-y: auto;
+  white-space: pre;
+  background: #000;
+  padding: 8px;
+}
+
+.diff-line {
+  display: block;
+  padding: 1px 6px;
+  line-height: 1.4;
+}
+
+.diff-line.added {
+  background: rgba(57, 255, 20, 0.08);
+  color: var(--success);
+}
+
+.diff-line.removed {
+  background: rgba(255, 26, 26, 0.08);
+  color: var(--accent-neon);
+}
+
+.diff-line.info {
+  color: #666;
+  font-style: italic;
+}
+
+/* ── INTELLIGENCE PANEL ── */
+.intelligence-panel .intel-status-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.intel-status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.intel-status-item:last-child {
+  border-bottom: none;
+}
+
+.intel-status-label {
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+.intel-status-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.intel-status-value {
+  color: var(--text-white);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.intel-dot.online {
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+  animation: intelPulse 2s ease-in-out infinite;
+}
+
+.intel-dot.offline {
+  background: var(--text-muted);
+  box-shadow: none;
+}
+
+@keyframes intelPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+

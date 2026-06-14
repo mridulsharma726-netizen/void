@@ -2,11 +2,28 @@ import asyncio
 import json
 import logging
 import re
+import time
+import contextvars
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import requests
 
+from backend.providers.router import MultiModelRouter
+
 logger = logging.getLogger("void.llm")
+
+# ContextVar to store timers for the current request
+request_timers = contextvars.ContextVar("request_timers", default=None)
+
+def add_timer_val(key: str, val: float):
+    timers = request_timers.get()
+    if timers is not None:
+        timers[key] = timers.get(key, 0.0) + val
+
+def set_timer_val(key: str, val: Any):
+    timers = request_timers.get()
+    if timers is not None:
+        timers[key] = val
 
 _PROJECT_FILES_CACHE = {}
 
@@ -30,86 +47,94 @@ RESPONSE FORMATTING RULES:
 - Keep responses concise — 1-3 sentences for simple things, more for complex explanations."""
 
 class OllamaClient:
-    def __init__(self, model: str = "llama3.2:3b", base_url: str = "http://127.0.0.1:11434"):
-        self.model = model
-        self.chat_url = f"{base_url}/api/chat"
-        self.tags_url = f"{base_url}/api/tags"
-        self.timeout = 90  # Increase to 90s to allow model loading under heavy load
+    """
+    Facade class that wraps MultiModelRouter to maintain 100% backward compatibility
+    with existing imports and singletons in the codebase.
+    """
+    def __init__(self, model: str = "qwen2.5:0.5b", base_url: str = "http://127.0.0.1:11434"):
+        self.router = MultiModelRouter()
         self.system_prompt = SYSTEM_PROMPT
-        self.model_detected = False
-        self._detect_model()
+        self.timeout = 120
 
-    def _detect_model(self):
-        try:
-            resp = requests.get(self.tags_url, timeout=5.0)
-            if resp.status_code == 200:
-                models = [m.get("name") for m in resp.json().get("models", [])]
-                for fast_model in ["qwen2.5:0.5b", "qwen2.5:1.5b"]:
-                    if fast_model in models or f"{fast_model}:latest" in models:
-                        self.model = fast_model
-                        logger.info(f"[LLM] Auto-selected fast model: {self.model}")
-                        break
-                self.model_detected = True
-        except Exception as e:
-            logger.debug(f"[LLM] Model detection failed: {e}")
+    @property
+    def model(self) -> str:
+        return self.router.config["local_model"]
+
+    @model.setter
+    def model(self, val: str):
+        self.router.config["local_model"] = val
+        self.router.save_config()
 
     def classify_intent(self, user_text: str) -> Dict[str, Any]:
         """Classifies the query intent for diagnostics logging."""
-        text_lower = user_text.lower()
-        
-        project_keywords = [
-            "project", "codebase", "files", "build", "blocker", "authentication", 
-            "database", "databases", "payment", "completion", "launch", "auth", "sqlite", 
-            "progress", "completed", "complete", "todo", "todos", "bug", "bugs",
-            "changed", "changes", "yesterday", "voice functionality", "diagnostics"
-        ]
-        is_project_query = any(kw in text_lower for kw in project_keywords)
-        
-        file_commands = [
-            "find file", "search for file", "read file", "write file", "save file", 
-            "list directory", "list folder", "show directory", "show folder", 
-            "open folder", "open file"
-        ]
-        is_file_command = any(cmd in text_lower for cmd in file_commands)
-        
-        automation_keywords = [
-            "open", "launch", "close", "kill", "start", "run", "execute", "cmd", "shell",
-            "whatsapp", "arrange windows", "split windows", "tile windows", 
-            "schedule", "calendar", "email", "spawn", "refactor", "optimize"
-        ]
-        is_automation = any(kw in text_lower for kw in automation_keywords)
-        
-        if is_project_query:
-            return {
-                "intent": "PROJECT_QUERY",
-                "confidence": 0.95 if any(w in text_lower for w in ["voice", "database", "files", "diagnostics"]) else 0.80,
-                "reason": f"Matches project keywords: {[kw for kw in project_keywords if kw in text_lower]}"
-            }
-        elif is_file_command:
-            return {
-                "intent": "FILE_COMMAND",
-                "confidence": 0.90,
-                "reason": "Matches file command patterns"
-            }
-        elif is_automation:
-            return {
-                "intent": "AUTOMATION",
-                "confidence": 0.85,
-                "reason": "Matches automation/control keywords"
-            }
-        else:
-            return {
-                "intent": "GENERAL_CHAT",
-                "confidence": 0.70,
-                "reason": "Default conversational fallback"
-            }
+        t_start = time.perf_counter()
+        try:
+            text_lower = user_text.lower()
+            
+            project_keywords = [
+                "project", "codebase", "files", "build", "blocker", "authentication", 
+                "database", "databases", "payment", "completion", "launch", "auth", "sqlite", 
+                "progress", "completed", "complete", "todo", "todos", "bug", "bugs",
+                "changed", "changes", "yesterday", "voice functionality", "diagnostics"
+            ]
+            try:
+                from backend.memory_sqlite import get_active_project
+                active_proj = get_active_project()
+                if active_proj:
+                    proj_name = active_proj.get("name", "").lower()
+                    if proj_name and proj_name not in project_keywords:
+                        project_keywords.append(proj_name)
+            except Exception:
+                pass
+            is_project_query = any(kw in text_lower for kw in project_keywords)
+            
+            file_commands = [
+                "find file", "search for file", "read file", "write file", "save file", 
+                "list directory", "list folder", "show directory", "show folder", 
+                "open folder", "open file"
+            ]
+            is_file_command = any(cmd in text_lower for cmd in file_commands)
+            
+            automation_keywords = [
+                "open", "launch", "close", "kill", "start", "run", "execute", "cmd", "shell",
+                "whatsapp", "arrange windows", "split windows", "tile windows", 
+                "schedule", "calendar", "email", "spawn", "refactor", "optimize"
+            ]
+            is_automation = any(kw in text_lower for kw in automation_keywords)
+            
+            if is_project_query:
+                res = {
+                    "intent": "PROJECT_QUERY",
+                    "confidence": 0.95 if any(w in text_lower for w in ["voice", "database", "files", "diagnostics"]) else 0.80,
+                    "reason": f"Matches project keywords: {[kw for kw in project_keywords if kw in text_lower]}"
+                }
+            elif is_file_command:
+                res = {
+                    "intent": "FILE_COMMAND",
+                    "confidence": 0.90,
+                    "reason": "Matches file command patterns"
+                }
+            elif is_automation:
+                res = {
+                    "intent": "AUTOMATION",
+                    "confidence": 0.85,
+                    "reason": "Matches automation/control keywords"
+                }
+            else:
+                res = {
+                    "intent": "GENERAL_CHAT",
+                    "confidence": 0.70,
+                    "reason": "Default conversational fallback"
+                }
+            return res
+        except Exception as e:
+            logger.error(f"Intent classification failed: {e}")
+            return {"intent": "GENERAL_CHAT", "confidence": 0.5, "reason": "Error"}
+        finally:
+            add_timer_val("intent_classification_ms", (time.perf_counter() - t_start) * 1000)
 
     async def available(self) -> bool:
-        try:
-            requests.get(self.tags_url, timeout=2.0)
-            return True
-        except:
-            return False
+        return await self.router.available()
 
     async def warmup(self) -> bool:
         try:
@@ -118,57 +143,12 @@ class OllamaClient:
         except:
             return False
 
-    def _get_dynamic_options(self, user_text: str) -> Dict[str, Any]:
-        """Analyzes prompt content to return optimal parameters for Ollama."""
-        text_lower = user_text.lower()
-        
-        # Check for Creative Writing intent
-        creative_keywords = [
-            "write a story", "write a poem", "compose", "creative writing", "write a song", 
-            "create a story", "tell a story", "fictional", "write an essay", "poetry",
-            "screenplay", "script", "creative content"
-        ]
-        is_creative = any(kw in text_lower for kw in creative_keywords) or (
-            "write" in text_lower and any(w in text_lower for w in ["story", "poem", "song", "script", "novel", "lyrics", "fiction"])
-        )
-        
-        # Check for Logic Puzzle / Reasoning intent
-        puzzle_keywords = [
-            "puzzle", "riddle", "logic", "solve", "math", "reasoning", "step by step",
-            "explain why", "prove", "algorithmic", "how to solve"
-        ]
-        is_puzzle = any(kw in text_lower for kw in puzzle_keywords)
-        
-        if is_creative:
-            return {
-                "temperature": 0.85,
-                "num_predict": 1024,
-                "num_ctx": 4096,
-                "num_thread": 4
-            }
-        elif is_puzzle:
-            return {
-                "temperature": 0.15,
-                "num_predict": 1024,
-                "num_ctx": 4096,
-                "num_thread": 4
-            }
-        else:
-            return {
-                "temperature": 0.7,
-                "num_predict": 512,
-                "num_ctx": 4096,
-                "num_thread": 4
-            }
-
     def build_context_prompt(self, user_text: str) -> str:
         """Dynamically inserts relevant stored memories/facts and project intelligence into system prompt context."""
         try:
             from backend.memory_manager import query_semantic_facts
-            # Retrieve semantic matches
             relevant_facts = query_semantic_facts(user_text, limit=3)
             
-            # Retrieve preferred user context profile
             try:
                 from backend.owner_profile import get_preference_context
                 pref_context = get_preference_context()
@@ -181,7 +161,6 @@ class OllamaClient:
             if pref_context and pref_context != "No stored memory yet.":
                 memory_block.append(f"User Profile & Preferences:\n{pref_context}")
                 
-            # --- STAGE 1: INTENT CLASSIFICATION ---
             intent_info = self.classify_intent(user_text)
             logger.info(
                 f"\n[INTENT]\n"
@@ -190,7 +169,6 @@ class OllamaClient:
                 f"Reason: {intent_info['reason']}\n"
             )
 
-            # --- STAGE 2: PROJECT DETECTION ---
             import os
             from backend.memory_sqlite import get_active_project, get_project_files, get_pending_action_items
             
@@ -198,7 +176,6 @@ class OllamaClient:
             if active_proj:
                 proj_path_check = active_proj.get("path")
                 if not proj_path_check or not os.path.isdir(proj_path_check):
-                    logger.warning(f"[PROJECT DETECTION] Active project path does not exist: {proj_path_check}")
                     active_proj = None
             
             project_found_str = "Yes" if active_proj else "No"
@@ -211,7 +188,6 @@ class OllamaClient:
                 f"Project Path: {proj_path}\n"
             )
 
-            # --- STAGE 3: RETRIEVAL LAYER ---
             all_files = []
             relevant_files = []
             blockers = []
@@ -220,60 +196,8 @@ class OllamaClient:
             
             if active_proj:
                 proj_id = active_proj["project_id"]
-                import time
                 now = time.time()
-                if proj_id in _PROJECT_FILES_CACHE and (now - _PROJECT_FILES_CACHE[proj_id][0]) < 30.0:
-                    all_files = _PROJECT_FILES_CACHE[proj_id][1]
-                else:
-                    all_files = get_project_files(proj_id)
-                    _PROJECT_FILES_CACHE[proj_id] = (now, all_files)
                 
-                # Check for files
-                import re
-                query_words = [w for w in re.split(r'\W+', user_text.lower()) if len(w) > 2]
-                for f in all_files:
-                    f_path = f["path"].lower()
-                    if len(all_files) <= 50 or any(qw in f_path for qw in query_words):
-                        relevant_files.append(f["path"])
-                relevant_files = relevant_files[:40]
-                
-                # Retrieve blockers
-                from tools.project_intelligence import detect_project_blockers
-                try:
-                    blockers = detect_project_blockers(active_proj["path"])
-                except Exception:
-                    pass
-                if not blockers:
-                    try:
-                        import json
-                        blockers = json.loads(active_proj.get("blockers", "[]"))
-                    except:
-                        pass
-                
-                # Retrieve package/project dependencies
-                req_file = os.path.join(active_proj["path"], "requirements.txt")
-                if os.path.isfile(req_file):
-                    try:
-                        with open(req_file, "r", encoding="utf-8") as f:
-                            for line in f:
-                                dep = line.strip().split("==")[0].strip()
-                                if dep and not dep.startswith("#"):
-                                    dependencies.append(dep)
-                    except:
-                        pass
-                
-                # Find database files on disk dynamically to ensure actual databases list
-                ignored_dirs = {"node_modules", "venv", ".venv", ".git", "dist", "build", "__pycache__", ".cache"}
-                for root, dirs, files_list in os.walk(active_proj["path"]):
-                    dirs[:] = [d for d in dirs if d not in ignored_dirs]
-                    for filename in files_list:
-                        ext = os.path.splitext(filename)[1].lower()
-                        if ext in [".db", ".sqlite", ".sqlite3"]:
-                            databases_detected.append(filename)
-                databases_detected = sorted(list(set(databases_detected)))
-                
-                # Calculate completion percentage
-                import json
                 try:
                     f_completed = json.loads(active_proj.get("features_completed", "[]"))
                     f_wip = json.loads(active_proj.get("features_progress", "[]"))
@@ -287,34 +211,101 @@ class OllamaClient:
                     completion_pct = round((len(f_completed) / total_f) * 100)
                 else:
                     all_items = get_pending_action_items()
-                    if len(all_files) > 0:
+                    if len(all_files) > 0 or proj_id in _PROJECT_FILES_CACHE:
                         completion_pct = max(20, 95 - (len(all_items) * 3))
                         completion_pct = min(95, completion_pct)
-                
-                proj_context = (
-                    f"[ACTIVE PROJECT INTELLIGENCE]\n"
-                    f"Project Name: {active_proj.get('name')}\n"
-                    f"Path: {active_proj.get('path')}\n"
-                    f"Purpose: {active_proj.get('purpose', 'Unknown')}\n"
-                    f"Architecture: {active_proj.get('architecture', 'Unknown')}\n"
-                    f"Technologies: {active_proj.get('technologies', '[]')}\n"
-                    f"Estimated Completion: {completion_pct}%\n"
-                    f"Completed Modules: {active_proj.get('features_completed', '[]')}\n"
-                    f"Pending Modules: {active_proj.get('features_planned', '[]')}\n"
-                    f"Goals: {active_proj.get('goals', '[]')}\n"
-                    f"Known Bugs: {active_proj.get('known_bugs', '[]')}\n"
-                    f"Development History: {active_proj.get('development_history', '[]')}\n"
-                    f"Current Blockers: {blockers}\n"
-                    f"Dependencies: {dependencies}\n"
-                    f"Databases Detected: {databases_detected}\n"
-                    f"Relevant Files: {', '.join(relevant_files) if relevant_files else 'None'}\n"
-                    f"[END ACTIVE PROJECT INTELLIGENCE]\n\n"
-                    f"Safety Rules for Project Q&A:\n"
-                    f"- Use the provided [ACTIVE PROJECT INTELLIGENCE] context to answer user questions about the project, files, blockers, or progress.\n"
-                    f"- Never guess or make assumptions about file paths, databases, APIs, or features.\n"
-                    f"- If the requested information is not explicitly clear or available in the project context, say: 'I do not have enough project data to determine that.'\n"
-                    f"- Never delete or modify project files without explicit user approval."
-                )
+                    else:
+                        completion_pct = 20
+
+                if intent_info["intent"] == "PROJECT_QUERY":
+                    if proj_id in _PROJECT_FILES_CACHE and (now - _PROJECT_FILES_CACHE[proj_id][0]) < 30.0:
+                        all_files = _PROJECT_FILES_CACHE[proj_id][1]
+                    else:
+                        all_files = get_project_files(proj_id)
+                        _PROJECT_FILES_CACHE[proj_id] = (now, all_files)
+                    
+                    query_words = [w for w in re.split(r'\W+', user_text.lower()) if len(w) > 2]
+                    for f in all_files:
+                        f_path = f["path"].lower()
+                        if len(all_files) <= 50 or any(qw in f_path for qw in query_words):
+                            relevant_files.append(f["path"])
+                    relevant_files = relevant_files[:40]
+                    
+                    from tools.project_intelligence import detect_project_blockers
+                    try:
+                        blockers = detect_project_blockers(active_proj["path"])
+                    except Exception:
+                        pass
+                    if not blockers:
+                        try:
+                            blockers = json.loads(active_proj.get("blockers", "[]"))
+                        except:
+                            pass
+                    
+                    req_file = os.path.join(active_proj["path"], "requirements.txt")
+                    if os.path.isfile(req_file):
+                        try:
+                            with open(req_file, "r", encoding="utf-8") as f:
+                                for line in f:
+                                    dep = line.strip().split("==")[0].strip()
+                                    if dep and not dep.startswith("#"):
+                                        dependencies.append(dep)
+                        except:
+                            pass
+                    
+                    ignored_dirs = {"node_modules", "venv", ".venv", ".git", "dist", "build", "__pycache__", ".cache"}
+                    for root, dirs, files_list in os.walk(active_proj["path"]):
+                        dirs[:] = [d for d in dirs if d not in ignored_dirs]
+                        for filename in files_list:
+                            ext = os.path.splitext(filename)[1].lower()
+                            if ext in [".db", ".sqlite", ".sqlite3"]:
+                                databases_detected.append(filename)
+                    databases_detected = sorted(list(set(databases_detected)))
+                    
+                    # Optimize Project context if Routed to Kimi Cloud
+                    provider_name, _, _ = self.router.select_provider(user_text)
+                    if provider_name == "Cloud":
+                        # Fetch compressed context from project analyzer
+                        try:
+                            from backend.project_analyzer import ProjectContextCompressor
+                            compressor = ProjectContextCompressor(active_proj["path"])
+                            proj_context = f"[ACTIVE PROJECT INTELLIGENCE (COMPRESSED)]\n{compressor.build_compressed_context()}\n[END ACTIVE PROJECT INTELLIGENCE]"
+                        except Exception as compress_err:
+                            logger.error(f"Failed to build compressed context: {compress_err}")
+                            proj_context = f"Project Name: {active_proj.get('name')}\nPath: {active_proj.get('path')}"
+                    else:
+                        proj_context = (
+                            f"[ACTIVE PROJECT INTELLIGENCE]\n"
+                            f"Project Name: {active_proj.get('name')}\n"
+                            f"Path: {active_proj.get('path')}\n"
+                            f"Purpose: {active_proj.get('purpose', 'Unknown')}\n"
+                            f"Architecture: {active_proj.get('architecture', 'Unknown')}\n"
+                            f"Technologies: {active_proj.get('technologies', '[]')}\n"
+                            f"Estimated Completion: {completion_pct}%\n"
+                            f"Completed Modules: {active_proj.get('features_completed', '[]')}\n"
+                            f"Pending Modules: {active_proj.get('features_planned', '[]')}\n"
+                            f"Goals: {active_proj.get('goals', '[]')}\n"
+                            f"Known Bugs: {active_proj.get('known_bugs', '[]')}\n"
+                            f"Development History: {active_proj.get('development_history', '[]')}\n"
+                            f"Current Blockers: {blockers}\n"
+                            f"Dependencies: {dependencies}\n"
+                            f"Databases Detected: {databases_detected}\n"
+                            f"Relevant Files: {', '.join(relevant_files) if relevant_files else 'None'}\n"
+                            f"[END ACTIVE PROJECT INTELLIGENCE]\n\n"
+                            f"Safety Rules for Project Q&A:\n"
+                            f"- Use the provided [ACTIVE PROJECT INTELLIGENCE] context to answer user questions about the project, files, blockers, or progress.\n"
+                            f"- Never guess or make assumptions about file paths, databases, APIs, or features.\n"
+                            f"- If the requested information is not explicitly clear or available in the project context, say: 'I do not have enough project data to determine that.'\n"
+                            f"- Never delete or modify project files without explicit user approval."
+                        )
+                else:
+                    proj_context = (
+                        f"[ACTIVE PROJECT INTELLIGENCE]\n"
+                        f"Project Name: {active_proj.get('name')}\n"
+                        f"Path: {active_proj.get('path')}\n"
+                        f"Estimated Completion: {completion_pct}%\n"
+                        f"[END ACTIVE PROJECT INTELLIGENCE]"
+                    )
                 memory_block.append(proj_context)
             else:
                 proj_context = (
@@ -335,24 +326,24 @@ class OllamaClient:
                 f"Memory Records Retrieved: {len(relevant_facts)}\n"
             )
 
-            # --- STAGE 5: LLM ENFORCEMENT ---
             sys_prompt = self.system_prompt
             if intent_info["intent"] == "PROJECT_QUERY":
-                sys_prompt += """
-                
-CRITICAL RULES FOR PROJECT QUESTIONS (STRICT COMPLIANCE REQUIRED):
-1. Never answer using general knowledge or fabricate details.
-2. Use ONLY the explicitly provided [ACTIVE PROJECT INTELLIGENCE] context.
-3. If the context has no files, no databases, or does not contain direct evidence to answer the user's question, you MUST respond with exactly: "I do not have enough project data to determine that."
-4. Never fabricate file names, databases, blockers, meetings, dependencies, or diagnostics.
-5. For example, if asked about database files, only list the files explicitly given in 'Databases Detected'. If none are listed, say "I do not have enough project data to determine that."
-"""
+                provider_name, _, _ = self.router.select_provider(user_text)
+                if provider_name != "Cloud":
+                    sys_prompt += """
+                    
+    CRITICAL RULES FOR PROJECT QUESTIONS (STRICT COMPLIANCE REQUIRED):
+    1. Never answer using general knowledge or fabricate details.
+    2. Use ONLY the explicitly provided [ACTIVE PROJECT INTELLIGENCE] context.
+    3. If the context has no files, no databases, or does not contain direct evidence to answer the user's question, you MUST respond with exactly: "I do not have enough project data to determine that."
+    4. Never fabricate file names, databases, blockers, meetings, dependencies, or diagnostics.
+    5. For example, if asked about database files, only list the files explicitly given in 'Databases Detected'. If none are listed, say "I do not have enough project data to determine that."
+    """
 
             enriched_context = ""
             if memory_block:
                 enriched_context = "\n\n[MEMORY CONTEXT]\n" + "\n\n".join(memory_block) + "\n[END MEMORY CONTEXT]"
 
-            # --- STAGE 4: CONTEXT INJECTION ---
             logger.info(
                 f"\n[CONTEXT]\n"
                 f"Context Length: {len(enriched_context)}\n"
@@ -367,103 +358,71 @@ CRITICAL RULES FOR PROJECT QUESTIONS (STRICT COMPLIANCE REQUIRED):
         return self.system_prompt
 
     async def chat(self, history: List[Dict], user_text: str) -> str:
-        if not self.model_detected:
-            self._detect_model()
-
-        # --- STAGE 6: EVIDENCE REQUIREMENT ---
-        intent_info = self.classify_intent(user_text)
-        if intent_info["intent"] == "PROJECT_QUERY":
-            from backend.memory_sqlite import get_active_project, get_project_files
-            active_proj = get_active_project()
-            if active_proj:
-                import os
-                if not active_proj.get("path") or not os.path.isdir(active_proj["path"]):
-                    active_proj = None
-            
-            has_evidence = False
-            if active_proj:
-                proj_id = active_proj["project_id"]
-                all_files = get_project_files(proj_id)
-                if all_files:
-                    stopwords = {
-                        "what", "is", "the", "are", "by", "used", "in", "of", "and", "or", "for", "to", "with", 
-                        "a", "an", "on", "at", "handle", "list", "show", "get", "find", "inspect", "all",
-                        "project", "projects", "file", "files", "codebase", "program", "script", "folder",
-                        "directory", "directories", "workspace", "workspaces", "system", "systems", "void"
-                    }
-                    query_words = [w for w in re.split(r'\W+', user_text.lower()) if len(w) > 2 and w not in stopwords]
-                    
-                    if not query_words:
-                        has_evidence = True
-                    else:
-                        relevant_files = [f["path"] for f in all_files if any(qw in f["path"].lower() for qw in query_words)]
-                        
-                        # Find database files on disk dynamically to ensure actual databases list
-                        db_files = []
-                        ignored_dirs = {"node_modules", "venv", ".venv", ".git", "dist", "build", "__pycache__", ".cache"}
-                        for root, dirs, files_list in os.walk(active_proj["path"]):
-                            dirs[:] = [d for d in dirs if d not in ignored_dirs]
-                            for filename in files_list:
-                                ext = os.path.splitext(filename)[1].lower()
-                                if ext in [".db", ".sqlite", ".sqlite3"]:
-                                    db_files.append(filename.lower())
-                        
-                        relevant_dbs = [db for db in db_files if any(qw in db for qw in query_words)]
-                        
-                        purpose = active_proj.get("purpose", "").lower()
-                        techs = active_proj.get("technologies", "").lower()
-                        blockers_str = active_proj.get("blockers", "").lower()
-                        
-                        has_matching_meta = any(qw in purpose or qw in techs or qw in blockers_str for qw in query_words)
-                        
-                        if "diagnostics" in query_words or "voice" in query_words:
-                            if any("voice" in f["path"].lower() or "tts" in f["path"].lower() or "stt" in f["path"].lower() for f in all_files):
-                                has_evidence = True
-                        
-                        if relevant_files or relevant_dbs or has_matching_meta:
-                            has_evidence = True
-            
-            if not has_evidence:
-                logger.info("[EVIDENCE CHECK] No evidence found in project for query. Returning fallback response.")
-                # We still generate the logs and print final prompt as requested
-                system_prompt = self.build_context_prompt(user_text)
-                logger.info(
-                    f"\n--- FINAL PROMPT SENT TO OLLAMA ---\n"
-                    f"Model: {self.model}\n"
-                    f"System Prompt:\n{system_prompt}\n"
-                    f"User Message:\n{user_text}\n"
-                    f"----------------------------------\n"
-                )
-                return "I do not have enough project data to determine that."
-
-        system_prompt = self.build_context_prompt(user_text)
-        messages = [{"role": "system", "content": system_prompt}] + history[-5:] + [{"role": "user", "content": user_text}]
-        options = self._get_dynamic_options(user_text)
+        # Check routing target
+        provider_name, _, _ = self.router.select_provider(user_text)
         
-        # Log final prompt sent to Ollama
-        logger.info(
-            f"\n--- FINAL PROMPT SENT TO OLLAMA ---\n"
-            f"Model: {self.model}\n"
-            f"System Prompt:\n{system_prompt}\n"
-            f"User Message:\n{user_text}\n"
-            f"----------------------------------\n"
-        )
-        try:
-            resp = await asyncio.to_thread(lambda: requests.post(
-                self.chat_url, 
-                json={
-                    "model": self.model, 
-                    "messages": messages, 
-                    "stream": False,
-                    "options": options
-                }, 
-                timeout=(3.0, self.timeout)
-            ))
-            resp.raise_for_status()
-            return resp.json().get("message", {}).get("content", "").strip()
-        except Exception as e:
-            logger.error(f"[LLM ERROR] Chat failed: {e}", exc_info=True)
-            return "I'm having a brief connection issue, Sir. Give me a moment."
+        # --- STAGE 6: EVIDENCE REQUIREMENT (Only for local models) ---
+        if provider_name != "Cloud":
+            intent_info = self.classify_intent(user_text)
+            if intent_info["intent"] == "PROJECT_QUERY":
+                from backend.memory_sqlite import get_active_project, get_project_files
+                active_proj = get_active_project()
+                if active_proj:
+                    import os
+                    if not active_proj.get("path") or not os.path.isdir(active_proj["path"]):
+                        active_proj = None
+                
+                has_evidence = False
+                if active_proj:
+                    proj_id = active_proj["project_id"]
+                    all_files = get_project_files(proj_id)
+                    if all_files:
+                        stopwords = {
+                            "what", "is", "the", "are", "by", "used", "in", "of", "and", "or", "for", "to", "with", 
+                            "a", "an", "on", "at", "handle", "list", "show", "get", "find", "inspect", "all",
+                            "project", "projects", "file", "files", "codebase", "program", "script", "folder",
+                            "directory", "directories", "workspace", "workspaces", "system", "systems", "void"
+                        }
+                        query_words = [w for w in re.split(r'\W+', user_text.lower()) if len(w) > 2 and w not in stopwords]
+                        
+                        if not query_words:
+                            has_evidence = True
+                        else:
+                            relevant_files = [f["path"] for f in all_files if any(qw in f["path"].lower() for qw in query_words)]
+                            
+                            db_files = []
+                            ignored_dirs = {"node_modules", "venv", ".venv", ".git", "dist", "build", "__pycache__", ".cache"}
+                            for root, dirs, files_list in os.walk(active_proj["path"]):
+                                dirs[:] = [d for d in dirs if d not in ignored_dirs]
+                                for filename in files_list:
+                                    ext = os.path.splitext(filename)[1].lower()
+                                    if ext in [".db", ".sqlite", ".sqlite3"]:
+                                         db_files.append(filename.lower())
+                            
+                            relevant_dbs = [db for db in db_files if any(qw in db for qw in query_words)]
+                            
+                            purpose = active_proj.get("purpose", "").lower()
+                            techs = active_proj.get("technologies", "").lower()
+                            blockers_str = active_proj.get("blockers", "").lower()
+                            
+                            has_matching_meta = any(qw in purpose or qw in techs or qw in blockers_str for qw in query_words)
+                            
+                            if "diagnostics" in query_words or "voice" in query_words:
+                                if any("voice" in f["path"].lower() or "tts" in f["path"].lower() or "stt" in f["path"].lower() for f in all_files):
+                                    has_evidence = True
+                            
+                            status_keywords = {"status", "state", "progress", "completion", "summary", "explain", "about", "overview", "info", "information"}
+                            has_status_query = any(qw in status_keywords for qw in query_words)
+                            
+                            if relevant_files or relevant_dbs or has_matching_meta or has_status_query:
+                                has_evidence = True
+                
+                if not has_evidence:
+                    logger.info("[EVIDENCE CHECK] No evidence found in project for query. Returning fallback response.")
+                    return "I do not have enough project data to determine that."
+
+        system_prompt = await asyncio.to_thread(self.build_context_prompt, user_text)
+        return await self.router.chat(history, user_text, system_prompt=system_prompt)
 
     async def summarize_tool_output(self, user_request: str, action_name: str, raw_output: str, is_success: bool = True) -> str:
         """Pass raw tool output through LLM to produce a natural, human-friendly response."""
@@ -493,137 +452,74 @@ CRITICAL RULES FOR PROJECT QUESTIONS (STRICT COMPLIANCE REQUIRED):
         return await self.chat([], prompt)
 
     async def chat_stream(self, history: List[Dict], user_text: str) -> AsyncGenerator[str, None]:
-        if not self.model_detected:
-            self._detect_model()
-
-        # --- STAGE 6: EVIDENCE REQUIREMENT ---
-        intent_info = self.classify_intent(user_text)
-        if intent_info["intent"] == "PROJECT_QUERY":
-            from backend.memory_sqlite import get_active_project, get_project_files
-            active_proj = get_active_project()
-            if active_proj:
-                import os
-                if not active_proj.get("path") or not os.path.isdir(active_proj["path"]):
-                    active_proj = None
-            
-            has_evidence = False
-            if active_proj:
-                proj_id = active_proj["project_id"]
-                all_files = get_project_files(proj_id)
-                if all_files:
-                    stopwords = {
-                        "what", "is", "the", "are", "by", "used", "in", "of", "and", "or", "for", "to", "with", 
-                        "a", "an", "on", "at", "handle", "list", "show", "get", "find", "inspect", "all",
-                        "project", "projects", "file", "files", "codebase", "program", "script", "folder",
-                        "directory", "directories", "workspace", "workspaces", "system", "systems", "void"
-                    }
-                    query_words = [w for w in re.split(r'\W+', user_text.lower()) if len(w) > 2 and w not in stopwords]
-                    
-                    if not query_words:
-                        has_evidence = True
-                    else:
-                        relevant_files = [f["path"] for f in all_files if any(qw in f["path"].lower() for qw in query_words)]
-                        
-                        # Find database files on disk dynamically to ensure actual databases list
-                        db_files = []
-                        ignored_dirs = {"node_modules", "venv", ".venv", ".git", "dist", "build", "__pycache__", ".cache"}
-                        for root, dirs, files_list in os.walk(active_proj["path"]):
-                            dirs[:] = [d for d in dirs if d not in ignored_dirs]
-                            for filename in files_list:
-                                ext = os.path.splitext(filename)[1].lower()
-                                if ext in [".db", ".sqlite", ".sqlite3"]:
-                                    db_files.append(filename.lower())
-                        
-                        relevant_dbs = [db for db in db_files if any(qw in db for qw in query_words)]
-                        
-                        purpose = active_proj.get("purpose", "").lower()
-                        techs = active_proj.get("technologies", "").lower()
-                        blockers_str = active_proj.get("blockers", "").lower()
-                        
-                        has_matching_meta = any(qw in purpose or qw in techs or qw in blockers_str for qw in query_words)
-                        
-                        if "diagnostics" in query_words or "voice" in query_words:
-                            if any("voice" in f["path"].lower() or "tts" in f["path"].lower() or "stt" in f["path"].lower() for f in all_files):
-                                has_evidence = True
-                        
-                        if relevant_files or relevant_dbs or has_matching_meta:
-                            has_evidence = True
-            
-            if not has_evidence:
-                logger.info("[EVIDENCE CHECK] No evidence found in project for query. Returning fallback response.")
-                # We still generate the logs and print final prompt as requested
-                system_prompt = self.build_context_prompt(user_text)
-                logger.info(
-                    f"\n--- FINAL PROMPT SENT TO OLLAMA ---\n"
-                    f"Model: {self.model}\n"
-                    f"System Prompt:\n{system_prompt}\n"
-                    f"User Message:\n{user_text}\n"
-                    f"----------------------------------\n"
-                )
-                yield "I do not have enough project data to determine that."
-                return
-
-        system_prompt = self.build_context_prompt(user_text)
-        messages = [{"role": "system", "content": system_prompt}] + history[-5:] + [{"role": "user", "content": user_text}]
-        options = self._get_dynamic_options(user_text)
+        provider_name, _, _ = self.router.select_provider(user_text)
         
-        # Log final prompt sent to Ollama
-        logger.info(
-            f"\n--- FINAL PROMPT SENT TO OLLAMA ---\n"
-            f"Model: {self.model}\n"
-            f"System Prompt:\n{system_prompt}\n"
-            f"User Message:\n{user_text}\n"
-            f"----------------------------------\n"
-        )
-        try:
-            resp = await asyncio.to_thread(lambda: requests.post(
-                self.chat_url, 
-                json={
-                    "model": self.model, 
-                    "messages": messages, 
-                    "stream": True,
-                    "options": options
-                }, 
-                stream=True, 
-                timeout=(3.0, self.timeout)
-            ))
-            
-            def read_lines():
-                return list(resp.iter_lines())
+        # --- STAGE 6: EVIDENCE REQUIREMENT (Only for local models) ---
+        if provider_name != "Cloud":
+            intent_info = self.classify_intent(user_text)
+            if intent_info["intent"] == "PROJECT_QUERY":
+                from backend.memory_sqlite import get_active_project, get_project_files
+                active_proj = get_active_project()
+                if active_proj:
+                    import os
+                    if not active_proj.get("path") or not os.path.isdir(active_proj["path"]):
+                        active_proj = None
                 
-            lines = await asyncio.to_thread(read_lines)
-            for line in lines:
-                if line:
-                    data = json.loads(line)
-                    token = data.get("message", {}).get("content", "")
-                    if token:
-                        yield token
-        except Exception as e:
-            logger.error(f"[LLM ERROR] Chat stream failed: {e}", exc_info=True)
-            yield "Stream interrupted. Please try again, Sir."
+                has_evidence = False
+                if active_proj:
+                    proj_id = active_proj["project_id"]
+                    all_files = get_project_files(proj_id)
+                    if all_files:
+                        stopwords = {
+                            "what", "is", "the", "are", "by", "used", "in", "of", "and", "or", "for", "to", "with", 
+                            "a", "an", "on", "at", "handle", "list", "show", "get", "find", "inspect", "all",
+                            "project", "projects", "file", "files", "codebase", "program", "script", "folder",
+                            "directory", "directories", "workspace", "workspaces", "system", "systems", "void"
+                        }
+                        query_words = [w for w in re.split(r'\W+', user_text.lower()) if len(w) > 2 and w not in stopwords]
+                        
+                        if not query_words:
+                            has_evidence = True
+                        else:
+                            relevant_files = [f["path"] for f in all_files if any(qw in f["path"].lower() for qw in query_words)]
+                            
+                            db_files = []
+                            ignored_dirs = {"node_modules", "venv", ".venv", ".git", "dist", "build", "__pycache__", ".cache"}
+                            for root, dirs, files_list in os.walk(active_proj["path"]):
+                                dirs[:] = [d for d in dirs if d not in ignored_dirs]
+                                for filename in files_list:
+                                    ext = os.path.splitext(filename)[1].lower()
+                                    if ext in [".db", ".sqlite", ".sqlite3"]:
+                                         db_files.append(filename.lower())
+                            
+                            relevant_dbs = [db for db in db_files if any(qw in db for qw in query_words)]
+                            
+                            purpose = active_proj.get("purpose", "").lower()
+                            techs = active_proj.get("technologies", "").lower()
+                            blockers_str = active_proj.get("blockers", "").lower()
+                            
+                            has_matching_meta = any(qw in purpose or qw in techs or qw in blockers_str for qw in query_words)
+                            
+                            if "diagnostics" in query_words or "voice" in query_words:
+                                if any("voice" in f["path"].lower() or "tts" in f["path"].lower() or "stt" in f["path"].lower() for f in all_files):
+                                    has_evidence = True
+                            
+                            status_keywords = {"status", "state", "progress", "completion", "summary", "explain", "about", "overview", "info", "information"}
+                            has_status_query = any(qw in status_keywords for qw in query_words)
+                            
+                            if relevant_files or relevant_dbs or has_matching_meta or has_status_query:
+                                has_evidence = True
+                
+                if not has_evidence:
+                    logger.info("[EVIDENCE CHECK] No evidence found in project for query. Returning fallback response.")
+                    yield "I do not have enough project data to determine that."
+                    return
+     
+        system_prompt = await asyncio.to_thread(self.build_context_prompt, user_text)
+        
+        async for token in self.router.chat_stream(history, user_text, system_prompt=system_prompt):
+            yield token
 
     def generate(self, prompt: str, system_prompt: Optional[str] = None, format: Optional[str] = None, timeout: Optional[float] = None) -> str:
-        """
-        Synchronously generates a response using Ollama's /api/generate endpoint.
-        """
-        if not self.model_detected:
-            self._detect_model()
-        payload = {
-            "model": self.model,
-            "prompt": prompt,
-            "stream": False,
-        }
-        if system_prompt:
-            payload["system"] = system_prompt
-        if format:
-            payload["format"] = format
-            
-        url = self.chat_url.replace("/chat", "/generate")
-        timeout_val = timeout if timeout is not None else self.timeout
-        try:
-            resp = requests.post(url, json=payload, timeout=timeout_val)
-            resp.raise_for_status()
-            return resp.json().get("response", "").strip()
-        except Exception as e:
-            logger.error(f"[LLM ERROR] Generate failed: {e}", exc_info=True)
-            raise e
+        """Synchronously generates a response."""
+        return self.router.generate(prompt, system_prompt=system_prompt, format=format, timeout=timeout)

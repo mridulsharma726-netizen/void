@@ -10,7 +10,7 @@ const ROOT_DIR = isPackaged
   ? path.resolve(path.dirname(app.getPath('exe')), '..', '..', '..')
   : path.resolve(__dirname, '..'); // VOID root
 const BACKEND_HOST = "127.0.0.1";
-const BACKEND_PORT = "8002";
+const BACKEND_PORT = "8003";
 const HEALTH_URL = `http://${BACKEND_HOST}:${BACKEND_PORT}/health`;
 
 let mainWindow;
@@ -30,10 +30,10 @@ async function isBackendReady() {
   });
 }
 
-function cleanupPort8002() {
+function cleanupPort8003() {
   if (process.platform !== 'win32') return;
   try {
-    log('info', 'Checking for zombie processes on port 8002...');
+    log('info', `Checking for zombie processes on port ${BACKEND_PORT}...`);
     const output = execSync(`netstat -ano | findstr :${BACKEND_PORT}`).toString();
     const lines = output.split('\n');
     const pidsToKill = new Set();
@@ -47,7 +47,7 @@ function cleanupPort8002() {
       }
     }
     for (const pid of pidsToKill) {
-      log('info', `Killing zombie process tree for PID ${pid} holding port 8002...`);
+      log('info', `Killing zombie process tree for PID ${pid} holding port ${BACKEND_PORT}...`);
       try {
         execSync(`taskkill /f /t /pid ${pid}`);
       } catch (err) {
@@ -56,13 +56,13 @@ function cleanupPort8002() {
     }
   } catch (e) {
     // netstat returns exit code 1 if no matches are found, which is normal
-    log('info', 'No active processes found on port 8002.');
+    log('info', `No active processes found on port ${BACKEND_PORT}.`);
   }
 }
 
 async function startBackend() {
-  // Clear any existing zombie servers holding port 8002
-  cleanupPort8002();
+  // Clear any existing zombie servers holding port
+  cleanupPort8003();
 
   if (await isBackendReady()) {
     log('info', 'Backend already running');

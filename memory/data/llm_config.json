@@ -1,0 +1,7 @@
+{
+    "routing_mode": "AUTO",
+    "kimi_api_key": "",
+    "kimi_model": "kimi-k2.7-code",
+    "local_model": "qwen2.5:0.5b",
+    "fallback_enabled": true
+}

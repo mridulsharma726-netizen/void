@@ -85,7 +85,7 @@
     },
     {
       "path": "test_gamification.py",
-      "size_bytes": 4247,
+      "size_bytes": 4286,
       "suffix": ".py"
     },
     {
@@ -170,17 +170,17 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 105441,
+      "size_bytes": 113643,
       "suffix": ".js"
     },
     {
       "path": "app/ui/index.html",
-      "size_bytes": 61455,
+      "size_bytes": 68917,
       "suffix": ".html"
     },
     {
       "path": "app/ui/style.css",
-      "size_bytes": 46250,
+      "size_bytes": 48179,
       "suffix": ".css"
     },
     {
@@ -300,12 +300,12 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 24189,
+      "size_bytes": 24824,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 40563,
+      "size_bytes": 41640,
       "suffix": ".json"
     },
     {
@@ -484,8 +484,33 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/inspect_health.py",
+      "size_bytes": 535,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/inspect_listen.py",
+      "size_bytes": 293,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/inspect_whatsapp.py",
       "size_bytes": 1471,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/list_routes.py",
+      "size_bytes": 306,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/read_db.py",
+      "size_bytes": 631,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/read_history.py",
+      "size_bytes": 398,
       "suffix": ".py"
     },
     {
@@ -496,6 +521,11 @@
     {
       "path": "scratch/refactor_imports.py",
       "size_bytes": 589,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/search_app_js.py",
+      "size_bytes": 194,
       "suffix": ".py"
     },
     {
@@ -570,7 +600,7 @@
     },
     {
       "path": "scratch/test_endpoints.py",
-      "size_bytes": 6803,
+      "size_bytes": 2556,
       "suffix": ".py"
     },
     {
@@ -670,7 +700,7 @@
     },
     {
       "path": "server/main.py",
-      "size_bytes": 90357,
+      "size_bytes": 95134,
       "suffix": ".py"
     },
     {
@@ -720,7 +750,7 @@
     },
     {
       "path": "server/backend/llm_client.py",
-      "size_bytes": 31299,
+      "size_bytes": 32592,
       "suffix": ".py"
     },
     {
@@ -770,7 +800,7 @@
     },
     {
       "path": "server/backend/tool_manager.py",
-      "size_bytes": 6367,
+      "size_bytes": 5403,
       "suffix": ".py"
     },
     {

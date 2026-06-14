@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:8002 http://localhost:8002 http://127.0.0.1:11434; img-src 'self' data: file: http://127.0.0.1:8002;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:8002 http://localhost:8002 http://127.0.0.1:11434 ws://localhost:8000; img-src 'self' data: file: http://127.0.0.1:8002;">
   <title>VOID AI Assistant - Command Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -309,6 +309,37 @@
               <!-- Loaded dynamically -->
             </div>
           </div>
+
+          <!-- Intelligence Status Panel -->
+          <div class="card intelligence-panel" style="margin-top: 12px;">
+            <div class="card-title">INTELLIGENCE STATUS</div>
+            <div class="intel-status-grid">
+              <div class="intel-status-item">
+                <span class="intel-status-label">🧠 Ollama</span>
+                <span class="intel-status-right"><span id="intelOllamaModel" class="intel-status-value">--</span><span id="intelOllamaDot" class="intel-dot offline"></span></span>
+              </div>
+              <div class="intel-status-item">
+                <span class="intel-status-label">🔍 Search</span>
+                <span class="intel-status-right"><span id="intelSearchQuery" class="intel-status-value">--</span><span id="intelSearchDot" class="intel-dot offline"></span></span>
+              </div>
+              <div class="intel-status-item">
+                <span class="intel-status-label">📰 RSS</span>
+                <span class="intel-status-right"><span id="intelRssInfo" class="intel-status-value">--</span><span id="intelRssDot" class="intel-dot offline"></span></span>
+              </div>
+              <div class="intel-status-item">
+                <span class="intel-status-label">💾 Memory</span>
+                <span class="intel-status-right"><span id="intelMemoryInfo" class="intel-status-value">--</span></span>
+              </div>
+              <div class="intel-status-item">
+                <span class="intel-status-label">🔧 Engineering</span>
+                <span class="intel-status-right"><span id="intelEngStatus" class="intel-status-value">--</span><span id="intelEngDot" class="intel-dot offline"></span></span>
+              </div>
+              <div class="intel-status-item">
+                <span class="intel-status-label">🏗️ Builder</span>
+                <span class="intel-status-right"><span id="intelBuilderInfo" class="intel-status-value">--</span></span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- === 4B. CHAT VIEW === -->
@@ -547,6 +578,49 @@
               </div>
             </div>
           </div>
+
+          <!-- Social Media Scheduler Card -->
+          <div class="card social-scheduler-card" style="margin-top: 20px;">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>SOCIAL MEDIA POST SCHEDULER</span>
+              <button id="addSocialPostBtn" class="btn" style="padding: 3px 10px; font-size: 10px;">+ Draft Post</button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+              <!-- Queue List -->
+              <div>
+                <div style="font-size: 11px; font-weight: bold; margin-bottom: 8px; color: var(--text-dim); text-transform: uppercase;">Scheduled Queue</div>
+                <div id="socialQueueList" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                  <div style="color: #666; text-align: center; font-size: 11px; padding: 15px;">No posts in queue.</div>
+                </div>
+              </div>
+              
+              <!-- Scheduler Form -->
+              <div id="socialDraftForm" class="hidden" style="border-left: 1px solid rgba(255, 0, 0, 0.1); padding-left: 20px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="font-size: 11px; font-weight: bold; color: #ff0000; text-transform: uppercase;">Draft New Post</div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <label style="font-size: 10px; color: var(--text-dim);">Platform</label>
+                  <select id="socialPlatform" class="hud-search-input" style="padding: 6px; font-size: 11px;">
+                    <option value="Twitter/X">Twitter/X</option>
+                    <option value="LinkedIn">LinkedIn</option>
+                    <option value="GitHub">GitHub Developer Activity</option>
+                  </select>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <label style="font-size: 10px; color: var(--text-dim);">Post Content</label>
+                  <textarea id="socialContent" class="hud-search-input" style="padding: 6px; font-size: 11px; height: 70px; resize: none; font-family: inherit;" placeholder="What's cooking in your workspace?"></textarea>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <label style="font-size: 10px; color: var(--text-dim);">Schedule Time</label>
+                  <input type="datetime-local" id="socialTime" class="hud-search-input" style="padding: 6px; font-size: 11px;">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                  <button id="submitSocialPostBtn" class="btn btn-primary" style="padding: 5px 12px; font-size: 11px;">Queue Post</button>
+                  <button id="cancelSocialPostBtn" class="btn" style="padding: 5px 12px; font-size: 11px;">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- === 4G. SETTINGS VIEW === -->
@@ -594,6 +668,28 @@
                   <span style="font-size: 12px;">Face Lock Autostart</span>
                   <button id="settingsFaceLockAutostartBtn" class="btn" style="padding: 4px 10px; font-size: 11px;">OFF</button>
                 </div>
+              </div>
+            </div>
+            
+            <div class="card config-card">
+              <div class="card-title">Advanced Coding Brain (Kimi)</div>
+              <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-size: 11px; color: var(--text-dim);">Routing Mode</label>
+                <select id="settingsLlmRoutingSelect" class="hud-search-input" style="padding: 6px; font-size: 12px;">
+                  <option value="AUTO">AUTO (Intelligent Routing)</option>
+                  <option value="LOCAL">LOCAL (Ollama Only)</option>
+                  <option value="CLOUD">CLOUD (Kimi Only)</option>
+                </select>
+                
+                <label style="font-size: 11px; color: var(--text-dim);">Moonshot API Key</label>
+                <input type="password" id="settingsKimiApiKey" class="hud-search-input" style="padding: 6px; font-size: 12px;" placeholder="Enter Moonshot API Key...">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                  <span style="font-size: 12px;">Cloud Fallback</span>
+                  <button id="settingsLlmFallbackBtn" class="btn" style="padding: 4px 10px; font-size: 11px;">ON</button>
+                </div>
+                
+                <button id="saveKimiSettingsBtn" class="btn btn-primary" style="margin-top: 8px; font-size: 11px; padding: 6px 14px;">APPLY LLM ROUTING</button>
               </div>
             </div>
           </div>
@@ -733,6 +829,33 @@
 
       <!-- ── 5. RIGHT ANALYTICS & TOOLS PANEL ── -->
       <aside class="right-analytics-panel" aria-label="Intelligence &amp; Tools">
+        <!-- Model Dashboard Card -->
+        <div class="card model-dashboard-card">
+          <div class="card-title">MODEL BRAIN CORE</div>
+          <div class="model-stats-grid" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px; font-size: 11px;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.03); padding-bottom: 4px;">
+              <span style="color: var(--text-dim);">Model:</span>
+              <strong id="dashModelName" style="color: var(--accent-neon); font-family: 'Orbitron', sans-serif;">--</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.03); padding-bottom: 4px;">
+              <span style="color: var(--text-dim);">Provider:</span>
+              <strong id="dashProviderName" style="color: var(--success); font-family: 'Rajdhani', sans-serif; font-weight: bold;">--</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.03); padding-bottom: 4px;">
+              <span style="color: var(--text-dim);">Context Size:</span>
+              <strong id="dashContextSize" style="font-family: monospace;">--</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.03); padding-bottom: 4px;">
+              <span style="color: var(--text-dim);">Response:</span>
+              <strong id="dashResponseTime" style="font-family: monospace;">--</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-bottom: 4px;">
+              <span style="color: var(--text-dim);">Memory:</span>
+              <strong id="dashMemoryUsage" style="font-family: monospace;">--</strong>
+            </div>
+          </div>
+        </div>
+
         <!-- Recent Activity Panel -->
         <div class="card recent-activity-card">
           <div class="card-title">RECENT ACTIVITY</div>
@@ -786,6 +909,49 @@
               <span class="tool-icon">⚙️</span>
               <span class="tool-label">System Info</span>
             </button>
+          </div>
+        </div>
+
+        <!-- Gamification Hub Card -->
+        <div class="card gamification-card">
+          <div class="card-title">VOID LEVEL &amp; XP</div>
+          <div class="xp-progress-container" style="margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px;">
+              <span>Level <strong id="userLevelVal" style="color: #ff0055;">1</strong></span>
+              <span id="userXPText" style="color: var(--text-dim);">0 / 100 XP</span>
+            </div>
+            <div class="metric-bar" style="height: 8px; background: #111; border: 1px solid rgba(255, 0, 85, 0.2); border-radius: 4px; overflow: hidden;">
+              <div id="userXPBar" class="metric-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ff0000, #ff0055); box-shadow: 0 0 10px #ff0055; transition: width 0.4s ease;"></div>
+            </div>
+          </div>
+          <div class="streaks-and-badges" style="margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+            <div class="hud-stat-box" style="padding: 6px; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 4px; text-align: center;">
+              <div style="color: var(--text-dim); font-size: 9px; text-transform: uppercase;">Active Streak</div>
+              <strong id="activeStreaksVal" style="color: #ffb300; font-size: 13px;">0 Days</strong>
+            </div>
+            <div class="hud-stat-box" style="padding: 6px; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 4px; text-align: center; cursor: pointer;" id="viewBadgesBtn">
+              <div style="color: var(--text-dim); font-size: 9px; text-transform: uppercase;">Badges</div>
+              <strong id="badgesCountVal" style="color: #39ff14; font-size: 13px;">0 Unlocked</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Productivity Analytics Card -->
+        <div class="card productivity-analytics-card">
+          <div class="card-title">PRODUCTIVITY &amp; FOCUS</div>
+          <div style="display: flex; align-items: center; justify-content: space-around; margin-top: 10px;">
+            <div class="focus-gauge-wrap" style="position: relative; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+              <svg width="60" height="60" viewBox="0 0 36 36">
+                <path class="gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#222" stroke-width="3" />
+                <path id="focusGaugeFill" class="gauge-fill" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#ff0000" stroke-width="3" stroke-dasharray="0, 100" style="transition: stroke-dasharray 0.5s ease; stroke-linecap: round;" />
+              </svg>
+              <div id="focusIndexVal" style="position: absolute; font-size: 11px; font-weight: bold; color: #ff0000; font-family: 'Orbitron', sans-serif;">0%</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px;">
+              <div>Events Logged: <strong id="totalEventsVal" style="color: #39ff14;">0</strong></div>
+              <div>Study Actions: <strong id="studyEventsVal" style="color: #ffb300;">0</strong></div>
+              <div>Chat Activities: <strong id="chatEventsVal" style="color: #ff0055;">0</strong></div>
+            </div>
           </div>
         </div>
 
@@ -1039,6 +1205,86 @@
       <div style="display: flex; gap: 10px; justify-content: center;">
         <button id="cvcsConfirmApproveBtn" class="btn btn-primary" style="background: #ff0000; color: #000; border-color: #ff0000;">Approve</button>
         <button id="cvcsConfirmDenyBtn" class="btn btn-secondary">Deny</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Engineering Proposal Modal -->
+  <div id="engineeringProposalModal" class="modal hidden" role="dialog" aria-modal="true" style="z-index: 6000;">
+    <div class="modal-content" style="max-width: 800px; width: 90%; max-height: 90vh; display: flex; flex-direction: column; text-align: left; padding: 25px; border: 1px solid var(--accent-neon); box-shadow: 0 0 25px rgba(255, 0, 0, 0.25);">
+      <div class="panel-title" style="color: var(--accent-neon); display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 16px;">
+        <span>🤖 ADVANCED ENGINEERING PROPOSAL</span>
+        <button id="closeProposalBtn" class="btn" style="font-size: 10px; padding: 3px 8px;">✕</button>
+      </div>
+      <div class="proposal-modal-body" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; padding-right: 5px;">
+        <div>
+          <h4 style="color: var(--accent-neon); font-size: 13px; text-transform: uppercase;">Goal</h4>
+          <p id="propGoal" style="font-size: 12px; color: #fff; margin-top: 4px; font-weight: bold;"></p>
+        </div>
+        <div>
+          <h4 style="color: var(--accent-neon); font-size: 13px; text-transform: uppercase;">Architecture & Dependencies Analysis</h4>
+          <p id="propAnalysis" style="font-size: 12px; color: #ccc; margin-top: 4px; line-height: 1.4; white-space: pre-wrap; font-family: 'Share Tech Mono', monospace;"></p>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <h4 style="color: var(--warning); font-size: 13px; text-transform: uppercase;">Risks & Constraints</h4>
+            <p id="propRisks" style="font-size: 12px; color: #ccc; margin-top: 4px; line-height: 1.4;"></p>
+          </div>
+          <div>
+            <h4 style="color: var(--success); font-size: 13px; text-transform: uppercase;">Testing Plan</h4>
+            <p id="propTesting" style="font-size: 12px; color: #ccc; margin-top: 4px; line-height: 1.4;"></p>
+          </div>
+        </div>
+        <div>
+          <h4 style="color: var(--accent-neon); font-size: 13px; text-transform: uppercase; margin-bottom: 8px;">Proposed File Changes</h4>
+          <div id="propDiffsContainer" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Render file changes dynamically -->
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 15px;">
+        <button id="propApproveBtn" class="btn btn-primary" style="background: var(--accent-neon); border-color: var(--accent-neon); color: #000; font-weight: bold; padding: 8px 20px;">APPROVE & IMPLEMENT</button>
+        <button id="propRejectBtn" class="btn btn-secondary" style="padding: 8px 20px;">REJECT CHANGES</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Achievements List Modal -->
+  <div id="achievementsModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 500px; width: 90%; text-align: left; padding: 20px; border-color: #ff0055; box-shadow: 0 0 25px rgba(255, 0, 85, 0.25);">
+      <div class="panel-title" style="color: #ff0055; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 16px;">
+        <span>🏆 VOID UNLOCKED ACHIEVEMENTS</span>
+        <button id="closeAchievementsBtn" class="btn" style="font-size: 10px; padding: 3px 8px;">Close</button>
+      </div>
+      <div id="achievementsList" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+        <!-- Achievements loaded dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Approval Modal (File Write / Terminal Command) -->
+  <div id="approvalModal" class="modal hidden" role="dialog" aria-modal="true" style="z-index: 7000;">
+    <div class="modal-content" style="max-width: 480px; width: 90%; text-align: left; padding: 25px; border-color: var(--warning); box-shadow: 0 0 25px rgba(255, 179, 0, 0.25);">
+      <div class="panel-title" style="color: var(--warning); display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px;">
+        <span>⚠️ APPROVAL REQUIRED</span>
+        <span id="approvalCountdown" style="font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--danger);">30s</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+        <div class="intel-status-item">
+          <span class="intel-status-label">Operation</span>
+          <span id="approvalOperation" class="intel-status-value" style="color: var(--warning); font-weight: 700;">--</span>
+        </div>
+        <div class="intel-status-item">
+          <span class="intel-status-label">Path</span>
+          <span id="approvalPath" class="intel-status-value" style="color: var(--text-white); word-break: break-all;">--</span>
+        </div>
+        <div style="font-size: 11px; color: var(--text-dim); line-height: 1.5; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); max-height: 120px; overflow-y: auto;">
+          <span id="approvalDetails">--</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button id="approvalDenyBtn" class="btn" style="background: rgba(255,0,127,0.15); border: 1px solid var(--danger); color: var(--danger); padding: 8px 20px; font-weight: bold; cursor: pointer;">DENY</button>
+        <button id="approvalApproveBtn" class="btn" style="background: rgba(57,255,20,0.15); border: 1px solid var(--success); color: var(--success); padding: 8px 20px; font-weight: bold; cursor: pointer;">APPROVE</button>
       </div>
     </div>
   </div>

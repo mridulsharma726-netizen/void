@@ -215,6 +215,60 @@ def init_db():
     except Exception as e:
         logger.warning(f"[SQLITE MEMORY] tracked_projects migration note: {e}")
     
+    # ----------------------------------------------------------------
+    # REAL-TIME INTELLIGENCE UPGRADE — new tables (Phase 9)
+    # ----------------------------------------------------------------
+
+    # 13. Search History table — tracks every web/news search
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS search_history (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            query       TEXT    NOT NULL,
+            intent      TEXT    DEFAULT 'web_search',
+            source      TEXT    DEFAULT 'duckduckgo',
+            result_count INTEGER DEFAULT 0,
+            web_used    INTEGER DEFAULT 0,
+            news_used   INTEGER DEFAULT 0,
+            latency_ms  REAL    DEFAULT 0.0,
+            timestamp   DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 14. Build Decisions table — logs architecture/code-gen choices
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS build_decisions (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            project     TEXT    NOT NULL,
+            decision    TEXT    NOT NULL,
+            rationale   TEXT    DEFAULT '',
+            tech_stack  TEXT    DEFAULT '',
+            approved    INTEGER DEFAULT 0,
+            timestamp   DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 15. User Patterns table — aggregated intent analytics
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_patterns (
+            intent      TEXT    PRIMARY KEY,
+            count       INTEGER DEFAULT 1,
+            last_used   DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Migrate: add search_history / build_decisions columns if DB existed before upgrade
+    for table, col, col_def in [
+        ("search_history", "latency_ms", "REAL DEFAULT 0.0"),
+        ("build_decisions", "approved",  "INTEGER DEFAULT 0"),
+    ]:
+        try:
+            cursor.execute(f"PRAGMA table_info({table})")
+            existing = {row[1] for row in cursor.fetchall()}
+            if col not in existing:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
+        except Exception as e:
+            logger.warning(f"[SQLITE MEMORY] {table} migration note: {e}")
+
     # Ensure default row in user_xp
     cursor.execute("SELECT COUNT(*) FROM user_xp")
     if cursor.fetchone()[0] == 0:
@@ -225,7 +279,158 @@ def init_db():
     _DB_INITIALIZED = True
     logger.info(f"[SQLITE MEMORY] Database initialized at: {DB_FILE}")
 
+
+# ---------------------------------------------------------------------------
+# REAL-TIME INTELLIGENCE UPGRADE — helper functions (Phase 9)
+# ---------------------------------------------------------------------------
+
+def store_search(
+    query: str,
+    intent: str = "web_search",
+    source: str = "duckduckgo",
+    result_count: int = 0,
+    web_used: bool = False,
+    news_used: bool = False,
+    latency_ms: float = 0.0,
+) -> bool:
+    """
+    Log a web/news search to the search_history table.
+
+    Args:
+        query:        The search query text.
+        intent:       The detected intent (e.g. 'web_search', 'news_query').
+        source:       The search provider used ('duckduckgo', 'rss', 'both').
+        result_count: Number of results returned.
+        web_used:     Whether DuckDuckGo web search was used.
+        news_used:    Whether RSS/DDG news was used.
+        latency_ms:   Total fusion latency in milliseconds.
+
+    Returns:
+        True on success, False on error.
+    """
+    init_db()
+    try:
+        conn = sqlite3.connect(str(DB_FILE))
+        conn.execute(
+            """
+            INSERT INTO search_history
+                (query, intent, source, result_count, web_used, news_used, latency_ms)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (query, intent, source, result_count,
+             1 if web_used else 0,
+             1 if news_used else 0,
+             latency_ms),
+        )
+        conn.commit()
+        conn.close()
+        # Also update user_patterns
+        _increment_user_pattern(intent)
+        return True
+    except Exception as e:
+        logger.warning(f"[SQLITE MEMORY] store_search error: {e}")
+        return False
+
+
+def store_build_decision(
+    project: str,
+    decision: str,
+    rationale: str = "",
+    tech_stack: str = "",
+    approved: bool = False,
+) -> bool:
+    """
+    Log an architecture or code-generation decision to build_decisions.
+
+    Args:
+        project:    Project name or path.
+        decision:   The decision made (e.g. 'Use FastAPI over Flask').
+        rationale:  Why this decision was made.
+        tech_stack: Comma-separated tech stack string.
+        approved:   Whether the user approved this decision.
+
+    Returns:
+        True on success, False on error.
+    """
+    init_db()
+    try:
+        conn = sqlite3.connect(str(DB_FILE))
+        conn.execute(
+            """
+            INSERT INTO build_decisions (project, decision, rationale, tech_stack, approved)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (project, decision, rationale, tech_stack, 1 if approved else 0),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logger.warning(f"[SQLITE MEMORY] store_build_decision error: {e}")
+        return False
+
+
+def get_user_patterns(limit: int = 10) -> List[Dict[str, Any]]:
+    """
+    Return the most frequently used intents for personalisation.
+
+    Returns:
+        List of {intent, count, last_used} dicts ordered by frequency.
+    """
+    init_db()
+    try:
+        conn = sqlite3.connect(str(DB_FILE))
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT intent, count, last_used FROM user_patterns "
+            "ORDER BY count DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        logger.warning(f"[SQLITE MEMORY] get_user_patterns error: {e}")
+        return []
+
+
+def get_recent_searches(limit: int = 10) -> List[Dict[str, Any]]:
+    """Return the most recent search history entries."""
+    init_db()
+    try:
+        conn = sqlite3.connect(str(DB_FILE))
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT * FROM search_history ORDER BY timestamp DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        logger.warning(f"[SQLITE MEMORY] get_recent_searches error: {e}")
+        return []
+
+
+def _increment_user_pattern(intent: str) -> None:
+    """Internal helper: upsert intent frequency counter."""
+    try:
+        conn = sqlite3.connect(str(DB_FILE))
+        conn.execute(
+            """
+            INSERT INTO user_patterns (intent, count, last_used) VALUES (?, 1, CURRENT_TIMESTAMP)
+            ON CONFLICT(intent) DO UPDATE SET
+                count    = count + 1,
+                last_used = CURRENT_TIMESTAMP
+            """,
+            (intent,),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
 def set_profile_value(key: str, value: str) -> bool:
+
     """Store or update user profile details (goals, projects, skills)."""
     init_db()
     conn = sqlite3.connect(str(DB_FILE))

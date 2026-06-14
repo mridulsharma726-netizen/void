@@ -6,7 +6,7 @@
  * DOMContentLoaded guard
  */
 
-const API_BASE = "http://127.0.0.1:8002";
+const API_BASE = "http://127.0.0.1:8003";
 
 const state = {
   online: false,
@@ -243,10 +243,208 @@ async function api(endpoint, opts = {}) {
 // === HEALTH ===
 async function refreshHealth() {
   const result = await api('/health');
-  if (result.status === 'ok') {
+  if (result && result.status === 'ok') {
     setStatus('online');
   } else {
     setStatus('offline');
+  }
+}
+
+// === CONNECTED SERVICES PINGS ===
+async function refreshIntegrations() {
+  try {
+    const res = await api('/system/ping-services');
+    if (res && !res.error) {
+      const ollamaEl = getEl('integrationOllama');
+      if (ollamaEl) {
+        ollamaEl.classList.toggle('active', res.ollama === 'connected');
+      }
+      const googleEl = getEl('integrationGoogle');
+      if (googleEl) {
+        googleEl.classList.toggle('active', res.google === 'connected');
+      }
+    }
+  } catch (e) {
+    console.error('Failed to refresh integrations:', e);
+  }
+}
+
+// === GAMIFICATION ===
+async function refreshGamification() {
+  try {
+    const res = await api('/gamification/xp');
+    if (res && !res.error) {
+      setText('userLevelVal', res.level);
+      const xpNeeded = res.level * 100;
+      setText('userXPText', `${res.points} / ${xpNeeded} XP`);
+      const xpBar = getEl('userXPBar');
+      if (xpBar) {
+        const pct = Math.min(100, Math.max(0, (res.points / xpNeeded) * 100));
+        xpBar.style.width = `${pct}%`;
+      }
+      setText('activeStreaksVal', `${res.streak} Days`);
+    }
+    
+    const achRes = await api('/gamification/achievements');
+    if (achRes && !achRes.error) {
+      const count = achRes.achievements ? achRes.achievements.length : 0;
+      setText('badgesCountVal', `${count} Unlocked`);
+    }
+  } catch (e) {
+    console.error('Failed to refresh gamification:', e);
+  }
+}
+
+async function showAchievements() {
+  try {
+    const res = await api('/gamification/achievements');
+    if (res && !res.error) {
+      const listEl = getEl('achievementsList');
+      if (!listEl) return;
+      
+      if (!res.achievements || res.achievements.length === 0) {
+        listEl.innerHTML = `<div style="color: #666; font-size: 11px; text-align: center; padding: 20px;">No achievements unlocked yet. Keep studying and automating to earn badges!</div>`;
+      } else {
+        listEl.innerHTML = res.achievements.map(ach => {
+          let dateStr = 'Unknown date';
+          if (ach.earned_at) {
+            try {
+              dateStr = new Date(ach.earned_at).toLocaleString();
+            } catch (err) {}
+          }
+          return `
+            <div class="badge-item">
+              <span class="badge-icon">🏆</span>
+              <div class="badge-details">
+                <span class="badge-title">${ach.title || ach.badge_id}</span>
+                <span class="badge-date">Earned on: ${dateStr}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+      
+      const modal = getEl('achievementsModal');
+      if (modal) modal.classList.remove('hidden');
+    }
+  } catch (e) {
+    console.error('Failed to show achievements:', e);
+  }
+}
+
+function closeAchievements() {
+  const modal = getEl('achievementsModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// === PRODUCTIVITY ANALYTICS ===
+async function refreshProductivity() {
+  try {
+    const res = await api('/analytics/summary');
+    if (res && !res.error) {
+      const focusVal = res.focus_index || 0;
+      setText('focusIndexVal', `${focusVal}%`);
+      const gaugeFill = getEl('focusGaugeFill');
+      if (gaugeFill) {
+        gaugeFill.setAttribute('stroke-dasharray', `${focusVal}, 100`);
+      }
+      
+      setText('totalEventsVal', res.total_events || 0);
+      const breakdown = res.event_breakdown || {};
+      setText('studyEventsVal', breakdown.study || 0);
+      setText('chatEventsVal', breakdown.chat || 0);
+    }
+  } catch (e) {
+    console.error('Failed to refresh productivity:', e);
+  }
+}
+
+// === SOCIAL MEDIA SCHEDULER ===
+async function refreshSocialQueue() {
+  try {
+    const res = await api('/social/queue');
+    if (res && !res.error) {
+      const queueList = getEl('socialQueueList');
+      if (!queueList) return;
+      
+      if (!res.posts || res.posts.length === 0) {
+        queueList.innerHTML = `<div style="color: #666; text-align: center; font-size: 11px; padding: 15px;">No posts in queue.</div>`;
+      } else {
+        queueList.innerHTML = res.posts.map(post => {
+          const platformClass = post.platform.toLowerCase().replace(/[^a-z]/g, '');
+          const isPending = post.status === 'pending';
+          const buttonHtml = isPending 
+            ? `<button class="btn btn-success" style="padding: 2px 6px; font-size: 9px; align-self: flex-end;" onclick="postSocialPost(${post.id})">Post Now</button>`
+            : '';
+            
+          return `
+            <div class="social-post-item">
+              <div class="social-post-header">
+                <span class="social-platform-badge ${platformClass}">${post.platform}</span>
+                <span class="social-post-status ${post.status}">${post.status.toUpperCase()}</span>
+              </div>
+              <div style="font-family: inherit; font-size: 11px; margin: 4px 0; color: #eee; word-break: break-word;">${post.content}</div>
+              <div style="font-size: 9px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center;">
+                <span>Scheduled: ${new Date(post.scheduled_time).toLocaleString()}</span>
+                ${buttonHtml}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+  } catch (e) {
+    console.error('Failed to refresh social queue:', e);
+  }
+}
+
+window.postSocialPost = async function(postId) {
+  try {
+    addMessage('system', `Executing post ${postId} draft...`);
+    const res = await api(`/social/post/${postId}`, { method: 'POST' });
+    if (res && !res.error) {
+      addMessage('system', `✓ Post ${postId} successfully executed.`);
+      await refreshSocialQueue();
+    } else {
+      addMessage('system', `Failed to execute post: ${res.error || 'Server error'}`);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+async function submitSocialPost() {
+  const platform = getEl('socialPlatform').value;
+  const content = getEl('socialContent').value.trim();
+  const time = getEl('socialTime').value;
+  
+  if (!content) {
+    alert('Please enter post content.');
+    return;
+  }
+  
+  try {
+    addMessage('system', `Scheduling social post on ${platform}...`);
+    const res = await api('/social/schedule', {
+      method: 'POST',
+      body: JSON.stringify({
+        platform,
+        content,
+        scheduled_time: time ? new Date(time).toISOString() : null
+      })
+    });
+    
+    if (res && !res.error) {
+      addMessage('system', `✓ Successfully scheduled post on ${platform}.`);
+      getEl('socialContent').value = '';
+      getEl('socialTime').value = '';
+      getEl('socialDraftForm').classList.add('hidden');
+      await refreshSocialQueue();
+    } else {
+      addMessage('system', `Failed to schedule post: ${res.error || 'Server error'}`);
+    }
+  } catch (err) {
+    console.error(err);
   }
 }
 
@@ -1143,6 +1341,157 @@ function showFaceLock() {
   }
 }
 
+// === MODEL BRAIN CORE DASHBOARD ===
+async function refreshModelMetrics() {
+  try {
+    const res = await api('/api/llm/metrics');
+    if (!res || res.error) return;
+    setText('dashModelName',    res.model_name    || '--');
+    setText('dashProviderName', res.provider      || '--');
+    setText('dashContextSize',  res.context_tokens ? `${res.context_tokens} tokens` : '--');
+    setText('dashResponseTime', res.last_latency_ms ? `${res.last_latency_ms} ms` : '--');
+    setText('dashMemoryUsage',  res.memory_usage  || '--');
+    
+    // Update integration pill for Kimi
+    const kimiEl = document.getElementById('integrationKimi');
+    if (kimiEl) {
+      kimiEl.classList.toggle('active', res.cloud_available === true);
+    }
+  } catch (e) {
+    console.warn('Model metrics poll failed:', e);
+  }
+}
+
+// === ENGINEERING PROPOSAL MODAL ===
+function renderProposalDiffs(diffs) {
+  const container = getEl('propDiffsContainer');
+  if (!container) return;
+  if (!diffs || diffs.length === 0) {
+    container.innerHTML = `<div style="color: #666; font-size: 11px;">No file changes proposed.</div>`;
+    return;
+  }
+  container.innerHTML = diffs.map(d => {
+    const lines = (d.diff || '').split('\n').map(line => {
+      if (line.startsWith('+')) return `<span class="diff-add">${line}</span>`;
+      if (line.startsWith('-')) return `<span class="diff-del">${line}</span>`;
+      return `<span class="diff-ctx">${line}</span>`;
+    }).join('\n');
+    return `
+      <div class="proposal-diff-block">
+        <div class="diff-file-header">${d.file || 'unknown'}</div>
+        <pre class="diff-content">${lines}</pre>
+      </div>
+    `;
+  }).join('');
+}
+
+function showProposalModal(proposal) {
+  const modal = getEl('engineeringProposalModal');
+  if (!modal) return;
+  setText('propGoal',     proposal.goal     || '');
+  setText('propAnalysis', proposal.analysis || '');
+  setText('propRisks',    proposal.risks    || '');
+  setText('propTesting',  proposal.testing  || '');
+  renderProposalDiffs(proposal.diffs || []);
+  modal.classList.remove('hidden');
+}
+
+function closeProposalModal() {
+  const modal = getEl('engineeringProposalModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function approveProposal() {
+  const approveBtn = getEl('propApproveBtn');
+  if (approveBtn) {
+    approveBtn.disabled = true;
+    approveBtn.textContent = 'IMPLEMENTING...';
+  }
+  try {
+    const res = await api('/api/engineering/approve', { method: 'POST' });
+    if (res && res.status === 'ok') {
+      addMessage('system', `✓ Engineering proposal approved and implemented successfully.`);
+      closeProposalModal();
+    } else {
+      addMessage('error', `Approval failed: ${res.error || 'Unknown error'}`);
+    }
+  } catch (e) {
+    addMessage('error', `Approval request error: ${e.message}`);
+  } finally {
+    if (approveBtn) {
+      approveBtn.disabled = false;
+      approveBtn.textContent = 'APPROVE & IMPLEMENT';
+    }
+  }
+}
+
+async function rejectProposal() {
+  try {
+    const res = await api('/api/engineering/reject', { method: 'POST' });
+    if (res && res.status === 'ok') {
+      addMessage('system', 'Engineering proposal rejected. No files were modified.');
+    }
+  } catch (e) {
+    console.warn('Reject proposal error:', e);
+  }
+  closeProposalModal();
+}
+
+// === SAVE LLM SETTINGS ===
+async function saveLlmSettings() {
+  const routingMode = getEl('settingsLlmRoutingSelect')?.value || 'AUTO';
+  const apiKey      = getEl('settingsKimiApiKey')?.value.trim() || '';
+  const fallbackEl  = getEl('settingsLlmFallbackBtn');
+  const fallback    = fallbackEl ? fallbackEl.textContent.trim() === 'ON' : true;
+  
+  const saveBtn = getEl('saveKimiSettingsBtn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'SAVING...'; }
+  
+  try {
+    const res = await api('/api/llm/config', {
+      method: 'POST',
+      body: JSON.stringify({
+        routing_mode: routingMode,
+        kimi_api_key: apiKey,
+        cloud_fallback: fallback
+      })
+    });
+    if (res && !res.error) {
+      addMessage('system', `✓ LLM routing updated: ${routingMode} mode${apiKey ? ' with Kimi API key' : ' (local only)'}.`);
+      await refreshModelMetrics();
+    } else {
+      addMessage('error', `LLM config save failed: ${res.error || 'Server error'}`);
+    }
+  } catch (e) {
+    addMessage('error', `LLM settings error: ${e.message}`);
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'APPLY LLM ROUTING'; }
+  }
+}
+
+// Load saved LLM config into settings form
+async function loadLlmConfig() {
+  try {
+    const res = await api('/api/llm/config');
+    if (!res || res.error) return;
+    const modeEl = getEl('settingsLlmRoutingSelect');
+    if (modeEl && res.routing_mode) modeEl.value = res.routing_mode;
+    const fallbackEl = getEl('settingsLlmFallbackBtn');
+    if (fallbackEl) {
+      const fb = res.cloud_fallback !== false;
+      fallbackEl.textContent = fb ? 'ON' : 'OFF';
+      fallbackEl.classList.toggle('active', fb);
+    }
+    // Don't re-populate API key for security — placeholder shows it's set
+    const keyEl = getEl('settingsKimiApiKey');
+    if (keyEl && res.has_api_key) {
+      keyEl.placeholder = '••••••••••••••••••• (key saved)';
+    }
+  } catch (e) {
+    console.warn('loadLlmConfig failed:', e);
+  }
+}
+
 // === EVENTS ===
 function bindEvents() {
   const els = getEls();
@@ -1190,6 +1539,19 @@ function bindEvents() {
   
   const soundToggleBtn = getEl('soundToggleBtn');
   if (soundToggleBtn) soundToggleBtn.onclick = toggleVoice;
+
+  // Gamification triggers
+  getEl('viewBadgesBtn')?.addEventListener('click', showAchievements);
+  getEl('closeAchievementsBtn')?.addEventListener('click', closeAchievements);
+  
+  // Social Scheduler triggers
+  getEl('addSocialPostBtn')?.addEventListener('click', () => {
+    getEl('socialDraftForm').classList.toggle('hidden');
+  });
+  getEl('cancelSocialPostBtn')?.addEventListener('click', () => {
+    getEl('socialDraftForm').classList.add('hidden');
+  });
+  getEl('submitSocialPostBtn')?.addEventListener('click', submitSocialPost);
 
   const actions = {
     'showMemoryBtn': 'showMemory',
@@ -1240,14 +1602,30 @@ function bindEvents() {
   const ctrlRestartBtn = getEl('ctrlRestartBtn');
   if (ctrlRestartBtn) ctrlRestartBtn.onclick = async () => {
     addMessage('system', 'Restarting VOID backend...');
-    const res = await api('/restart', { method: 'POST' });
-    if (res && !res.error) {
-      addMessage('system', 'Backend restart initiated. Reconnecting...');
-      setTimeout(refreshHealth, 3000);
-    } else {
-      addMessage('system', 'Restart command sent. Monitoring reconnection...');
-      setTimeout(refreshHealth, 3000);
-    }
+    setStatus('offline');
+    
+    await api('/restart', { method: 'POST' });
+    addMessage('system', 'Backend restart command issued. Reconnecting...');
+    
+    let attempts = 0;
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      const health = await api('/health');
+      if (health && health.status === 'ok') {
+        clearInterval(pollInterval);
+        setStatus('online');
+        addMessage('system', '✓ VOID backend reconnected successfully!');
+        await refreshHealth();
+        await refreshStats();
+        await refreshIntegrations();
+        await refreshGamification();
+        await refreshProductivity();
+        await refreshSocialQueue();
+      } else if (attempts >= 15) {
+        clearInterval(pollInterval);
+        addMessage('system', '⚠️ Reconnection timeout. Please check backend manually.');
+      }
+    }, 1500);
   };
   
   const ctrlShutdownBtn = getEl('ctrlShutdownBtn');
@@ -1326,6 +1704,29 @@ function bindEvents() {
     };
   }
   
+  // === KIMI LLM SETTINGS ===
+  const saveKimiBtn = getEl('saveKimiSettingsBtn');
+  if (saveKimiBtn) saveKimiBtn.onclick = saveLlmSettings;
+  
+  const fallbackToggle = getEl('settingsLlmFallbackBtn');
+  if (fallbackToggle) {
+    fallbackToggle.onclick = () => {
+      const isOn = fallbackToggle.textContent.trim() === 'ON';
+      fallbackToggle.textContent = isOn ? 'OFF' : 'ON';
+      fallbackToggle.classList.toggle('active', !isOn);
+    };
+  }
+  
+  // === ENGINEERING PROPOSAL MODAL ===
+  const closeProposalModalBtn = getEl('closeProposalBtn');
+  if (closeProposalModalBtn) closeProposalModalBtn.onclick = closeProposalModal;
+  
+  const propApproveBtn = getEl('propApproveBtn');
+  if (propApproveBtn) propApproveBtn.onclick = approveProposal;
+  
+  const propRejectBtn = getEl('propRejectBtn');
+  if (propRejectBtn) propRejectBtn.onclick = rejectProposal;
+
   initAcademicDashboard();
   initSearchSystem();
   initIntegrationsConsole();
@@ -1525,6 +1926,19 @@ function bindViewEvents() {
         settingsDevModeBtn.style.color = newActive ? '#000' : '#888';
         addMessage('void', res.reply);
       }
+    };
+  }
+  
+  const settingsFaceLockAutostartBtn = getEl('settingsFaceLockAutostartBtn');
+  if (settingsFaceLockAutostartBtn) {
+    settingsFaceLockAutostartBtn.onclick = () => {
+      const isAutostart = localStorage.getItem('faceLockAutostart') === 'true';
+      const newActive = !isAutostart;
+      localStorage.setItem('faceLockAutostart', newActive ? 'true' : 'false');
+      settingsFaceLockAutostartBtn.textContent = newActive ? 'ON' : 'OFF';
+      settingsFaceLockAutostartBtn.style.background = newActive ? '#39ff14' : '#222';
+      settingsFaceLockAutostartBtn.style.color = newActive ? '#000' : '#888';
+      addMessage('system', `Face Lock Autostart has been toggled ${newActive ? 'ON' : 'OFF'}.`);
     };
   }
 }
@@ -1750,6 +2164,13 @@ async function loadSettingsView() {
     devBtn.textContent = isDev ? 'ON' : 'OFF';
     devBtn.style.background = isDev ? '#39ff14' : '#222';
     devBtn.style.color = isDev ? '#000' : '#888';
+  }
+  
+  if (autostartBtn) {
+    const isAutostart = localStorage.getItem('faceLockAutostart') === 'true';
+    autostartBtn.textContent = isAutostart ? 'ON' : 'OFF';
+    autostartBtn.style.background = isAutostart ? '#39ff14' : '#222';
+    autostartBtn.style.color = isAutostart ? '#000' : '#888';
   }
   
   try {
@@ -2069,6 +2490,12 @@ async function initApp() {
     
     handleNavSwitch('dashboard');
 
+    if (localStorage.getItem('faceLockAutostart') === 'true') {
+      setTimeout(() => {
+        runAction('faceLock');
+      }, 1500);
+    }
+
     // Run background initializations without blocking the loading transition
     (async () => {
       try {
@@ -2078,17 +2505,46 @@ async function initApp() {
         await refreshRecommendations();
         await loadProjectsView();
         await loadMemoryView();
+        await refreshIntegrations();
+        await refreshGamification();
+        await refreshProductivity();
+        await refreshSocialQueue();
+        await refreshModelMetrics();   // Kimi/model dashboard
+        await loadLlmConfig();         // Populate LLM settings form
         const info = await api('/system-info');
         if (info.reply) setText('system-info-text', info.reply);
+        // Check for any pending proposal from previous session
+        const pending = await api('/api/engineering/proposal');
+        if (pending && pending.status !== 'empty' && !pending.error && pending.goal) {
+          addMessage('system', '⚠️ A pending engineering proposal is waiting for your review.');
+          showProposalModal({
+            goal:     pending.goal,
+            analysis: pending.analysis || '',
+            risks:    pending.risks    || '',
+            testing:  pending.testing_plan || '',
+            diffs:    (pending.proposed_diffs || []).map(d => ({
+              file: d.file_path,
+              diff: `--- ${d.file_path}\n+++ ${d.file_path} (proposed)\n${d.description}`
+            }))
+          });
+        }
+        await fetchIntelligenceStatus();
+        connectApprovalWebSocket();
       } catch (err) {
         console.warn('Background init failed:', err);
       }
     })();
     
-    setInterval(refreshHealth, 10000);  // 10s — health is lightweight
-    setInterval(refreshStats, 15000);   // 15s — stats don't change fast (throttled from 5s)
-    setInterval(refreshCVCS, 2000);     // 2s — CVCS updates frequently
-    setInterval(refreshRecommendations, 30000); // 30s — recommendations (throttled from 10s)
+    setInterval(refreshHealth, 10000);       // 10s — health is lightweight
+    setInterval(refreshStats, 15000);        // 15s — stats don't change fast
+    setInterval(refreshCVCS, 2000);          // 2s — CVCS updates frequently
+    setInterval(refreshRecommendations, 30000); // 30s
+    setInterval(refreshIntegrations, 10000);
+    setInterval(refreshGamification, 10000);
+    setInterval(refreshProductivity, 15000);
+    setInterval(refreshSocialQueue, 15000);
+    setInterval(refreshModelMetrics, 20000); // 20s — model brain core dashboard
+    setInterval(fetchIntelligenceStatus, 30000); // 30s — intelligence panel
     
     // Pause heavy animations when tab is hidden
     document.addEventListener('visibilitychange', () => {
@@ -3153,3 +3609,133 @@ async function performToolsFileSearch() {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 20px;">Error searching database index.</td></tr>';
   }
 }
+
+// === INTELLIGENCE PANEL ===
+let intelInFlight = false;
+async function fetchIntelligenceStatus() {
+  if (intelInFlight || !state.online || document.hidden) return;
+  intelInFlight = true;
+  try {
+    const data = await api('/api/intelligence-status');
+    if (data && !data.error) {
+      // Ollama
+      setText('intelOllamaModel', data.ollama_model || '--');
+      const ollamaDot = getEl('intelOllamaDot');
+      if (ollamaDot) { ollamaDot.className = 'intel-dot ' + (data.ollama_online ? 'online' : 'offline'); }
+
+      // Search
+      setText('intelSearchQuery', data.last_search_query || '--');
+      const searchDot = getEl('intelSearchDot');
+      if (searchDot) { searchDot.className = 'intel-dot ' + (data.search_online ? 'online' : 'offline'); }
+
+      // RSS
+      const rssText = data.rss_article_count != null
+        ? `${data.rss_article_count} articles` + (data.rss_last_fetch ? ` · ${data.rss_last_fetch}` : '')
+        : '--';
+      setText('intelRssInfo', rssText);
+      const rssDot = getEl('intelRssDot');
+      if (rssDot) { rssDot.className = 'intel-dot ' + (data.rss_online ? 'online' : 'offline'); }
+
+      // Memory
+      const memText = data.memory_total_facts != null
+        ? `${data.memory_total_facts} facts · ${data.memory_searches || 0} searches`
+        : '--';
+      setText('intelMemoryInfo', memText);
+
+      // Engineering
+      setText('intelEngStatus', data.engineering_status || '--');
+      const engDot = getEl('intelEngDot');
+      if (engDot) { engDot.className = 'intel-dot ' + (data.engineering_status === 'active' ? 'online' : 'offline'); }
+
+      // Builder
+      setText('intelBuilderInfo', data.builder_last_project || '--');
+    }
+  } catch (e) {
+    console.warn('Intelligence status fetch failed:', e);
+  } finally {
+    intelInFlight = false;
+  }
+}
+
+// === APPROVAL WEBSOCKET ===
+let approvalWs = null;
+let approvalCountdownTimer = null;
+let currentApprovalRequestId = null;
+
+function connectApprovalWebSocket() {
+  if (approvalWs && approvalWs.readyState <= 1) return; // already open or connecting
+  try {
+    approvalWs = new WebSocket('ws://localhost:8000/ws/approval');
+
+    approvalWs.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'approval_request') {
+          showApprovalModal(msg);
+        }
+      } catch (e) {
+        console.warn('Approval WS parse error:', e);
+      }
+    };
+
+    approvalWs.onclose = () => {
+      console.log('Approval WS closed, reconnecting in 10s...');
+      setTimeout(connectApprovalWebSocket, 10000);
+    };
+
+    approvalWs.onerror = (e) => {
+      console.warn('Approval WS error:', e);
+    };
+  } catch (e) {
+    console.warn('Approval WS connection failed:', e);
+    setTimeout(connectApprovalWebSocket, 10000);
+  }
+}
+
+function showApprovalModal(msg) {
+  currentApprovalRequestId = msg.request_id;
+  setText('approvalOperation', msg.operation || 'Unknown');
+  setText('approvalPath', msg.path || '--');
+  setText('approvalDetails', msg.details || 'No additional details.');
+
+  const modal = getEl('approvalModal');
+  if (modal) modal.classList.remove('hidden');
+
+  // Start 30s countdown
+  let remaining = 30;
+  setText('approvalCountdown', remaining + 's');
+  if (approvalCountdownTimer) clearInterval(approvalCountdownTimer);
+  approvalCountdownTimer = setInterval(() => {
+    remaining--;
+    setText('approvalCountdown', remaining + 's');
+    if (remaining <= 0) {
+      clearInterval(approvalCountdownTimer);
+      approvalCountdownTimer = null;
+      sendApprovalResponse(false); // auto-deny
+    }
+  }, 1000);
+}
+
+function hideApprovalModal() {
+  if (approvalCountdownTimer) { clearInterval(approvalCountdownTimer); approvalCountdownTimer = null; }
+  const modal = getEl('approvalModal');
+  if (modal) modal.classList.add('hidden');
+  currentApprovalRequestId = null;
+}
+
+function sendApprovalResponse(approved) {
+  if (!currentApprovalRequestId) return;
+  const payload = JSON.stringify({ request_id: currentApprovalRequestId, approved: approved });
+  if (approvalWs && approvalWs.readyState === WebSocket.OPEN) {
+    approvalWs.send(payload);
+  }
+  hideApprovalModal();
+}
+
+// Bind approval buttons
+document.addEventListener('DOMContentLoaded', () => {
+  const approveBtn = document.getElementById('approvalApproveBtn');
+  const denyBtn = document.getElementById('approvalDenyBtn');
+  if (approveBtn) approveBtn.addEventListener('click', () => sendApprovalResponse(true));
+  if (denyBtn) denyBtn.addEventListener('click', () => sendApprovalResponse(false));
+});

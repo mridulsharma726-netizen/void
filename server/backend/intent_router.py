@@ -144,7 +144,7 @@ class IntentRouter:
             PREFIX + r"(?:click|press|tap)(?:\s+(?:on|the|button))?\s+(.+)" + SUFFIX
         ],
         "cvcs_type": [
-            PREFIX + r"(?:type|write|input)\s+(.+)" + SUFFIX
+            PREFIX + r"(?:type|input)\s+(.+)" + SUFFIX
         ],
         "cvcs_read_screen": [
             PREFIX + r"(?:what\s+is\s+on\s+(?:my\s+)?screen|read\s+(?:my\s+)?screen|scan\s+(?:my\s+)?screen|analyze\s+(?:my\s+)?screen)" + SUFFIX,
@@ -234,6 +234,30 @@ class IntentRouter:
         "list_directory": [
             PREFIX + r"(?:list|show)\s+(?:directory|folder|dir)\s*(.+)??" + SUFFIX
         ],
+
+        # ---------------------------------------------------------------
+        # REAL-TIME INTELLIGENCE UPGRADE — new intent patterns
+        # ---------------------------------------------------------------
+        "web_search": [
+            PREFIX + r"(?:search|google|look\s+up|find\s+out|search\s+for)\s+(.+)" + SUFFIX,
+            PREFIX + r"what\s+is\s+(?:the\s+)?(?:current|latest|today'?s?)\s+(.+)" + SUFFIX,
+            PREFIX + r"(?:current|live|real-?time)\s+(?:price|value|stock|rate)\s+(?:of\s+)?(.+)" + SUFFIX,
+        ],
+        "news_query": [
+            PREFIX + r"(?:latest|recent|today'?s?|breaking)\s+(?:news|headlines|articles?)(?:\s+(?:about|on|for)\s+(.+))?" + SUFFIX,
+            PREFIX + r"(?:what'?s?|what\s+is)\s+(?:happening|going\s+on|new)\s+(?:in|with|about)\s+(.+)" + SUFFIX,
+            PREFIX + r"(?:news|headlines)\s+(?:about|on|for|regarding)\s+(.+)" + SUFFIX,
+            PREFIX + r"(?:show|get|fetch)\s+(?:me\s+)?(?:the\s+)?(?:latest\s+)?news(?:\s+(?:about|on)\s+(.+))?" + SUFFIX,
+        ],
+        "engineering_mode": [
+            PREFIX + r"(?:debug|fix|review)\s+(?:this|my|the)?\s*(?:code|error|bug|issue)(?:\s+(.+))?" + SUFFIX,
+            PREFIX + r"(?:review|analyze|audit)\s+(?:this|my|the)?\s*(?:architecture|design|codebase|project)(?:\s+(.+))?" + SUFFIX,
+            PREFIX + r"(?:suggest|recommend)\s+(?:an?\s+)?(?:architecture|tech\s*stack|design)\s+(?:for\s+)?(.+)" + SUFFIX,
+        ],
+        "build_project": [
+            PREFIX + r"(?:create|build|generate|make|scaffold)\s+(?:a\s+|an\s+)?(?:modern\s+|new\s+|simple\s+)?(.+?)\s*(?:website|app|application|backend|api|project|platform|site|page)" + SUFFIX,
+            PREFIX + r"(?:build|create|generate)\s+(?:me\s+)?(?:a\s+)?(.+)" + SUFFIX,
+        ],
     }
     
     # Words that indicate conversational/abstract usage of action verbs
@@ -281,6 +305,14 @@ class IntentRouter:
         if any(kw in lower for kw in academic_keywords):
             logger.info(f"[ACADEMIC INTENT DETECTED] Query: {raw}")
             return IntentResult(intent="academic")
+
+        # ---------------------------------------------------------------
+        # REAL-TIME INTELLIGENCE: detect web/news/engineering/build intents
+        # (checked early so they are not swallowed by generic chat fallback)
+        # ---------------------------------------------------------------
+        rt_result = self._classify_realtime_intent(lower, raw)
+        if rt_result:
+            return rt_result
         
         # Rules first
         result = self._classify_rules(lower, raw)
@@ -296,6 +328,87 @@ class IntentRouter:
                 return llm_intent
         
         return IntentResult(intent="chat")
+
+    # ---------------------------------------------------------------
+    # REAL-TIME INTELLIGENCE — semantic intent detection
+    # ---------------------------------------------------------------
+    def _classify_realtime_intent(self, lower: str, raw: str):
+        """Detect web_search, news_query, engineering_mode, build_project intents.
+        Returns IntentResult or None."""
+
+        # Keyword-based fast-path for news
+        news_triggers = ["latest news", "breaking news", "recent news", "headlines",
+                         "what's happening", "what is happening", "what's new in",
+                         "news about", "news on", "today's news"]
+        # Also check regex for "latest/recent/breaking <topic> news" pattern
+        news_regex = re.search(
+            r"\b(?:latest|recent|breaking|today'?s?)\s+(?:\w+\s+){0,4}(?:news|headlines|articles?)\b",
+            lower
+        )
+        # Short messages ending/containing 'news' are almost certainly news queries
+        has_news_word = (
+            re.search(r"\bnews\b", lower) and len(lower.split()) <= 6
+        )
+        if any(t in lower for t in news_triggers) or news_regex or has_news_word:
+            topic = raw
+            for prefix in ["latest", "recent", "breaking", "today's", "show me",
+                           "get me", "fetch", "tell me", "what is the", "what's the"]:
+                topic = topic.lower().replace(prefix, "").strip()
+            for suffix in ["news", "headlines", "articles"]:
+                if topic.endswith(suffix):
+                    topic = topic[:-len(suffix)].strip()
+            logger.info(f"[REALTIME INTENT] news_query: topic='{topic}'")
+            return IntentResult(intent="command", action="news_query",
+                                params={"query": topic or "general"})
+
+
+        # Keyword-based fast-path for real-time data / web search
+        web_triggers = ["current price", "live price", "stock price",
+                        "bitcoin price", "weather in", "weather today",
+                        "exchange rate", "search for", "look up",
+                        "search the web", "google"]
+        if any(t in lower for t in web_triggers):
+            query = raw
+            for prefix in ["search for", "look up", "google", "find out",
+                           "what is the", "what's the", "tell me the"]:
+                query = query.lower().replace(prefix, "").strip()
+            logger.info(f"[REALTIME INTENT] web_search: query='{query}'")
+            return IntentResult(intent="command", action="web_search",
+                                params={"query": query})
+
+        # Engineering mode triggers
+        eng_triggers = ["debug this", "fix this code", "review my code",
+                        "review architecture", "suggest architecture",
+                        "analyze my project", "code review",
+                        "dependency analysis", "tech stack for"]
+        if any(t in lower for t in eng_triggers):
+            logger.info(f"[REALTIME INTENT] engineering_mode")
+            return IntentResult(intent="command", action="engineering_mode",
+                                params={"query": raw})
+
+        # Build / scaffold triggers
+        build_triggers = ["create a website", "build a website", "create an app",
+                          "build an app", "generate a backend", "scaffold",
+                          "create a project", "build a project", "make a website",
+                          "create a modern", "build a modern"]
+        if any(t in lower for t in build_triggers):
+            logger.info(f"[REALTIME INTENT] build_project")
+            return IntentResult(intent="command", action="build_project",
+                                params={"requirements": raw})
+
+        # Regex patterns (fallback for less obvious phrasings)
+        for action in ["web_search", "news_query", "engineering_mode", "build_project"]:
+            if action in self.COMMAND_PATTERNS:
+                for pat in self.COMMAND_PATTERNS[action]:
+                    match = re.search(pat, lower)
+                    if match:
+                        target = self._extract_target(match) or raw
+                        logger.info(f"[REALTIME INTENT] {action} (regex): '{target}'")
+                        param_key = "query" if action in ("web_search", "news_query", "engineering_mode") else "requirements"
+                        return IntentResult(intent="command", action=action,
+                                            params={param_key: target})
+
+        return None
     
     def _is_conversational(self, text: str) -> bool:
         """Check if text looks like natural conversation rather than a command."""
