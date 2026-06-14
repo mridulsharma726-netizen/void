@@ -51,7 +51,7 @@ def start_server():
         sys.executable, "-m", "uvicorn",
         "server.main:app", 
         "--host", "127.0.0.1",
-        "--port", "8002",
+        "--port", "8003",
         "--reload"
     ]
     print(f"[LAUNCHER] Starting server: {' '.join(cmd)}")
@@ -95,7 +95,7 @@ def main():
     
     # 5. Health check
     try:
-        r = requests.get("http://127.0.0.1:8002/health", timeout=2)
+        r = requests.get("http://127.0.0.1:8003/health", timeout=2)
         print(f"[LAUNCHER] Backend health: {'[OK] OK' if r.status_code == 200 else f'[FAIL] {r.status_code}'}")
     except Exception as e:
         print(f"[LAUNCHER] Backend health check failed: {e}")
@@ -104,7 +104,7 @@ def main():
     open_ui()
     
     print("\n[SUCCESS] VOID FULLY ONLINE!")
-    print("- Backend: http://127.0.0.1:8002")
+    print("- Backend: http://127.0.0.1:8003")
     print("- UI open in browser")
     print("- Ctrl+C to shutdown")
     print("=V=O=I=D= =" * 3)

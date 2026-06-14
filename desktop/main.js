@@ -223,6 +223,18 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  const { session } = require('electron');
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['ws://*/*', 'wss://*/*', 'http://127.0.0.1/*', 'http://localhost/*'] },
+    (details, callback) => {
+      const originKey = Object.keys(details.requestHeaders).find(k => k.toLowerCase() === 'origin');
+      if (originKey && details.requestHeaders[originKey] === 'file://') {
+        details.requestHeaders[originKey] = `http://${BACKEND_HOST}:${BACKEND_PORT}`;
+      }
+      callback({ cancel: false, requestHeaders: details.requestHeaders });
+    }
+  );
+
   const backendOk = await startBackend();
   if (!backendOk) {
     dialog.showErrorBox('Backend Error', 'Backend failed to start.\nCheck python main.py manually.');

@@ -105,7 +105,7 @@
     },
     {
       "path": "test_realtime_intelligence.py",
-      "size_bytes": 17601,
+      "size_bytes": 17569,
       "suffix": ".py"
     },
     {
@@ -315,7 +315,7 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 26952,
+      "size_bytes": 27655,
       "suffix": ".json"
     },
     {
@@ -345,7 +345,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 2068,
+      "size_bytes": 2585,
       "suffix": ".log"
     },
     {
@@ -355,7 +355,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 5402,
+      "size_bytes": 6011,
       "suffix": ".log"
     },
     {

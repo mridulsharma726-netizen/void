@@ -3786,7 +3786,8 @@ let currentApprovalRequestId = null;
 function connectApprovalWebSocket() {
   if (approvalWs && approvalWs.readyState <= 1) return; // already open or connecting
   try {
-    approvalWs = new WebSocket('ws://localhost:8000/ws/approval');
+    const wsUrl = API_BASE.replace(/^http/, 'ws') + '/ws/approval';
+    approvalWs = new WebSocket(wsUrl);
 
     approvalWs.onmessage = (event) => {
       try {

@@ -350,50 +350,86 @@ async def lifespan(app: FastAPI):
 # === APP ===
 app = FastAPI(title="VOID Backend", lifespan=lifespan)
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+class WebSocketBypassCORSMiddleware(CORSMiddleware):
+    async def __call__(self, scope, receive, send):
+        logger.info(f"CORS SCOPE TYPE: {scope.get('type')}, PATH: {scope.get('path')}")
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start = time.time()
-    resp = await call_next(request)
-    logger.info(f"{request.method} {request.url.path} - {resp.status_code} - {(time.time()-start)*1000:.0f}ms")
-    return resp
+app.add_middleware(WebSocketBypassCORSMiddleware, allow_origins=["*", "file://"], allow_origin_regex=".*", allow_methods=["*"], allow_headers=["*"])
 
 # Exempt paths from token verification (like /health)
-EXEMPT_PATHS = {"/health", "/docs", "/openapi.json"}
+EXEMPT_PATHS = {"/health", "/docs", "/openapi.json", "/ws/approval"}
 
-@app.middleware("http")
-async def secure_token_auth_middleware(request: Request, call_next):
-    # Allow CORS preflight requests
-    if request.method == "OPTIONS":
-        return await call_next(request)
-        
-    # Check if request path is exempt
-    if request.url.path in EXEMPT_PATHS:
-        return await call_next(request)
-        
-    # Token check
-    auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        return JSONResponse(
-            status_code=401,
-            content={"status": "error", "message": "Access Denied: Missing Authorization Header"}
-        )
-        
-    try:
-        scheme, token = auth_header.split()
-        if scheme.lower() != "bearer" or token != API_TOKEN:
-            return JSONResponse(
-                status_code=401,
-                content={"status": "error", "message": "Access Denied: Invalid Security Token"}
-            )
-    except Exception:
-        return JSONResponse(
-            status_code=401,
-            content={"status": "error", "message": "Access Denied: Malformed Authorization Header"}
-        )
-        
-    return await call_next(request)
+class SecureTokenAuthMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        logger.info(f"ASGI SCOPE TYPE: {scope.get('type')}, PATH: {scope.get('path')}")
+        if scope["type"] == "websocket":
+            headers_dict = {k.decode('latin-1'): v.decode('latin-1') for k, v in scope.get('headers', [])}
+            logger.info(f"WEBSOCKET HEADERS: {headers_dict}")
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        from fastapi import Request
+        from fastapi.responses import JSONResponse
+        import time
+
+        request = Request(scope, receive)
+        start = time.time()
+
+        is_exempt = request.method == "OPTIONS" or request.url.path in EXEMPT_PATHS
+
+        if not is_exempt:
+            auth_header = request.headers.get("Authorization")
+            if not auth_header:
+                response = JSONResponse(
+                    status_code=401,
+                    content={"status": "error", "message": "Access Denied: Missing Authorization Header"}
+                )
+                # Apply CORS headers for direct response
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                await response(scope, receive, send)
+                return
+
+            try:
+                scheme, token = auth_header.split()
+                if scheme.lower() != "bearer" or token != API_TOKEN:
+                    response = JSONResponse(
+                        status_code=401,
+                        content={"status": "error", "message": "Access Denied: Invalid Security Token"}
+                    )
+                    response.headers["Access-Control-Allow-Origin"] = "*"
+                    await response(scope, receive, send)
+                    return
+            except Exception:
+                response = JSONResponse(
+                    status_code=401,
+                    content={"status": "error", "message": "Access Denied: Malformed Authorization Header"}
+                )
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                await response(scope, receive, send)
+                return
+
+        status_code = [200]
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                status_code[0] = message["status"]
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        finally:
+            duration = (time.time() - start) * 1000
+            logger.info(f"{request.method} {request.url.path} - {status_code[0]} - {duration:.0f}ms")
+
+app.add_middleware(SecureTokenAuthMiddleware)
 
 @app.exception_handler(Exception)
 async def error_handler(request, exc):
@@ -798,7 +834,7 @@ async def api_intelligence_status():
 # WebSocket — Approval Gate channel
 # ---------------------------------------------------------------------------
 @app.websocket("/ws/approval")
-async def ws_approval(websocket):
+async def ws_approval(websocket: WebSocket):
     """
     WebSocket channel for the user approval gate.
 
