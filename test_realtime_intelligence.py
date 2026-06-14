@@ -412,7 +412,7 @@ class TestIntentRouterUpgrade:
     """Tests for new real-time intents in the IntentRouter."""
 
     def _run(self, coro):
-        return asyncio.get_event_loop().run_until_complete(coro)
+        return asyncio.run(coro)
 
     def test_news_intent(self):
         from backend.intent_router import IntentRouter

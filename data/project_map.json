@@ -79,8 +79,18 @@
       "suffix": ".py"
     },
     {
+      "path": "test_agent_swarm.py",
+      "size_bytes": 3175,
+      "suffix": ".py"
+    },
+    {
       "path": "test_autonomous_agent.py",
       "size_bytes": 5249,
+      "suffix": ".py"
+    },
+    {
+      "path": "test_brain_manager.py",
+      "size_bytes": 4145,
       "suffix": ".py"
     },
     {
@@ -175,12 +185,12 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 126583,
+      "size_bytes": 131817,
       "suffix": ".js"
     },
     {
       "path": "app/ui/index.html",
-      "size_bytes": 79501,
+      "size_bytes": 84528,
       "suffix": ".html"
     },
     {
@@ -305,7 +315,7 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 24824,
+      "size_bytes": 26952,
       "suffix": ".json"
     },
     {
@@ -334,13 +344,18 @@
       "suffix": ".js"
     },
     {
+      "path": "logs/agent_swarm.log",
+      "size_bytes": 2068,
+      "suffix": ".log"
+    },
+    {
       "path": "logs/agent_terminal.log",
       "size_bytes": 6188,
       "suffix": ".log"
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 2969,
+      "size_bytes": 5402,
       "suffix": ".log"
     },
     {
@@ -750,7 +765,7 @@
     },
     {
       "path": "server/main.py",
-      "size_bytes": 118190,
+      "size_bytes": 121343,
       "suffix": ".py"
     },
     {
@@ -894,8 +909,18 @@
       "suffix": ".py"
     },
     {
+      "path": "server/backend/providers/anthropic_compatible.py",
+      "size_bytes": 5838,
+      "suffix": ".py"
+    },
+    {
       "path": "server/backend/providers/base.py",
       "size_bytes": 1194,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/providers/gemini_compatible.py",
+      "size_bytes": 5483,
       "suffix": ".py"
     },
     {
@@ -905,12 +930,17 @@
     },
     {
       "path": "server/backend/providers/ollama_local.py",
-      "size_bytes": 6708,
+      "size_bytes": 9183,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/providers/openai_compatible.py",
+      "size_bytes": 5175,
       "suffix": ".py"
     },
     {
       "path": "server/backend/providers/router.py",
-      "size_bytes": 14365,
+      "size_bytes": 19814,
       "suffix": ".py"
     },
     {
@@ -930,7 +960,7 @@
     },
     {
       "path": "tools/agent_network.py",
-      "size_bytes": 24127,
+      "size_bytes": 28384,
       "suffix": ".py"
     },
     {
