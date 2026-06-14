@@ -45,7 +45,7 @@
     },
     {
       "path": "requirements.txt",
-      "size_bytes": 346,
+      "size_bytes": 589,
       "suffix": ".txt"
     },
     {
@@ -91,6 +91,11 @@
     {
       "path": "test_project_intelligence_upgrade.py",
       "size_bytes": 8458,
+      "suffix": ".py"
+    },
+    {
+      "path": "test_realtime_intelligence.py",
+      "size_bytes": 17601,
       "suffix": ".py"
     },
     {
@@ -170,17 +175,17 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 113643,
+      "size_bytes": 126583,
       "suffix": ".js"
     },
     {
       "path": "app/ui/index.html",
-      "size_bytes": 68917,
+      "size_bytes": 79501,
       "suffix": ".html"
     },
     {
       "path": "app/ui/style.css",
-      "size_bytes": 48179,
+      "size_bytes": 50875,
       "suffix": ".css"
     },
     {
@@ -310,7 +315,7 @@
     },
     {
       "path": "desktop/main.js",
-      "size_bytes": 7416,
+      "size_bytes": 7444,
       "suffix": ".js"
     },
     {
@@ -340,12 +345,22 @@
     },
     {
       "path": "logs/desktop_control.log",
-      "size_bytes": 171,
+      "size_bytes": 559,
       "suffix": ".log"
     },
     {
       "path": "logs/system.log",
       "size_bytes": 40732,
+      "suffix": ".log"
+    },
+    {
+      "path": "logs/terminal.log",
+      "size_bytes": 0,
+      "suffix": ".log"
+    },
+    {
+      "path": "logs/terminal_history.log",
+      "size_bytes": 0,
       "suffix": ".log"
     },
     {
@@ -401,6 +416,11 @@
     {
       "path": "memory/data/cvcs_config.json",
       "size_bytes": 119,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/llm_config.json",
+      "size_bytes": 161,
       "suffix": ".json"
     },
     {
@@ -469,6 +489,21 @@
       "suffix": ".conf"
     },
     {
+      "path": "news/rss_cache.py",
+      "size_bytes": 8445,
+      "suffix": ".py"
+    },
+    {
+      "path": "news/rss_engine.py",
+      "size_bytes": 14230,
+      "suffix": ".py"
+    },
+    {
+      "path": "news/__init__.py",
+      "size_bytes": 267,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/check_db.py",
       "size_bytes": 393,
       "suffix": ".py"
@@ -531,6 +566,11 @@
     {
       "path": "scratch/search_stages.py",
       "size_bytes": 802,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/search_voice_thread.py",
+      "size_bytes": 194,
       "suffix": ".py"
     },
     {
@@ -699,8 +739,18 @@
       "suffix": ".txt"
     },
     {
+      "path": "search/duckduckgo_provider.py",
+      "size_bytes": 10218,
+      "suffix": ".py"
+    },
+    {
+      "path": "search/__init__.py",
+      "size_bytes": 224,
+      "suffix": ".py"
+    },
+    {
       "path": "server/main.py",
-      "size_bytes": 95134,
+      "size_bytes": 118190,
       "suffix": ".py"
     },
     {
@@ -724,6 +774,11 @@
       "suffix": ".py"
     },
     {
+      "path": "server/backend/builder_agent.py",
+      "size_bytes": 29106,
+      "suffix": ".py"
+    },
+    {
       "path": "server/backend/decision_engine.py",
       "size_bytes": 7265,
       "suffix": ".py"
@@ -744,13 +799,28 @@
       "suffix": ".py"
     },
     {
+      "path": "server/backend/engineering_mode.py",
+      "size_bytes": 16846,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/fs_tools.py",
+      "size_bytes": 15541,
+      "suffix": ".py"
+    },
+    {
       "path": "server/backend/intent_router.py",
-      "size_bytes": 32720,
+      "size_bytes": 39457,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/knowledge_fusion.py",
+      "size_bytes": 11799,
       "suffix": ".py"
     },
     {
       "path": "server/backend/llm_client.py",
-      "size_bytes": 32592,
+      "size_bytes": 28712,
       "suffix": ".py"
     },
     {
@@ -760,7 +830,7 @@
     },
     {
       "path": "server/backend/memory_sqlite.py",
-      "size_bytes": 38630,
+      "size_bytes": 45488,
       "suffix": ".py"
     },
     {
@@ -771,6 +841,11 @@
     {
       "path": "server/backend/pipeline.py",
       "size_bytes": 1552,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/project_analyzer.py",
+      "size_bytes": 5736,
       "suffix": ".py"
     },
     {
@@ -816,6 +891,26 @@
     {
       "path": "server/backend/__init__.py",
       "size_bytes": 41,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/providers/base.py",
+      "size_bytes": 1194,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/providers/kimi_cloud.py",
+      "size_bytes": 5090,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/providers/ollama_local.py",
+      "size_bytes": 6708,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/providers/router.py",
+      "size_bytes": 14365,
       "suffix": ".py"
     },
     {
@@ -1030,7 +1125,7 @@
     },
     {
       "path": "tools/terminal_tools.py",
-      "size_bytes": 10337,
+      "size_bytes": 16689,
       "suffix": ".py"
     },
     {
@@ -1050,7 +1145,7 @@
     },
     {
       "path": "tools/voice_listener.py",
-      "size_bytes": 7825,
+      "size_bytes": 7891,
       "suffix": ".py"
     },
     {

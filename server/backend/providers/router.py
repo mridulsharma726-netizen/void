@@ -9,6 +9,9 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 from backend.providers.base import BaseProvider
 from backend.providers.ollama_local import OllamaProvider
 from backend.providers.kimi_cloud import KimiProvider
+from backend.providers.openai_compatible import OpenAICompatibleProvider
+from backend.providers.gemini_compatible import GeminiProvider
+from backend.providers.anthropic_compatible import AnthropicProvider
 
 logger = logging.getLogger("void.providers.router")
 
@@ -19,15 +22,30 @@ class MultiModelRouter(BaseProvider):
     def __init__(self):
         self.config_path = CONFIG_PATH
         self.config = {
-            "routing_mode": "AUTO",  # AUTO, LOCAL, CLOUD
-            "kimi_api_key": "",
-            "kimi_model": "kimi-k2.7-code",
+            "routing_mode": "AUTO",  # AUTO, LOCAL, CLOUD, OPENAI, GEMINI, ANTHROPIC
+            "active_provider": "ollama",
+            "fallback_enabled": True,
+            # Ollama / Local
             "local_model": "qwen2.5:0.5b",
-            "fallback_enabled": True
+            "ollama_base_url": "http://127.0.0.1:11434",
+            # OpenAI
+            "openai_api_key": "",
+            "openai_model": "gpt-4o",
+            "openai_base_url": "https://api.openai.com/v1",
+            # Gemini
+            "gemini_api_key": "",
+            "gemini_model": "gemini-1.5-flash",
+            "gemini_base_url": "https://generativelanguage.googleapis.com/v1beta",
+            # Anthropic
+            "anthropic_api_key": "",
+            "anthropic_model": "claude-3-5-sonnet-20241022",
+            "anthropic_base_url": "https://api.anthropic.com/v1",
+            # Kimi
+            "kimi_api_key": "",
+            "kimi_model": "kimi-k2.7-code"
         }
         self.load_config()
-        self.ollama_provider = OllamaProvider(model=self.config["local_model"])
-        self.kimi_provider = KimiProvider(api_key=self.config["kimi_api_key"], model=self.config["kimi_model"])
+        self.initialize_providers()
         
         # Performance metrics
         self.metrics = {
@@ -57,12 +75,35 @@ class MultiModelRouter(BaseProvider):
         except Exception as e:
             logger.error(f"Failed to save LLM config: {e}")
 
+    def initialize_providers(self):
+        self.ollama_provider = OllamaProvider(
+            model=self.config["local_model"],
+            base_url=self.config.get("ollama_base_url", "http://127.0.0.1:11434")
+        )
+        self.openai_provider = OpenAICompatibleProvider(
+            api_key=self.config.get("openai_api_key", ""),
+            model=self.config.get("openai_model", "gpt-4o"),
+            base_url=self.config.get("openai_base_url", "https://api.openai.com/v1")
+        )
+        self.gemini_provider = GeminiProvider(
+            api_key=self.config.get("gemini_api_key", ""),
+            model=self.config.get("gemini_model", "gemini-1.5-flash"),
+            base_url=self.config.get("gemini_base_url", "https://generativelanguage.googleapis.com/v1beta")
+        )
+        self.anthropic_provider = AnthropicProvider(
+            api_key=self.config.get("anthropic_api_key", ""),
+            model=self.config.get("anthropic_model", "claude-3-5-sonnet-20241022"),
+            base_url=self.config.get("anthropic_base_url", "https://api.anthropic.com/v1")
+        )
+        self.kimi_provider = KimiProvider(
+            api_key=self.config.get("kimi_api_key", ""),
+            model=self.config.get("kimi_model", "kimi-k2.7-code")
+        )
+
     def update_config(self, new_config: Dict[str, Any]):
         self.config.update(new_config)
         self.save_config()
-        # Re-initialize providers with updated configs
-        self.ollama_provider = OllamaProvider(model=self.config["local_model"])
-        self.kimi_provider = KimiProvider(api_key=self.config["kimi_api_key"], model=self.config["kimi_model"])
+        self.initialize_providers()
 
     def get_metrics(self) -> Dict[str, Any]:
         """Return metrics for the model dashboard panel."""
@@ -99,22 +140,20 @@ class MultiModelRouter(BaseProvider):
                 "local_model": self.config["local_model"],
                 "kimi_model": self.config["kimi_model"],
                 "fallback_enabled": self.config["fallback_enabled"],
-                "has_api_key": bool(self.config["kimi_api_key"])
+                "has_api_key": bool(self.config["kimi_api_key"]) or bool(self.config["openai_api_key"]) or bool(self.config["gemini_api_key"]) or bool(self.config["anthropic_api_key"])
             }
         }
 
     def classify_query(self, user_text: str) -> Tuple[bool, str]:
         """
-        Classifies if the query warrants Kimi K2.7 Code.
+        Classifies if the query warrants Kimi K2.7 Code or deep engineering.
         Returns: (is_coding, reason)
         """
         text_lower = user_text.lower().strip()
         
-        # 1. Check if user query contains explicit code markers
         if "```" in user_text:
             return True, "User prompt contains markdown code blocks"
             
-        # 2. Key codebase/project keywords
         project_keywords = [
             "analyze project", "project structure", "architecture", "explain codebase", 
             "codebase map", "find bugs", "improve architecture", "review code", 
@@ -125,12 +164,10 @@ class MultiModelRouter(BaseProvider):
         if any(kw in text_lower for kw in project_keywords):
             return True, "Matches project analysis keywords"
             
-        # 3. Direct coding indicators
         coding_verbs = ["debug", "write code", "create function", "refactor", "compile error", "fastapi route", "implement feature", "unit test", "syntax error"]
         if any(v in text_lower for v in coding_verbs):
             return True, "Matches coding action verbs"
-
-        # 4. Programming language context keywords
+            
         programming_keywords = [
             "python", "javascript", "electron", "fastapi", "sqlite", "html", "css", 
             "import ", "def ", "class ", "return ", "struct ", "package.json", "requirements.txt",
@@ -141,42 +178,106 @@ class MultiModelRouter(BaseProvider):
 
         return False, "General conversation / command"
 
-    def select_provider(self, user_text: str) -> Tuple[str, BaseProvider, str]:
+    def select_provider_and_model(self, user_text: str) -> Tuple[str, BaseProvider, str, str]:
         """
-        Routes the query to the correct provider.
-        Returns: (provider_name, provider_instance, routing_reason)
+        Routes the query to the correct provider and selects/updates the model name.
+        Returns: (provider_name, provider_instance, model_name, routing_reason)
         """
         mode = self.config["routing_mode"].upper()
         
-        if mode == "LOCAL":
-            return "Local", self.ollama_provider, "Manual Local routing config"
-        elif mode == "CLOUD":
-            if not self.config["kimi_api_key"]:
-                return "Local", self.ollama_provider, "Kimi Cloud requested but API key is missing. Routing to Local."
-            return "Cloud", self.kimi_provider, "Manual Cloud routing config"
-        else:
-            # AUTO Mode: classify intent
-            is_coding, reason = self.classify_query(user_text)
-            if is_coding:
-                if not self.config["kimi_api_key"]:
-                    return "Local", self.ollama_provider, f"Coding task detected ({reason}) but Kimi API key is missing. Routing to Local."
-                return "Cloud", self.kimi_provider, f"Coding task detected: {reason}"
-            else:
-                return "Local", self.ollama_provider, "Casual conversation / command detected"
+        # 1. Manual Overrides
+        if mode == "LOCAL" or mode == "OLLAMA":
+            return "Local", self.ollama_provider, self.config["local_model"], "Manual Ollama configuration"
+        elif mode == "OPENAI":
+            return "OpenAI", self.openai_provider, self.config["openai_model"], "Manual OpenAI configuration"
+        elif mode == "GEMINI":
+            return "Gemini", self.gemini_provider, self.config["gemini_model"], "Manual Gemini configuration"
+        elif mode == "ANTHROPIC":
+            return "Anthropic", self.anthropic_provider, self.config["anthropic_model"], "Manual Anthropic configuration"
+        elif mode == "CLOUD" or mode == "KIMI":
+            return "Cloud", self.kimi_provider, self.config["kimi_model"], "Manual Kimi configuration"
+        
+        # 2. AUTO Mode: dynamic routing based on classification
+        discovered = self.ollama_provider.discover_and_categorize_models()
+        text_lower = user_text.lower().strip()
+        is_coding, coding_reason = self.classify_query(user_text)
+        
+        # Check for reasoning/planning queries
+        reasoning_keywords = ["reason", "prove", "math", "why", "logic", "solve", "step by step", "algorithm"]
+        is_reasoning = any(k in text_lower for k in reasoning_keywords)
+        
+        # Check for vision queries
+        vision_keywords = ["screenshot", "screen", "camera", "image", "picture", "photo", "look at my screen"]
+        is_vision = any(k in text_lower for k in vision_keywords)
+        
+        # Check for quick questions (short text)
+        is_quick = len(text_lower.split()) <= 5
+        
+        if is_coding:
+            if self.config.get("kimi_api_key"):
+                return "Cloud", self.kimi_provider, self.config["kimi_model"], f"Coding task: {coding_reason} -> Moonshot Kimi"
+            elif self.config.get("openai_api_key"):
+                return "OpenAI", self.openai_provider, self.config["openai_model"], f"Coding task: {coding_reason} -> OpenAI"
+            elif discovered.get("Coding"):
+                best_local_coder = discovered["Coding"][0]
+                self.ollama_provider.model = best_local_coder
+                return "Local", self.ollama_provider, best_local_coder, f"Coding task: {coding_reason} -> Dynamic Local Coder ({best_local_coder})"
+            
+        elif is_reasoning:
+            if discovered.get("Reasoning"):
+                best_reasoner = discovered["Reasoning"][0]
+                self.ollama_provider.model = best_reasoner
+                return "Local", self.ollama_provider, best_reasoner, f"Reasoning task -> Dynamic Local Reasoner ({best_reasoner})"
+            elif self.config.get("openai_api_key"):
+                return "OpenAI", self.openai_provider, self.config["openai_model"], "Reasoning task -> OpenAI"
+                
+        elif is_vision:
+            if self.config.get("gemini_api_key"):
+                return "Gemini", self.gemini_provider, self.config["gemini_model"], "Vision task -> Gemini"
+            elif discovered.get("Vision"):
+                best_vision = discovered["Vision"][0]
+                self.ollama_provider.model = best_vision
+                return "Local", self.ollama_provider, best_vision, f"Vision task -> Dynamic Local Vision ({best_vision})"
+                
+        elif is_quick:
+            if discovered.get("Lightweight"):
+                best_light = discovered["Lightweight"][0]
+                self.ollama_provider.model = best_light
+                return "Local", self.ollama_provider, best_light, f"Quick question -> Dynamic Local Lightweight ({best_light})"
+        
+        # Default fallback
+        active_prov = self.config.get("active_provider", "ollama").lower()
+        if active_prov == "openai" and self.config.get("openai_api_key"):
+            return "OpenAI", self.openai_provider, self.config["openai_model"], "Default Auto routing -> OpenAI"
+        elif active_prov == "gemini" and self.config.get("gemini_api_key"):
+            return "Gemini", self.gemini_provider, self.config["gemini_model"], "Default Auto routing -> Gemini"
+        elif active_prov == "anthropic" and self.config.get("anthropic_api_key"):
+            return "Anthropic", self.anthropic_provider, self.config["anthropic_model"], "Default Auto routing -> Anthropic"
+            
+        return "Local", self.ollama_provider, self.config["local_model"], "Default Auto routing -> Local Ollama"
+
+    def select_provider(self, user_text: str) -> Tuple[str, BaseProvider, str]:
+        prov_name, prov, _, reason = self.select_provider_and_model(user_text)
+        return prov_name, prov, reason
 
     async def available(self) -> bool:
         mode = self.config["routing_mode"].upper()
-        if mode == "LOCAL":
+        if mode == "LOCAL" or mode == "OLLAMA":
             return await self.ollama_provider.available()
-        elif mode == "CLOUD":
+        elif mode == "OPENAI":
+            return await self.openai_provider.available()
+        elif mode == "GEMINI":
+            return await self.gemini_provider.available()
+        elif mode == "ANTHROPIC":
+            return await self.anthropic_provider.available()
+        elif mode == "CLOUD" or mode == "KIMI":
             return await self.kimi_provider.available()
         else:
-            return await self.ollama_provider.available() or await self.kimi_provider.available()
+            return await self.ollama_provider.available()
 
     async def chat(self, history: List[Dict[str, str]], prompt: str, system_prompt: Optional[str] = None) -> str:
-        provider_name, provider, reason = self.select_provider(prompt)
+        provider_name, provider, model_name, reason = self.select_provider_and_model(prompt)
         
-        # Estimate context token size (approx. 4 characters per token as a rough metric)
         total_chars = len(prompt) + (len(system_prompt) if system_prompt else 0)
         for msg in history:
             total_chars += len(msg.get("content", ""))
@@ -184,8 +285,7 @@ class MultiModelRouter(BaseProvider):
         
         t_start = time.perf_counter()
         
-        # Logging statement
-        logger.info(f"[ROUTER] Selected provider: {provider_name} | Reason: {reason} | Context: ~{estimated_tokens} tokens")
+        logger.info(f"[ROUTER] Selected provider: {provider_name} | Model: {model_name} | Reason: {reason} | Context: ~{estimated_tokens} tokens")
         print(f"[ROUTER] Routing to {provider_name} ({reason})")
 
         try:
@@ -193,21 +293,18 @@ class MultiModelRouter(BaseProvider):
             
             # Record metrics
             self.metrics["last_provider"] = provider_name
-            self.metrics["last_model"] = self.config["kimi_model"] if provider_name == "Cloud" else self.config["local_model"]
+            self.metrics["last_model"] = model_name
             self.metrics["last_context_tokens"] = estimated_tokens
             self.metrics["last_latency_seconds"] = time.perf_counter() - t_start
             self.metrics["last_routing_reason"] = reason
             
-            # Print latency logs
             print(f"[MODEL] Selected: {self.metrics['last_model']} | Context: {estimated_tokens} tokens | Response duration: {self.metrics['last_latency_seconds']:.2f}s")
-            
             return res
         except Exception as e:
             logger.error(f"[ROUTER] Provider {provider_name} failed: {e}")
-            if provider_name == "Cloud" and self.config["fallback_enabled"]:
-                # Log fallback
-                logger.warning(f"[CLOUD FALLBACK] Kimi Cloud failed. Redirecting to Ollama Local model. Reason: {e}")
-                print(f"[CLOUD FALLBACK] Cloud failed. Switching to Local model {self.config['local_model']}...")
+            if provider_name != "Local" and self.config["fallback_enabled"]:
+                logger.warning(f"[CLOUD FALLBACK] Provider {provider_name} failed. Redirecting to Ollama Local model. Reason: {e}")
+                print(f"[CLOUD FALLBACK] Provider failed. Switching to Local model {self.config['local_model']}...")
                 
                 t_fallback_start = time.perf_counter()
                 try:
@@ -217,9 +314,9 @@ class MultiModelRouter(BaseProvider):
                     self.metrics["last_model"] = self.config["local_model"]
                     self.metrics["last_context_tokens"] = estimated_tokens
                     self.metrics["last_latency_seconds"] = time.perf_counter() - t_fallback_start
-                    self.metrics["last_routing_reason"] = f"Kimi Cloud Failed ({e})"
+                    self.metrics["last_routing_reason"] = f"Provider {provider_name} Failed ({e})"
                     
-                    notice = "*(System Notice: Moonshot Kimi Cloud is currently unavailable. I have automatically redirected your engineering request to the local model so your session remains uninterrupted, Sir.)*\n\n"
+                    notice = f"*(System Notice: Provider {provider_name} is currently unavailable. I have automatically redirected your request to the local model so your session remains uninterrupted, Sir.)*\n\n"
                     return notice + local_res
                 except Exception as local_err:
                     logger.error(f"[ROUTER] Fallback local provider also failed: {local_err}")
@@ -227,7 +324,7 @@ class MultiModelRouter(BaseProvider):
             raise e
 
     async def chat_stream(self, history: List[Dict[str, str]], prompt: str, system_prompt: Optional[str] = None) -> AsyncGenerator[str, None]:
-        provider_name, provider, reason = self.select_provider(prompt)
+        provider_name, provider, model_name, reason = self.select_provider_and_model(prompt)
         
         total_chars = len(prompt) + (len(system_prompt) if system_prompt else 0)
         for msg in history:
@@ -235,13 +332,12 @@ class MultiModelRouter(BaseProvider):
         estimated_tokens = int(total_chars / 4)
         
         t_start = time.perf_counter()
-        logger.info(f"[ROUTER-STREAM] Routing to {provider_name} ({reason})")
+        logger.info(f"[ROUTER-STREAM] Routing to {provider_name} | Model: {model_name} ({reason})")
         print(f"[ROUTER-STREAM] Routing to {provider_name} ({reason})")
 
         try:
-            # We record metrics on connection start
             self.metrics["last_provider"] = provider_name
-            self.metrics["last_model"] = self.config["kimi_model"] if provider_name == "Cloud" else self.config["local_model"]
+            self.metrics["last_model"] = model_name
             self.metrics["last_context_tokens"] = estimated_tokens
             self.metrics["last_routing_reason"] = reason
 
@@ -251,9 +347,9 @@ class MultiModelRouter(BaseProvider):
             self.metrics["last_latency_seconds"] = time.perf_counter() - t_start
         except Exception as e:
             logger.error(f"[ROUTER-STREAM] Stream failed: {e}")
-            if provider_name == "Cloud" and self.config["fallback_enabled"]:
+            if provider_name != "Local" and self.config["fallback_enabled"]:
                 logger.warning(f"[CLOUD FALLBACK-STREAM] Cloud failed. Switching to Local model...")
-                yield "*(System Notice: Moonshot Kimi Cloud has disconnected. Switching to local Ollama model...)*\n\n"
+                yield f"*(System Notice: Provider {provider_name} disconnected. Switching to local Ollama model...)*\n\n"
                 
                 t_fallback_start = time.perf_counter()
                 try:
@@ -264,24 +360,23 @@ class MultiModelRouter(BaseProvider):
                     self.metrics["last_latency_seconds"] = time.perf_counter() - t_fallback_start
                 except Exception as local_err:
                     logger.error(f"[ROUTER-STREAM] Fallback stream also failed: {local_err}")
-                    yield "\n\n[System Error: Both Kimi Cloud and local Ollama stream requests failed.]"
+                    yield "\n\n[System Error: Both remote provider and local Ollama stream requests failed.]"
             else:
                 raise e
 
     def generate(self, prompt: str, system_prompt: Optional[str] = None, format: Optional[str] = None, timeout: Optional[float] = None) -> str:
-        provider_name, provider, reason = self.select_provider(prompt)
+        provider_name, provider, model_name, reason = self.select_provider_and_model(prompt)
         
         t_start = time.perf_counter()
         try:
             res = provider.generate(prompt, system_prompt=system_prompt, format=format, timeout=timeout)
-            
             self.metrics["last_provider"] = provider_name
-            self.metrics["last_model"] = self.config["kimi_model"] if provider_name == "Cloud" else self.config["local_model"]
+            self.metrics["last_model"] = model_name
             self.metrics["last_latency_seconds"] = time.perf_counter() - t_start
             return res
         except Exception as e:
             logger.error(f"[ROUTER] Generate failed: {e}")
-            if provider_name == "Cloud" and self.config["fallback_enabled"]:
+            if provider_name != "Local" and self.config["fallback_enabled"]:
                 try:
                     return self.ollama_provider.generate(prompt, system_prompt=system_prompt, format=format, timeout=timeout)
                 except Exception:

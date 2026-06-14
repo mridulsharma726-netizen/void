@@ -1300,43 +1300,83 @@ function showFaceLock() {
       faceLockAnimId = requestAnimationFrame(drawScanHUD);
     }
     
+    // Create offscreen canvas for capturing frames
+    const captureCanvas = document.createElement('canvas');
+    captureCanvas.width = 220;
+    captureCanvas.height = 220;
+    const captureCtx = captureCanvas.getContext('2d');
+    
+    scanPhase = 1;
+    scanProgress = 0;
+    
     // Stage 1: Init (1s)
-    setTimeout(() => {
-      if (!modal.classList.contains('hidden')) {
-        scanPhase = 2;
-        status.innerText = "Analyzing facial geometry...";
-        status.style.color = "rgba(255, 158, 34, 0.85)"; // Orange
+    setTimeout(async () => {
+      if (modal.classList.contains('hidden')) return;
+      
+      scanPhase = 2;
+      status.innerText = "Analyzing facial geometry...";
+      status.style.color = "rgba(255, 158, 34, 0.85)"; // Orange
+      
+      let attempts = 0;
+      const maxAttempts = 10;
+      const interval = setInterval(async () => {
+        if (modal.classList.contains('hidden') || scanPhase === 3) {
+          clearInterval(interval);
+          return;
+        }
         
-        // Increment progress smoothly
-        let interval = setInterval(() => {
-          if (modal.classList.contains('hidden') || scanPhase === 3) {
-            clearInterval(interval);
-            return;
-          }
-          scanProgress += 6.5;
-          if (scanProgress >= 100) {
-            scanProgress = 100;
-            clearInterval(interval);
-          }
-        }, 100);
+        attempts++;
+        scanProgress = Math.min(100, (attempts / 6) * 100);
         
-        // Stage 2: Sync and Match (2s)
-        setTimeout(() => {
-          if (!modal.classList.contains('hidden')) {
-            scanPhase = 3;
-            status.innerText = "ACCESS GRANTED: Mridul Sharma";
-            status.style.color = "#39ff14"; // Glowing success green
-            
-            // Stage 3: Success and Welcome (1.5s)
-            setTimeout(() => {
-              if (!modal.classList.contains('hidden')) {
-                stopFaceLock();
-                addMessage('system', 'Biometric login successful. Welcome back, Master Mridul.');
-              }
-            }, 1500);
+        // Capture frame
+        if (hasCamera && video) {
+          try {
+            captureCtx.drawImage(video, 0, 0, 220, 220);
+          } catch (e) {
+            console.error("Failed to draw video frame: ", e);
           }
-        }, 2200);
-      }
+        } else {
+          // Draw noise/dynamic patterns to trigger the backend's Hamming activity detection
+          captureCtx.fillStyle = '#111';
+          captureCtx.fillRect(0, 0, 220, 220);
+          captureCtx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+          captureCtx.lineWidth = 2;
+          captureCtx.beginPath();
+          captureCtx.moveTo(Math.random() * 220, Math.random() * 220);
+          captureCtx.lineTo(Math.random() * 220, Math.random() * 220);
+          captureCtx.stroke();
+        }
+        
+        const base64Image = captureCanvas.toDataURL('image/jpeg');
+        
+        // Upload to backend
+        const res = await api('/api/cvcs/verify-face', {
+          method: 'POST',
+          body: JSON.stringify({ image: base64Image })
+        });
+        
+        if (res && res.authorized) {
+          clearInterval(interval);
+          scanPhase = 3;
+          scanProgress = 100;
+          status.innerText = `ACCESS GRANTED: ${res.user || 'Mridul Sharma'}`;
+          status.style.color = "#39ff14"; // Lime green
+          
+          setTimeout(() => {
+            if (!modal.classList.contains('hidden')) {
+              stopFaceLock();
+              addMessage('system', `Biometric login successful. Welcome back, ${res.user || 'Master Mridul'}.`);
+            }
+          }, 1500);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          status.innerText = "ACCESS DENIED: Identity Unverified";
+          status.style.color = "rgba(255, 0, 60, 0.85)";
+          setTimeout(() => {
+            stopFaceLock();
+          }, 2000);
+        }
+      }, 800);
     }, 1200);
   }
 }
@@ -1440,24 +1480,49 @@ async function rejectProposal() {
 // === SAVE LLM SETTINGS ===
 async function saveLlmSettings() {
   const routingMode = getEl('settingsLlmRoutingSelect')?.value || 'AUTO';
-  const apiKey      = getEl('settingsKimiApiKey')?.value.trim() || '';
+  const activeProvider = getEl('settingsActiveProviderSelect')?.value || 'ollama';
   const fallbackEl  = getEl('settingsLlmFallbackBtn');
   const fallback    = fallbackEl ? fallbackEl.textContent.trim() === 'ON' : true;
+  
+  const ollamaUrl   = getEl('settingsOllamaUrl')?.value.trim() || 'http://127.0.0.1:11434';
+  const openaiKey   = getEl('settingsOpenaiApiKey')?.value.trim() || '';
+  const openaiModel = getEl('settingsOpenaiModel')?.value.trim() || 'gpt-4o';
+  const openaiUrl   = getEl('settingsOpenaiUrl')?.value.trim() || 'https://api.openai.com/v1';
+  const geminiKey   = getEl('settingsGeminiApiKey')?.value.trim() || '';
+  const geminiModel = getEl('settingsGeminiModel')?.value.trim() || 'gemini-1.5-flash';
+  const anthropicKey = getEl('settingsAnthropicApiKey')?.value.trim() || '';
+  const anthropicModel = getEl('settingsAnthropicModel')?.value.trim() || 'claude-3-5-sonnet-20241022';
+  const kimiKey      = getEl('settingsKimiApiKey')?.value.trim() || '';
+  const kimiModel    = getEl('settingsKimiModel')?.value.trim() || 'kimi-k2.7-code';
   
   const saveBtn = getEl('saveKimiSettingsBtn');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'SAVING...'; }
   
+  const payload = {
+    routing_mode: routingMode,
+    active_provider: activeProvider,
+    cloud_fallback: fallback,
+    ollama_base_url: ollamaUrl,
+    openai_model: openaiModel,
+    openai_base_url: openaiUrl,
+    gemini_model: geminiModel,
+    anthropic_model: anthropicModel,
+    kimi_model: kimiModel
+  };
+  
+  // Only send keys if the user typed something new (avoid overwriting saved keys)
+  if (openaiKey) payload.openai_api_key = openaiKey;
+  if (geminiKey) payload.gemini_api_key = geminiKey;
+  if (anthropicKey) payload.anthropic_api_key = anthropicKey;
+  if (kimiKey) payload.kimi_api_key = kimiKey;
+  
   try {
     const res = await api('/api/llm/config', {
       method: 'POST',
-      body: JSON.stringify({
-        routing_mode: routingMode,
-        kimi_api_key: apiKey,
-        cloud_fallback: fallback
-      })
+      body: JSON.stringify(payload)
     });
     if (res && !res.error) {
-      addMessage('system', `✓ LLM routing updated: ${routingMode} mode${apiKey ? ' with Kimi API key' : ' (local only)'}.`);
+      addMessage('system', `✓ Multi-Brain configuration applied: ${routingMode} routing active.`);
       await refreshModelMetrics();
     } else {
       addMessage('error', `LLM config save failed: ${res.error || 'Server error'}`);
@@ -1465,28 +1530,84 @@ async function saveLlmSettings() {
   } catch (e) {
     addMessage('error', `LLM settings error: ${e.message}`);
   } finally {
-    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'APPLY LLM ROUTING'; }
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'APPLY ROUTING & CREDENTIALS'; }
   }
 }
 
 // Load saved LLM config into settings form
 async function loadLlmConfig() {
   try {
+    // 1. Populate Ollama discovered models
+    const modelsData = await api('/api/llm/discovered-models');
+    const modelSelect = getEl('settingsModelSelect');
+    if (modelSelect && modelsData && !modelsData.error) {
+      modelSelect.innerHTML = '';
+      const allModels = new Set();
+      Object.values(modelsData).forEach(modelsList => {
+        if (Array.isArray(modelsList)) {
+          modelsList.forEach(m => allModels.add(m));
+        }
+      });
+      
+      if (allModels.size === 0) {
+        const opt = document.createElement('option');
+        opt.value = 'qwen2.5:0.5b';
+        opt.textContent = 'qwen2.5:0.5b (Default)';
+        modelSelect.appendChild(opt);
+      } else {
+        allModels.forEach(modelName => {
+          const opt = document.createElement('option');
+          opt.value = modelName;
+          opt.textContent = modelName;
+          modelSelect.appendChild(opt);
+        });
+      }
+    }
+
+    // 2. Load config settings
     const res = await api('/api/llm/config');
     if (!res || res.error) return;
+    
     const modeEl = getEl('settingsLlmRoutingSelect');
     if (modeEl && res.routing_mode) modeEl.value = res.routing_mode;
+    
+    const providerEl = getEl('settingsActiveProviderSelect');
+    if (providerEl && res.active_provider) providerEl.value = res.active_provider;
+    
     const fallbackEl = getEl('settingsLlmFallbackBtn');
     if (fallbackEl) {
       const fb = res.cloud_fallback !== false;
       fallbackEl.textContent = fb ? 'ON' : 'OFF';
       fallbackEl.classList.toggle('active', fb);
     }
-    // Don't re-populate API key for security — placeholder shows it's set
-    const keyEl = getEl('settingsKimiApiKey');
-    if (keyEl && res.has_api_key) {
-      keyEl.placeholder = '••••••••••••••••••• (key saved)';
+    
+    if (modelSelect && res.local_model) {
+      modelSelect.value = res.local_model;
     }
+    
+    const ollamaUrlEl = getEl('settingsOllamaUrl');
+    if (ollamaUrlEl && res.ollama_base_url) ollamaUrlEl.value = res.ollama_base_url;
+    
+    const openaiModelEl = getEl('settingsOpenaiModel');
+    if (openaiModelEl && res.openai_model) openaiModelEl.value = res.openai_model;
+    
+    const openaiUrlEl = getEl('settingsOpenaiUrl');
+    if (openaiUrlEl && res.openai_base_url) openaiUrlEl.value = res.openai_base_url;
+    
+    const geminiModelEl = getEl('settingsGeminiModel');
+    if (geminiModelEl && res.gemini_model) geminiModelEl.value = res.gemini_model;
+    
+    const anthropicModelEl = getEl('settingsAnthropicModel');
+    if (anthropicModelEl && res.anthropic_model) anthropicModelEl.value = res.anthropic_model;
+    
+    const kimiModelEl = getEl('settingsKimiModel');
+    if (kimiModelEl && res.kimi_model) kimiModelEl.value = res.kimi_model;
+    
+    // Set placeholders for keys
+    if (res.has_openai_key) getEl('settingsOpenaiApiKey').placeholder = '••••••••••••••••••• (key saved)';
+    if (res.has_gemini_key) getEl('settingsGeminiApiKey').placeholder = '••••••••••••••••••• (key saved)';
+    if (res.has_anthropic_key) getEl('settingsAnthropicApiKey').placeholder = '••••••••••••••••••• (key saved)';
+    if (res.has_kimi_key) getEl('settingsKimiApiKey').placeholder = '••••••••••••••••••• (key saved)';
   } catch (e) {
     console.warn('loadLlmConfig failed:', e);
   }

@@ -671,25 +671,78 @@
               </div>
             </div>
             
-            <div class="card config-card">
-              <div class="card-title">Advanced Coding Brain (Kimi)</div>
-              <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-                <label style="font-size: 11px; color: var(--text-dim);">Routing Mode</label>
-                <select id="settingsLlmRoutingSelect" class="hud-search-input" style="padding: 6px; font-size: 12px;">
-                  <option value="AUTO">AUTO (Intelligent Routing)</option>
-                  <option value="LOCAL">LOCAL (Ollama Only)</option>
-                  <option value="CLOUD">CLOUD (Kimi Only)</option>
-                </select>
-                
-                <label style="font-size: 11px; color: var(--text-dim);">Moonshot API Key</label>
-                <input type="password" id="settingsKimiApiKey" class="hud-search-input" style="padding: 6px; font-size: 12px;" placeholder="Enter Moonshot API Key...">
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                  <span style="font-size: 12px;">Cloud Fallback</span>
-                  <button id="settingsLlmFallbackBtn" class="btn" style="padding: 4px 10px; font-size: 11px;">ON</button>
+            <div class="card config-card" style="grid-column: span 2;">
+              <div class="card-title">Multi-Brain Routing &amp; Providers Config</div>
+              <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <label style="font-size: 11px; color: var(--text-dim); font-weight: bold;">Global Routing Mode</label>
+                  <select id="settingsLlmRoutingSelect" class="hud-search-input" style="padding: 6px; font-size: 12px;">
+                    <option value="AUTO">AUTO (Intelligent Routing)</option>
+                    <option value="LOCAL">LOCAL (Ollama Only)</option>
+                    <option value="OPENAI">OPENAI (Remote OpenAI)</option>
+                    <option value="GEMINI">GEMINI (Remote Google)</option>
+                    <option value="ANTHROPIC">ANTHROPIC (Remote Anthropic)</option>
+                    <option value="CLOUD">KIMI (Remote Moonshot)</option>
+                  </select>
+                  
+                  <label style="font-size: 11px; color: var(--text-dim); font-weight: bold;">Active Provider (AUTO Fallback default)</label>
+                  <select id="settingsActiveProviderSelect" class="hud-search-input" style="padding: 6px; font-size: 12px;">
+                    <option value="ollama">Ollama (Local)</option>
+                    <option value="openai">OpenAI (Cloud)</option>
+                    <option value="gemini">Gemini (Cloud)</option>
+                    <option value="anthropic">Anthropic (Cloud)</option>
+                  </select>
+                  
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <span style="font-size: 12px;">Cloud Fallback to Local</span>
+                    <button id="settingsLlmFallbackBtn" class="btn" style="padding: 4px 10px; font-size: 11px;">ON</button>
+                  </div>
+                  
+                  <div style="margin-top: 12px; border-top: 1px solid #222; padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-weight: bold; font-size: 11px; color: var(--accent-neon);">OLLAMA / LOCAL BRAIN</div>
+                    <label style="font-size: 10px; color: var(--text-dim);">Ollama Base URL</label>
+                    <input type="text" id="settingsOllamaUrl" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="http://127.0.0.1:11434">
+                  </div>
+
+                  <div style="margin-top: 12px; border-top: 1px solid #222; padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-weight: bold; font-size: 11px; color: var(--accent-neon);">GEMINI BRAIN</div>
+                    <label style="font-size: 10px; color: var(--text-dim);">Gemini API Key</label>
+                    <input type="password" id="settingsGeminiApiKey" class="hud-search-input" style="padding: 6px; font-size: 11px;" placeholder="Enter Gemini Key...">
+                    <label style="font-size: 10px; color: var(--text-dim);">Gemini Model Name</label>
+                    <input type="text" id="settingsGeminiModel" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="gemini-1.5-flash">
+                  </div>
                 </div>
-                
-                <button id="saveKimiSettingsBtn" class="btn btn-primary" style="margin-top: 8px; font-size: 11px; padding: 6px 14px;">APPLY LLM ROUTING</button>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-weight: bold; font-size: 11px; color: var(--accent-neon);">OPENAI BRAIN</div>
+                    <label style="font-size: 10px; color: var(--text-dim);">OpenAI API Key</label>
+                    <input type="password" id="settingsOpenaiApiKey" class="hud-search-input" style="padding: 6px; font-size: 11px;" placeholder="Enter OpenAI Key...">
+                    <label style="font-size: 10px; color: var(--text-dim);">OpenAI Model Name</label>
+                    <input type="text" id="settingsOpenaiModel" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="gpt-4o">
+                    <label style="font-size: 10px; color: var(--text-dim);">OpenAI Base URL</label>
+                    <input type="text" id="settingsOpenaiUrl" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="https://api.openai.com/v1">
+                  </div>
+
+                  <div style="margin-top: 12px; border-top: 1px solid #222; padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-weight: bold; font-size: 11px; color: var(--accent-neon);">ANTHROPIC BRAIN</div>
+                    <label style="font-size: 10px; color: var(--text-dim);">Anthropic API Key</label>
+                    <input type="password" id="settingsAnthropicApiKey" class="hud-search-input" style="padding: 6px; font-size: 11px;" placeholder="Enter Anthropic Key...">
+                    <label style="font-size: 10px; color: var(--text-dim);">Anthropic Model Name</label>
+                    <input type="text" id="settingsAnthropicModel" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="claude-3-5-sonnet-20241022">
+                  </div>
+
+                  <div style="margin-top: 12px; border-top: 1px solid #222; padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-weight: bold; font-size: 11px; color: var(--accent-neon);">MOONSHOT / KIMI BRAIN</div>
+                    <label style="font-size: 10px; color: var(--text-dim);">Moonshot API Key</label>
+                    <input type="password" id="settingsKimiApiKey" class="hud-search-input" style="padding: 6px; font-size: 11px;" placeholder="Enter Moonshot Key...">
+                    <label style="font-size: 10px; color: var(--text-dim);">Moonshot Model Name</label>
+                    <input type="text" id="settingsKimiModel" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="kimi-k2.7-code">
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top: 16px; border-top: 1px solid #222; padding-top: 12px; display: flex; justify-content: flex-end;">
+                <button id="saveKimiSettingsBtn" class="btn btn-primary" style="font-size: 12px; padding: 8px 20px;">APPLY ROUTING &amp; CREDENTIALS</button>
               </div>
             </div>
           </div>

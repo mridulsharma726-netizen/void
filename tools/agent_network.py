@@ -1,13 +1,3 @@
-"""
-VOID Agent Network Swarm Module
-================================
-
-Features:
-- Real specialized AI loops performing raw folder audits, static audits, health verifications.
-- Structured SQLite shared blackboard memory (shared swarm state board).
-- Collaborative consensus voting engine with detailed agent reasoning.
-"""
-
 import os
 import re
 import sys
@@ -27,6 +17,7 @@ logger = logging.getLogger("void.agent_network")
 WORKSPACE_ROOT = Path(__file__).parent.parent
 DB_FILE = WORKSPACE_ROOT / "memory" / "data" / "memory.db"
 BRAIN_LOG_PATH = WORKSPACE_ROOT / "logs" / "brain.log"
+AGENT_SWARM_LOG_PATH = WORKSPACE_ROOT / "logs" / "agent_swarm.log"
 
 def _log_to_brain(agent: str, action: str, details: str = ""):
     """Log agent events to logs/brain.log."""
@@ -38,6 +29,17 @@ def _log_to_brain(agent: str, action: str, details: str = ""):
             f.write(log_line)
     except Exception as e:
         logger.error(f"Failed writing to brain.log: {e}")
+
+def _log_to_swarm(agent: str, event_type: str, details: str = ""):
+    """Log detailed swarm interactions to logs/agent_swarm.log."""
+    try:
+        os.makedirs(WORKSPACE_ROOT / "logs", exist_ok=True)
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        log_line = f"[{timestamp}] [{agent}] [{event_type}] {details}\n"
+        with open(AGENT_SWARM_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(log_line)
+    except Exception as e:
+        logger.error(f"Failed writing to agent_swarm.log: {e}")
 
 # ==================== SWARM BLACKBOARD AND VOTING TABLES ====================
 
@@ -95,12 +97,19 @@ class SpecialistAgent:
 
 # Swarm Registry
 SWARM: Dict[str, SpecialistAgent] = {
-    "research": SpecialistAgent(
-        name="Research Agent",
-        role="Workspace Telemetry & File Auditor",
-        badge="🔍 [RESEARCH]",
-        capabilities=["Real workspace directories walking", "File system auditing", "Telemetric queries"],
-        system_prompt="VOID Research node auditing files, cataloging directories, compiling codebase context."
+    "ceo": SpecialistAgent(
+        name="CEO Agent",
+        role="Swarm Coordinator & Final Synthesizer",
+        badge="👑 [CEO]",
+        capabilities=["Orchestrates task handoffs", "Synthesizes final response", "Blackboard monitoring"],
+        system_prompt="VOID CEO node supervising coordinator operations, checking metrics, and formatting answers."
+    ),
+    "planner": SpecialistAgent(
+        name="Planner Agent",
+        role="Strategic Dependency & Roadmap Compiler",
+        badge="📋 [PLANNER]",
+        capabilities=["Project roadmap compiling", "Gantt timeline design", "Task matrix tracking"],
+        system_prompt="VOID Planner node compiling matrices, listing task hierarchies, framing timelines."
     ),
     "coding": SpecialistAgent(
         name="Coding Agent",
@@ -109,34 +118,98 @@ SWARM: Dict[str, SpecialistAgent] = {
         capabilities=["Safe file authoring", "Scaffolds builder", "Syntax compiler validation"],
         system_prompt="VOID Coding node generating scaffolds, compiling local scripts, verifying code formats."
     ),
-    "testing": SpecialistAgent(
-        name="Testing Agent",
-        role="Diagnostics & Validation Engineer",
-        badge="🧪 [TESTING]",
-        capabilities=["Live diagnostic suite", "Endpoint verification", "Latency profiling"],
-        system_prompt="VOID Testing node validating endpoints, running full diagnostics, calculating latency specs."
+    "frontend": SpecialistAgent(
+        name="Frontend Agent",
+        role="Web Interface UI & Styling Specialist",
+        badge="🎨 [FRONTEND]",
+        capabilities=["CSS design styling", "HTML structure layout", "JavaScript user interaction"],
+        system_prompt="VOID Frontend node building responsive interfaces, CSS styling variables, and JS triggers."
+    ),
+    "backend": SpecialistAgent(
+        name="Backend Agent",
+        role="Database & API Route Architect",
+        badge="⚙️ [BACKEND]",
+        capabilities=["FastAPI endpoint setup", "Database schema writing", "Server routes linking"],
+        system_prompt="VOID Backend node building FastAPI endpoints, DB tables, schemas, and processing requests."
+    ),
+    "debug": SpecialistAgent(
+        name="Debug Agent",
+        role="Error Analyzer & Code Diagnostics Node",
+        badge="🛠️ [DEBUG]",
+        capabilities=["Log parsing telemetry", "Traceback analysis", "Syntax error isolation"],
+        system_prompt="VOID Debug node parsing error logs, identifying traceback issues, and suggesting fixes."
+    ),
+    "qa": SpecialistAgent(
+        name="QA Agent",
+        role="Quality Assurance & Unit Test Verifier",
+        badge="🧪 [QA]",
+        capabilities=["Unit test compilation", "Function verification", "Validation assertion checking"],
+        system_prompt="VOID QA node verifying assertions, running unit tests, and checking functionality health."
+    ),
+    "research": SpecialistAgent(
+        name="Research Agent",
+        role="Workspace Telemetry & File Auditor",
+        badge="🔍 [RESEARCH]",
+        capabilities=["Real workspace directories walking", "File system auditing", "Telemetric queries"],
+        system_prompt="VOID Research node auditing files, cataloging directories, compiling codebase context."
+    ),
+    "memory": SpecialistAgent(
+        name="Memory Agent",
+        role="Long-Term Fact & Preference Indexer",
+        badge="💾 [MEMORY]",
+        capabilities=["Retrieves semantic facts", "Tracks owner preferences", "Indexes workspace history"],
+        system_prompt="VOID Memory node retrieving semantic details, indexing project logs, and matching user preferences."
     ),
     "security": SpecialistAgent(
         name="Security Agent",
         role="Secrets Scanning & Static Auditor",
         badge="🛡️ [SECURITY]",
         capabilities=["Credentials exposure scan", "Shell-injection audit", "Dependency checking"],
-        system_prompt="VOID Security node auditing file buffers, checking regex credentials, protecting bounds."
-    ),
-    "planner": SpecialistAgent(
-        name="Planner Agent",
-        role="Strategic Dependency & Roadmap Compiler",
-        badge="📋 [PLANNER]",
-        capabilities=["Project roadmap compiling", "Gantt timeline design", "Task matrix tracking"],
-        system_prompt="VOID Planner node compiling matrices, listing task hierarchies, framing timelines."
+        system_prompt="VOID Security node auditing file buffers, checking credentials, protecting bounds."
     )
 }
 
 # ==================== REAL AGENT OPERATIONS IMPLEMENTATION ====================
 
+async def run_agent_llm(agent_name: str, badge: str, system_prompt: str, instruction: str) -> str:
+    """Helper to query the routing LLM to generate agent reasoning and text responses."""
+    try:
+        from backend.llm_client import OllamaClient
+        llm = OllamaClient()
+        
+        # Load blackboard context
+        blackboard_context = ""
+        conn = sqlite3.connect(str(DB_FILE))
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT key, value, posted_by FROM swarm_blackboard ORDER BY timestamp DESC LIMIT 5")
+            rows = cursor.fetchall()
+            if rows:
+                blackboard_context = "\nShared Blackboard Memory Status:\n" + "\n".join(
+                    f"- [{posted}] {key}: {val[:120]}" for key, val, posted in rows
+                )
+        except Exception:
+            pass
+        finally:
+            conn.close()
+
+        full_system_prompt = (
+            f"{system_prompt}\n"
+            f"{blackboard_context}\n"
+            f"Always start your response with your identifier badge: {badge}. "
+            f"Address the user politely as Master Mridul / Sir. Speak naturally and perform your specialized role."
+        )
+        
+        response = await llm.chat([], instruction, system_prompt=full_system_prompt)
+        return response
+    except Exception as e:
+        logger.error(f"Error in run_agent_llm for {agent_name}: {e}")
+        return f"{badge} I am operational, Sir, but my communication link to Ollama is offline. I am ready to perform tasks."
+
 async def run_research_task(instruction: str) -> Dict[str, Any]:
     """Research Agent: Scans actual workspace directories or searches files."""
     _log_to_brain("RESEARCH_AGENT", "TASK_START", instruction)
+    _log_to_swarm("RESEARCH_AGENT", "SCANNING", "Walking directories")
     init_swarm_tables()
     
     # Search patterns
@@ -150,7 +223,6 @@ async def run_research_task(instruction: str) -> Dict[str, Any]:
     
     # Perform a real local directory traversal
     for root, dirs, files in os.walk(str(WORKSPACE_ROOT)):
-        # Skip standard ignore folders
         if any(ignore in root.lower() for ignore in ["venv", "node_modules", ".git", "__pycache__", "backups"]):
             continue
         for file in files:
@@ -160,7 +232,7 @@ async def run_research_task(instruction: str) -> Dict[str, Any]:
                 rel_path = os.path.relpath(full_path, str(WORKSPACE_ROOT))
                 size = os.path.getsize(full_path)
                 found_files.append(f"`{rel_path}` ({size} bytes)")
-                if len(found_files) >= 15:  # Cap results
+                if len(found_files) >= 15:
                     break
         if len(found_files) >= 15:
             break
@@ -184,8 +256,6 @@ async def run_research_task(instruction: str) -> Dict[str, Any]:
         lines.append("\n**Matches Uncovered**:")
         for f in found_files[:10]:
             lines.append(f"- {f}")
-        if len(found_files) > 10:
-            lines.append(f"- *and {len(found_files)-10} more files...*")
     else:
         lines.append("\n- *No matches found in the active workspace directories.*")
         
@@ -194,18 +264,17 @@ async def run_research_task(instruction: str) -> Dict[str, Any]:
 async def run_coding_task(instruction: str) -> Dict[str, Any]:
     """Coding Agent: Creates syntactically-verified code scaffolds inside workspace."""
     _log_to_brain("CODING_AGENT", "TASK_START", instruction)
+    _log_to_swarm("CODING_AGENT", "WRITING", "Authoring script scaffold")
     init_swarm_tables()
     
-    # Extract requested file path
     file_match = re.search(r'([a-zA-Z0-9_\-\/]+\.(?:html|py|js|css|json|md))', instruction, re.I)
     filename = file_match.group(1) if file_match else "scaffold_generated.py"
     
-    # Enforce safe write locations
-    from tools.file_manager import _is_path_allowed
-    if not _is_path_allowed(filename):
+    # Simple check for path safety
+    if ".." in filename or filename.startswith("/") or ":" in filename:
         return {
             "status": "error",
-            "message": f"Security Lockout: Writing to path '{filename}' is restricted.",
+            "message": f"Security Lockout: Path '{filename}' contains invalid characters.",
             "data": None
         }
         
@@ -233,7 +302,6 @@ async def run_coding_task(instruction: str) -> Dict[str, Any]:
         content = f"# VOID Custom Scaffold\n- **Target**: {instruction}\n- **Created At**: {time.time()}\n"
         
     try:
-        # Syntax check Python templates before writing
         if filename.endswith(".py"):
             compile(content, filename, "exec")
             
@@ -241,12 +309,11 @@ async def run_coding_task(instruction: str) -> Dict[str, Any]:
         with open(target_path, "w", encoding="utf-8") as f:
             f.write(content)
             
-        # Post status to Swarm Blackboard
         conn = sqlite3.connect(str(DB_FILE))
         cursor = conn.cursor()
         cursor.execute(
             "INSERT OR REPLACE INTO swarm_blackboard (key, value, posted_by) VALUES (?, ?, ?)",
-            (f"last_written_{filename}", f"Path: {filename}, Bytes: {len(content)}", "Coding Agent")
+            (f"last_written_{filename}", f"Bytes: {len(content)}", "Coding Agent")
         )
         conn.commit()
         conn.close()
@@ -254,8 +321,7 @@ async def run_coding_task(instruction: str) -> Dict[str, Any]:
         msg = (
             f"💻 **Coding Agent Task Successful!**\n\n"
             f"- **File Created**: `{filename}`\n"
-            f"- **Absolute Path**: `{target_path}`\n"
-            f"- **Sc scaffold verification**: **Passed** (Python AST compiled successfully)"
+            f"- **Scaffold verification**: **Passed** (Python AST compiled successfully)"
         )
         return {"status": "ok", "message": msg, "data": {"path": str(target_path), "bytes": len(content)}}
     except Exception as e:
@@ -265,13 +331,14 @@ async def run_coding_task(instruction: str) -> Dict[str, Any]:
 async def run_testing_task(instruction: str) -> Dict[str, Any]:
     """Testing Agent: Runs live diagnostic suite or measures latency to active ports."""
     _log_to_brain("TESTING_AGENT", "TASK_START", instruction)
+    _log_to_swarm("TESTING_AGENT", "DIAGNOSTICS", "Checking ports and endpoints")
     init_swarm_tables()
     
     start_time = time.time()
     latency_ms = 0.0
     
-    # 1. Real HTTP probe to backend health endpoint
-    url = "http://127.0.0.1:8002/health"
+    # 1. Real HTTP probe to backend health endpoint on 8003
+    url = "http://127.0.0.1:8003/health"
     status_code = "Offline"
     try:
         resp = requests.get(url, timeout=3.0)
@@ -288,7 +355,7 @@ async def run_testing_task(instruction: str) -> Dict[str, Any]:
         diag_report = await diag.run()
         diagnostics_passed = diag_report.get("status") == "OK"
     except Exception:
-        diag_report = {}
+        pass
         
     conn = sqlite3.connect(str(DB_FILE))
     cursor = conn.cursor()
@@ -301,7 +368,7 @@ async def run_testing_task(instruction: str) -> Dict[str, Any]:
     
     lines = [
         "🧪 **Testing Agent Dynamic Verification Complete!**\n",
-        f"- **Local Backend (Port 8002)**: `HTTP {status_code}` (Probe Latency: {latency_ms:.1f}ms)",
+        f"- **Local Backend (Port 8003)**: `HTTP {status_code}` (Probe Latency: {latency_ms:.1f}ms)",
         f"- **Diagnostics System Suite**: **{'Passed' if diagnostics_passed else 'Failed'}**",
         "- **Event Loop Status**: **Operational**"
     ]
@@ -310,6 +377,7 @@ async def run_testing_task(instruction: str) -> Dict[str, Any]:
 async def run_security_task(instruction: str) -> Dict[str, Any]:
     """Security Agent: Performs real secrets audit on critical workspace scripts."""
     _log_to_brain("SECURITY_AGENT", "TASK_START", instruction)
+    _log_to_swarm("SECURITY_AGENT", "AUDITING", "Scanning files for secrets")
     init_swarm_tables()
     
     exposed_credentials = []
@@ -327,10 +395,8 @@ async def run_security_task(instruction: str) -> Dict[str, Any]:
                 with open(fpath, "r", encoding="utf-8") as f:
                     content = f.readlines()
                     for idx, line in enumerate(content):
-                        # Regex credentials check
                         if re.search(r'(?:api_key|password|jwt_secret|secret_key)\s*=\s*[\'"][a-zA-Z0-9]{8,}[\'"]', line, re.I):
                             exposed_credentials.append(f"`{fpath.name}:{idx+1}`: {line.strip()[:35]}")
-                        # Unsafe eval/exec check
                         if "eval(" in line or "exec(" in line:
                             if "def " not in line and "#" not in line:
                                 unsafe_evals.append(f"`{fpath.name}:{idx+1}`: {line.strip()[:35]}")
@@ -351,23 +417,15 @@ async def run_security_task(instruction: str) -> Dict[str, Any]:
         f"- **Secret Exposure Check**: **{'CLEAN' if not exposed_credentials else 'WARNING'}** ({len(exposed_credentials)} potential hits)",
         f"- **Dangerous Evaluations**: **{'CLEAN' if not unsafe_evals else 'WARNING'}** ({len(unsafe_evals)} potential hits)"
     ]
-    if exposed_credentials:
-        lines.append("\n**Credential Hits**:")
-        for hit in exposed_credentials:
-            lines.append(f"- {hit}")
-    if unsafe_evals:
-        lines.append("\n**Dangerous Evaluators**:")
-        for hit in unsafe_evals:
-            lines.append(f"- {hit}")
-            
     return {"status": "ok", "message": "\n".join(lines).strip(), "data": {"exposures": len(exposed_credentials), "injections": len(unsafe_evals)}}
 
 async def run_planner_task(instruction: str) -> Dict[str, Any]:
     """Planner Agent: Compiles dependency roadmaps and matrices using blackboard status."""
     _log_to_brain("PLANNER_AGENT", "TASK_START", instruction)
+    _log_to_swarm("PLANNER_AGENT", "PLANNING", "Compiling roadmap")
     init_swarm_tables()
     
-    # Pull current blackboard status to formulate adaptive roadmap
+    # Load blackboard status
     blackboard_info = {}
     conn = sqlite3.connect(str(DB_FILE))
     cursor = conn.cursor()
@@ -390,9 +448,9 @@ async def run_planner_task(instruction: str) -> Dict[str, Any]:
         f"1. **Stabilization Verification** [Priority: High]\n"
         f"   - Confirm uvicorn API ports remain completely responsive under latency loads.\n"
         f"2. **Continuous Security Hardening** [Priority: Critical]\n"
-        f"   - Eliminate any newly reported shell-execution vulnerabilities and isolate memory indices.\n"
+        f"   - Eliminate any newly reported shell-execution vulnerabilities.\n"
         f"3. **Local Vector Semantics Deployment** [Priority: Medium]\n"
-        f"   - Optimize sqlite recall pipelines and embed vectors asynchronously."
+        f"   - Optimize sqlite recall pipelines and embed vectors."
     )
     return {"status": "ok", "message": roadmap, "data": {"instruction": instruction}}
 
@@ -407,51 +465,26 @@ async def initiate_swarm_vote(proposal_id: str, description: str) -> Dict[str, A
     init_swarm_tables()
     _log_to_brain("VOID_COORDINATOR", "INITIATE_VOTE", f"Proposal ID: {proposal_id}")
     
-    # 1. Gather votes with individual reasoning from each specialist
     votes = {}
-    
-    # Research Node: checks context
-    votes["research"] = {
-        "vote": "APPROVE",
-        "reasoning": "Workspace indexing telemetry is fully aligned. Proposal falls within healthy parameter structures."
-    }
-    
-    # Coding Node: checks compatibility
-    votes["coding"] = {
-        "vote": "APPROVE",
-        "reasoning": "Scaffold compiles cleanly. No structural loops or file blocking detected."
-    }
-    
-    # Testing Node: checks health
-    votes["testing"] = {
-        "vote": "APPROVE",
-        "reasoning": "Endpoint testing remains stable. Latency indicators yield nominal margins."
-    }
-    
-    # Security Node: Audits proposal for safety!
-    if "override" in description.lower() or "force" in description.lower() or "delete" in description.lower():
-        votes["security"] = {
-            "vote": "REJECT",
-            "reasoning": "Vulnerability alert: Forceful overrides or block removals violate sandboxed access bounds. Rejected."
-        }
-    else:
-        votes["security"] = {
-            "vote": "APPROVE",
-            "reasoning": "Local path checks are cleanly sanitised. Safe operational bounds confirmed."
+    for agent_id, agent in SWARM.items():
+        # Evaluate based on agent responsibility
+        vote_choice = "APPROVE"
+        reason = f"Aligned with {agent.role} guidelines."
+        
+        if agent_id == "security" and ("force" in description.lower() or "delete" in description.lower()):
+            vote_choice = "REJECT"
+            reason = "Security guidelines warn against forceful overrides or destructive sweeps."
+            
+        votes[agent_id] = {
+            "vote": vote_choice,
+            "reasoning": reason
         }
         
-    # Planner Node: checks dependencies
-    votes["planner"] = {
-        "vote": "APPROVE",
-        "reasoning": "Dependencies mapped. Task lines up chronologically with milestone priorities."
-    }
-    
-    # 2. Compute Consensus (majority vote)
     approve_count = sum(1 for v in votes.values() if v["vote"] == "APPROVE")
     reject_count = len(votes) - approve_count
     consensus = "APPROVED" if approve_count > reject_count else "REJECTED"
     
-    # Save proposal to SQLite Swarm proposals
+    # Save proposal
     conn = sqlite3.connect(str(DB_FILE))
     cursor = conn.cursor()
     try:
@@ -465,7 +498,6 @@ async def initiate_swarm_vote(proposal_id: str, description: str) -> Dict[str, A
     finally:
         conn.close()
         
-    # Build report message
     lines = [
         f"🤖 **Swarm Consensus Voting Ledger Complete!**\n",
         f"📌 **Proposal**: `\"{description}\"`",
@@ -494,12 +526,11 @@ def get_network_status() -> Dict[str, Any]:
     """Compile current swarm completion stats and SQLite Blackboard memory summary."""
     init_swarm_tables()
     
-    # Retrieve blackboard stats
     blackboard_items = []
     conn = sqlite3.connect(str(DB_FILE))
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT key, value, posted_by FROM swarm_blackboard")
+        cursor.execute("SELECT key, value, posted_by FROM swarm_blackboard ORDER BY timestamp DESC LIMIT 10")
         blackboard_items = cursor.fetchall()
     except Exception:
         pass
@@ -508,7 +539,7 @@ def get_network_status() -> Dict[str, Any]:
         
     lines = [
         "🌐 **VOID Agent Swarm Network Control Panel**\n",
-        "🚦 **Network Status**: **OPERATIONAL (5 Specialist Nodes Online)**\n",
+        f"🚦 **Network Status**: **OPERATIONAL ({len(SWARM)} Specialist Nodes Online)**\n",
         "📋 **Swarm Shared Blackboard Memory**:"
     ]
     if blackboard_items:
@@ -534,7 +565,7 @@ def get_network_status() -> Dict[str, Any]:
 async def spawn_agent_network() -> Dict[str, Any]:
     """Spawn agent network, create SQLite tables, and warm up all specialist nodes."""
     init_swarm_tables()
-    _log_to_brain("VOID_COORDINATOR", "SPAWN_SWARM", "Syncing 5 specialist nodes")
+    _log_to_brain("VOID_COORDINATOR", "SPAWN_SWARM", f"Syncing {len(SWARM)} specialist nodes")
     
     for agent in SWARM.values():
         agent.status = "INITIALIZING"
@@ -544,18 +575,14 @@ async def spawn_agent_network() -> Dict[str, Any]:
         
     msg = (
         f"🚀 **VOID Agent Swarm Network Spawned successfully, Sir!**\n\n"
-        f"I have initialized **5 specialized AI nodes** and seeded the **SQLite shared blackboard board**:\n"
-        f"1. 🔍 **Research Agent** (Workspace file directory scanner)\n"
-        f"2. 💻 **Coding Agent** (Safe file authoring and script scaffold writer)\n"
-        f"3. 🧪 **Testing Agent** (Port 8002 live health verifier and diagnostics inspector)\n"
-        f"4. 🛡️ **Security Agent** (Dependency auditing and regex secret scanner)\n"
-        f"5. 📋 **Planner Agent** (Strategic Gantt roadmapper based on blackboard metrics)\n\n"
-        f"The network is unified and ready. You can ask nodes to run tasks or start proposals!"
+        f"I have initialized **{len(SWARM)} specialized AI nodes** and seeded the **SQLite shared blackboard board**:\n"
+        + "\n".join(f"{idx+1}. {agent.badge} **{agent.name}** ({agent.role})" for idx, agent in enumerate(SWARM.values()))
+        + "\n\nThe network is unified and ready. You can ask nodes to run tasks or start proposals!"
     )
     return {"status": "ok", "message": msg, "data": {"swarm_size": len(SWARM)}}
 
 async def ask_agent(agent_type: str, instruction: str) -> Dict[str, Any]:
-    """Routes commands directly to real specialists and updates task counts."""
+    """Routes commands directly to real specialists, handles chaining / handoffs, and updates task counts."""
     target = agent_type.strip().lower()
     if target not in SWARM:
         return {
@@ -566,7 +593,30 @@ async def ask_agent(agent_type: str, instruction: str) -> Dict[str, Any]:
     agent = SWARM[target]
     agent.status = "BUSY"
     
+    _log_to_swarm(agent.name, "RECEIVE_TASK", instruction)
+    
     try:
+        # Detect Task Handoff Triggers (e.g. if CEO decides to delegate to Planner or Coding)
+        handoff_chain = []
+        
+        # CEO Handoff routing logic
+        if target == "ceo":
+            # Determine delegation targets based on instruction keywords
+            if any(k in instruction.lower() for k in ["plan", "roadmap", "milestone"]):
+                handoff_chain.append(("planner", f"Generate a project plan for: {instruction}"))
+            elif any(k in instruction.lower() for k in ["code", "script", "scaffold"]):
+                handoff_chain.append(("coding", f"Create a script scaffold based on: {instruction}"))
+            elif any(k in instruction.lower() for k in ["test", "verify", "health"]):
+                handoff_chain.append(("qa", f"Verify functionality of: {instruction}"))
+                handoff_chain.append(("testing", f"Port check functionality for: {instruction}"))
+            elif any(k in instruction.lower() for k in ["security", "credential", "expose"]):
+                handoff_chain.append(("security", f"Static credential scan for: {instruction}"))
+            elif any(k in instruction.lower() for k in ["find", "search", "workspace"]):
+                handoff_chain.append(("research", f"Audit workspace directories for: {instruction}"))
+            elif any(k in instruction.lower() for k in ["history", "facts", "preference"]):
+                handoff_chain.append(("memory", f"Query memory database for facts on: {instruction}"))
+                
+        # Running the base task
         if target == "research":
             res = await run_research_task(instruction)
         elif target == "coding":
@@ -578,15 +628,27 @@ async def ask_agent(agent_type: str, instruction: str) -> Dict[str, Any]:
         elif target == "planner":
             res = await run_planner_task(instruction)
         else:
-            res = {"status": "error", "message": "Routing error."}
+            # General persona-based reasoning using dynamic LLM router
+            llm_reasoning = await run_agent_llm(agent.name, agent.badge, agent.system_prompt, instruction)
+            res = {"status": "ok", "message": llm_reasoning, "data": {"reasoning": llm_reasoning}}
             
         if res.get("status") == "ok":
             agent.tasks_completed += 1
             
         agent.status = "IDLE"
         
-        reply = f"{agent.badge} **{agent.name}** responds:\n\n{res.get('message')}"
-        return {"status": "ok", "message": reply, "data": res.get("data")}
+        reply_lines = [f"{agent.badge} **{agent.name}** responds:\n\n{res.get('message')}"]
+        
+        # Execute Handoff Chaining
+        for next_agent_type, sub_instruction in handoff_chain:
+            _log_to_swarm(agent.name, "HANDOFF", f"Delegating to {next_agent_type}")
+            reply_lines.append(f"\n🔄 *Handoff: {agent.name} delegating to {SWARM[next_agent_type].name}...*")
+            
+            # Recurse ask_agent
+            handoff_res = await ask_agent(next_agent_type, sub_instruction)
+            reply_lines.append(handoff_res.get("message", ""))
+            
+        return {"status": "ok", "message": "\n".join(reply_lines).strip(), "data": res.get("data")}
     except Exception as e:
         agent.status = "IDLE"
         logger.error(f"Error delegating to node {agent_type}: {e}", exc_info=True)

@@ -172,3 +172,56 @@ class OllamaProvider(BaseProvider):
         except Exception as e:
             logger.error(f"[Ollama] Generate failed: {e}", exc_info=True)
             raise e
+
+    def discover_and_categorize_models(self) -> Dict[str, List[str]]:
+        """Query Ollama /api/tags and dynamically group models into capability categories."""
+        categories = {
+            "Coding": [],
+            "Reasoning": [],
+            "Planning": [],
+            "Vision": [],
+            "Chat": [],
+            "Lightweight": [],
+            "Large": []
+        }
+        try:
+            resp = requests.get(self.tags_url, timeout=5.0)
+            if resp.status_code == 200:
+                models_data = resp.json().get("models", [])
+                for m in models_data:
+                    name = m.get("name", "")
+                    details = m.get("details", {})
+                    size_bytes = m.get("size", 0)
+                    family = details.get("family", "").lower()
+                    
+                    is_coding = any(k in name.lower() for k in ["code", "coder", "starcoder", "deepseek-coder"]) or family == "starcoder"
+                    is_reasoning = any(k in name.lower() for k in ["r1", "reason", "phi4", "qwq"])
+                    is_vision = any(k in name.lower() for k in ["vision", "llava", "bakllava", "minicpm-v", "mllama"])
+                    
+                    is_lightweight = size_bytes < 2500000000 or any(k in name.lower() for k in ["0.5b", "1b", "1.5b", "3b", "3.2b"])
+                    is_large = size_bytes > 8000000000 or any(k in name.lower() for k in ["13b", "14b", "32b", "70b"])
+
+                    if is_coding:
+                        categories["Coding"].append(name)
+                    if is_reasoning:
+                        categories["Reasoning"].append(name)
+                        categories["Planning"].append(name)
+                    if is_vision:
+                        categories["Vision"].append(name)
+                    if is_lightweight:
+                        categories["Lightweight"].append(name)
+                    elif is_large:
+                        categories["Large"].append(name)
+                    
+                    categories["Chat"].append(name)
+            
+            # Fallback if no models in categories
+            for cat, list_models in categories.items():
+                if not list_models:
+                    all_names = [m.get("name") for m in models_data]
+                    categories[cat] = all_names
+        except Exception as e:
+            logger.error(f"[Ollama] Model discovery failed: {e}")
+            
+        return categories
+
