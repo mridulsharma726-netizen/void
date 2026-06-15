@@ -185,12 +185,12 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 131817,
+      "size_bytes": 131857,
       "suffix": ".js"
     },
     {
       "path": "app/ui/index.html",
-      "size_bytes": 84528,
+      "size_bytes": 84552,
       "suffix": ".html"
     },
     {
@@ -325,7 +325,7 @@
     },
     {
       "path": "desktop/main.js",
-      "size_bytes": 7444,
+      "size_bytes": 8026,
       "suffix": ".js"
     },
     {
@@ -345,7 +345,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 2585,
+      "size_bytes": 3102,
       "suffix": ".log"
     },
     {
@@ -355,7 +355,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 6011,
+      "size_bytes": 6620,
       "suffix": ".log"
     },
     {
@@ -765,7 +765,7 @@
     },
     {
       "path": "server/main.py",
-      "size_bytes": 121343,
+      "size_bytes": 123123,
       "suffix": ".py"
     },
     {
