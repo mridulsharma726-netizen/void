@@ -85,9 +85,12 @@ async def test_tfidf_rag():
         
     engine = RAGEngine()
     # Mock documents list for indexing
-    engine.index.add_chunk("Shortest Job First is a CPU scheduling algorithm.", "scheduling.txt")
-    engine.index.add_chunk("Paging manages physical memory in contiguous chunks.", "memory.txt")
-    engine.index.finalize()
+    from server.backend.academic_rag import SimpleTFIDFIndex
+    index = SimpleTFIDFIndex()
+    index.add_chunk("Shortest Job First is a CPU scheduling algorithm.", "scheduling.txt")
+    index.add_chunk("Paging manages physical memory in contiguous chunks.", "memory.txt")
+    index.finalize()
+    engine.indexes["dsa"] = index
     engine.loaded = True
     
     res = engine.retrieve_context("Tell me about CPU scheduling algorithms")

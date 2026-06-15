@@ -129,12 +129,19 @@ class MultiModelRouter(BaseProvider):
 
         total_memory_usage_mb = python_mem + model_memory
         
+        model_val = self.metrics["last_model"] if self.metrics["last_model"] != "None" else self.config["local_model"]
+        provider_val = self.metrics["last_provider"] if self.metrics["last_provider"] != "None" else "Local"
+        
         return {
-            "model": self.metrics["last_model"] if self.metrics["last_model"] != "None" else self.config["local_model"],
-            "provider": self.metrics["last_provider"] if self.metrics["last_provider"] != "None" else "Local",
+            "model": model_val,
+            "model_name": model_val,
+            "provider": provider_val,
             "context_size": self.metrics["last_context_tokens"],
+            "context_tokens": self.metrics["last_context_tokens"],
             "response_time": f"{self.metrics['last_latency_seconds']:.2f}s",
+            "last_latency_ms": int(self.metrics["last_latency_seconds"] * 1000),
             "memory_usage": f"{total_memory_usage_mb:.1f} MB",
+            "cloud_available": bool(self.config.get("kimi_api_key")),
             "config": {
                 "routing_mode": self.config["routing_mode"],
                 "local_model": self.config["local_model"],

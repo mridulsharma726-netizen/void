@@ -31,10 +31,11 @@ _fallback_lock = threading.Lock()
 
 def _get_fallback_engine():
     global _fallback_engine
-    if _fallback_engine is None:
-        import pyttsx3
-        _fallback_engine = pyttsx3.init()
-        _fallback_engine.setProperty("rate", 180)
+    with _fallback_lock:
+        if _fallback_engine is None:
+            import pyttsx3
+            _fallback_engine = pyttsx3.init()
+            _fallback_engine.setProperty("rate", 180)
     return _fallback_engine
 
 
@@ -188,7 +189,8 @@ def speak(text: str) -> dict:
                         edge_tts_success = False
                     finally:
                         with _process_lock:
-                            _ffplay_process = None
+                            if _ffplay_process == proc:
+                                _ffplay_process = None
                 else:
                     edge_tts_success = False
 

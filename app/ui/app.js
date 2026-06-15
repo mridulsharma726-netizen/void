@@ -536,6 +536,7 @@ async function refreshStats() {
   }
   
   setStatIfChanged('statRAM', `${ram.toFixed(0)}%`);
+  setBarIfChanged('barMemory', ram);
   setStatIfChanged('statRAMDetail', `${data.ram_used_gb ? data.ram_used_gb.toFixed(1) : '5.2'} GB / ${data.ram_total_gb ? data.ram_total_gb.toFixed(1) : '16.0'} GB`);
   
   setStatIfChanged('statStorage', `${(data.storage_used_gb || 0).toFixed(0)}GB / ${(data.storage_total_gb || 0).toFixed(0)}GB`);

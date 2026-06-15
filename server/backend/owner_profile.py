@@ -87,3 +87,18 @@ def get_owner_context_block() -> str:
         "He built you from scratch. Address him with respect and familiarity. "
         "Keep responses concise and technical."
     )
+
+
+def get_preference_context() -> str:
+    """
+    Returns a formatted string representation of all stored user preferences from SQLite database.
+    """
+    from backend.memory_sqlite import get_all_preferences
+    try:
+        prefs = get_all_preferences()
+        if not prefs:
+            return "No stored memory yet."
+        return "\n".join(f"- {k}: {v}" for k, v in prefs.items())
+    except Exception:
+        return "No stored memory yet."
+

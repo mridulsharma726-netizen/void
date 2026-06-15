@@ -39,6 +39,11 @@
       "suffix": ".json"
     },
     {
+      "path": "pytest.ini",
+      "size_bytes": 43,
+      "suffix": ".ini"
+    },
+    {
       "path": "README.md",
       "size_bytes": 1595,
       "suffix": ".md"
@@ -171,6 +176,11 @@
     {
       "path": "UPGRADE_PLAN.md",
       "size_bytes": 4002,
+      "suffix": ".md"
+    },
+    {
+      "path": "void_audit_report.md",
+      "size_bytes": 32494,
       "suffix": ".md"
     },
     {
@@ -315,7 +325,7 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 27655,
+      "size_bytes": 28218,
       "suffix": ".json"
     },
     {
@@ -345,7 +355,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 3619,
+      "size_bytes": 4136,
       "suffix": ".log"
     },
     {
@@ -355,7 +365,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 7229,
+      "size_bytes": 7838,
       "suffix": ".log"
     },
     {
@@ -546,6 +556,11 @@
     {
       "path": "scratch/inspect_whatsapp.py",
       "size_bytes": 1471,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/kill_port_8003.py",
+      "size_bytes": 758,
       "suffix": ".py"
     },
     {
@@ -830,7 +845,7 @@
     },
     {
       "path": "server/backend/diagnostics.py",
-      "size_bytes": 14365,
+      "size_bytes": 14286,
       "suffix": ".py"
     },
     {
@@ -1200,22 +1215,22 @@
     },
     {
       "path": "tools/voice_listener.py",
-      "size_bytes": 7891,
+      "size_bytes": 7991,
       "suffix": ".py"
     },
     {
       "path": "tools/voice_stt.py",
-      "size_bytes": 21664,
+      "size_bytes": 21635,
       "suffix": ".py"
     },
     {
       "path": "tools/voice_tts.py",
-      "size_bytes": 10331,
+      "size_bytes": 10332,
       "suffix": ".py"
     },
     {
       "path": "tools/wake_word.py",
-      "size_bytes": 7783,
+      "size_bytes": 7928,
       "suffix": ".py"
     },
     {
@@ -1265,7 +1280,7 @@
     },
     {
       "path": "workflows/workflow_engine.py",
-      "size_bytes": 27489,
+      "size_bytes": 27709,
       "suffix": ".py"
     },
     {

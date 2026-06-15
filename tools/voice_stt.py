@@ -189,6 +189,7 @@ class VoiceSTT:
     _running = False
     _current_rms = 0.0
     _lock = threading.Lock()
+    _sr_recognizer = None
     
     def __new__(cls):
         if cls._instance is None:
@@ -462,7 +463,7 @@ class VoiceSTT:
                     return {"status": "ok", "text": text, "status_code": "OK", "confidence": 1.0}
                     
             # --- ONLINE GOOGLE API FALLBACK ---
-            if SR_AVAILABLE and len(collected_data) > 0:
+            if SR_AVAILABLE and self._sr_recognizer is not None and len(collected_data) > 0:
                 try:
                     logger.info("[STT] Falling back to Online Google STT APIs...")
                     audio_data = sr.AudioData(bytes(collected_data), 16000, 2)
