@@ -61,18 +61,18 @@ def check_backend() -> Dict[str, Any]:
     if "server.main" in sys.modules or "uvicorn" in sys.modules:
         details.append("Backend: OK")
     else:
-        try:
-            r = requests.get(f"{BACKEND_URL}/health", timeout=2)
-            if r.status_code == 200:
-                details.append("Backend: OK")
-            else:
-                details.append(f"Backend: HTTP {r.status_code}")
-        except requests.exceptions.ConnectionError:
+        backend_ok = False
+        for port in [8003, 8002]:
+            try:
+                r = requests.get(f"http://127.0.0.1:{port}/health", timeout=2)
+                if r.status_code == 200:
+                    details.append("Backend: OK")
+                    backend_ok = True
+                    break
+            except Exception:
+                continue
+        if not backend_ok:
             details.append("Backend: Not running")
-        except requests.exceptions.Timeout:
-            details.append("Backend: Timeout")
-        except Exception as e:
-            details.append(f"Backend Error: {str(e)}")
     
     # Determine status
     all_ok = all("OK" in d for d in details)

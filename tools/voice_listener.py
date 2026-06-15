@@ -109,79 +109,77 @@ def start_voice_loop() -> Optional[str]:
     logger.info("[VOICE LOOP] Starting...")
 
     try:
-        from tools.wake_word import listen_for_wake_word
-        logger.info("[VOICE LOOP] Wake word detector ready")
-    except ImportError:
-        logger.error("[VOICE LOOP] Wake word module not available")
+        try:
+            from tools.wake_word import listen_for_wake_word
+            logger.info("[VOICE LOOP] Wake word detector ready")
+        except ImportError:
+            logger.error("[VOICE LOOP] Wake word module not available")
+            return None
+
+        while True:
+            with _state_lock:
+                if not _running:
+                    break
+
+            logger.info("[VOICE LOOP] Waiting for wake word...")
+
+            # Listen for wake word (with timeout to allow checking _running)
+            wake_detected = listen_for_wake_word(timeout=10)
+
+            with _state_lock:
+                if not _running:
+                    break
+
+            if wake_detected:
+                logger.info("[VOICE LOOP] Wake word detected!")
+
+                # Play activation chime tone
+                _play_activation_chime()
+
+                # Optional: speak activation phrase
+                phrase = ""
+                with _state_lock:
+                    phrase = _activation_phrase
+                if phrase:
+                    _speak(phrase)
+
+                # Now listen for the actual command
+                try:
+                    from tools.voice_stt import listen_once
+                    logger.info("[VOICE LOOP] Listening for command...")
+
+                    # Listen with reasonable timeout
+                    result = listen_once(timeout=5, phrase_time_limit=6)
+
+                    if isinstance(result, dict):
+                        command = result.get("text", "")
+                    else:
+                        command = result
+
+                    if command and command.strip():
+                        logger.info(f"[VOICE LOOP] Captured: {command}")
+
+                        # Run callback if set
+                        callback = None
+                        with _state_lock:
+                            callback = _command_callback
+                        if callback:
+                            callback(command)
+
+                        return command.strip()
+                    else:
+                        logger.info("[VOICE LOOP] No command captured")
+
+                except Exception as e:
+                    logger.error(f"[VOICE LOOP] Command listen error: {e}")
+
+            # Small delay before retry
+            time.sleep(0.5)
+
+    finally:
         with _state_lock:
             _listening = False
-        return None
-
-    while True:
-        with _state_lock:
-            if not _running:
-                break
-
-        logger.info("[VOICE LOOP] Waiting for wake word...")
-
-        # Listen for wake word (with timeout to allow checking _running)
-        wake_detected = listen_for_wake_word(timeout=10)
-
-        with _state_lock:
-            if not _running:
-                break
-
-        if wake_detected:
-            logger.info("[VOICE LOOP] Wake word detected!")
-
-            # Play activation chime tone
-            _play_activation_chime()
-
-            # Optional: speak activation phrase
-            phrase = ""
-            with _state_lock:
-                phrase = _activation_phrase
-            if phrase:
-                _speak(phrase)
-
-            # Now listen for the actual command
-            try:
-                from tools.voice_stt import listen_once
-                logger.info("[VOICE LOOP] Listening for command...")
-
-                # Listen with reasonable timeout
-                result = listen_once(timeout=5, phrase_time_limit=6)
-
-                if isinstance(result, dict):
-                    command = result.get("text", "")
-                else:
-                    command = result
-
-                if command and command.strip():
-                    logger.info(f"[VOICE LOOP] Captured: {command}")
-
-                    # Run callback if set
-                    callback = None
-                    with _state_lock:
-                        callback = _command_callback
-                    if callback:
-                        callback(command)
-
-                    with _state_lock:
-                        _listening = False
-                    return command.strip()
-                else:
-                    logger.info("[VOICE LOOP] No command captured")
-
-            except Exception as e:
-                logger.error(f"[VOICE LOOP] Command listen error: {e}")
-
-        # Small delay before retry
-        time.sleep(0.5)
-
-    with _state_lock:
-        _listening = False
-    logger.info("[VOICE LOOP] Stopped")
+        logger.info("[VOICE LOOP] Stopped")
     return None
 
 

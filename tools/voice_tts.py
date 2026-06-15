@@ -130,98 +130,93 @@ def speak(text: str) -> dict:
                     
             _is_speaking.set()
 
-            # Try edge-tts first
             edge_tts_success = False
             temp_wav = None
             try:
-                import edge_tts
-
-                # Setup temp wav path
-                temp_dir = tempfile.gettempdir()
-                temp_wav = os.path.join(temp_dir, f"void_tts_{os.getpid()}_{session_id}.wav")
-
-                # Generate wav synchronously
-                async def _generate():
-                    communicate = edge_tts.Communicate(cleaned, VOICE)
-                    await communicate.save(temp_wav)
-
-                # Run in a new event loop
-                loop = asyncio.new_event_loop()
+                # Try edge-tts first
                 try:
-                    loop.run_until_complete(_generate())
-                finally:
-                    loop.close()
+                    import edge_tts
 
-                with _session_lock:
-                    if session_id != _speech_session_id:
-                        try:
-                            if os.path.exists(temp_wav):
-                                os.remove(temp_wav)
-                        except:
-                            pass
-                        return
+                    # Setup temp wav path
+                    temp_dir = tempfile.gettempdir()
+                    temp_wav = os.path.join(temp_dir, f"void_tts_{os.getpid()}_{session_id}.wav")
 
-                # Verify file generated
-                if os.path.exists(temp_wav) and os.path.getsize(temp_wav) > 0:
-                    edge_tts_success = True
+                    # Generate wav synchronously
+                    async def _generate():
+                        communicate = edge_tts.Communicate(cleaned, VOICE)
+                        await communicate.save(temp_wav)
 
-            except Exception as e:
-                logger.warning("edge-tts generation failed: %s. Falling back to pyttsx3.", e)
-
-            if edge_tts_success and os.path.exists(FFPLAY_PATH):
-                try:
-                    # Spawn ffplay subprocess
-                    with _session_lock:
-                        if session_id != _speech_session_id:
-                            try:
-                                if os.path.exists(temp_wav):
-                                    os.remove(temp_wav)
-                            except:
-                                pass
-                            return
-                            
-                    with _process_lock:
-                        if not _stop_flag.is_set():
-                            _ffplay_process = subprocess.Popen(
-                                [FFPLAY_PATH, "-nodisp", "-autoexit", temp_wav],
-                                stdout=subprocess.DEVNULL,
-                                stderr=subprocess.DEVNULL
-                            )
-
-                    if _ffplay_process:
-                        _ffplay_process.wait()
-                except Exception as e:
-                    logger.error("ffplay execution failed: %s. Falling back to pyttsx3.", e)
-                    edge_tts_success = False
-                finally:
-                    with _process_lock:
-                        _ffplay_process = None
-                    # Clean up temp file
+                    # Run in a new event loop
+                    loop = asyncio.new_event_loop()
                     try:
-                        if temp_wav and os.path.exists(temp_wav):
-                            os.remove(temp_wav)
-                    except Exception:
-                        pass
-            else:
-                edge_tts_success = False
+                        loop.run_until_complete(_generate())
+                    finally:
+                        loop.close()
 
-            # Fallback to pyttsx3 if edge-tts/ffplay failed
-            if not edge_tts_success:
-                try:
                     with _session_lock:
                         if session_id != _speech_session_id:
                             return
-                    with _fallback_lock:
-                        engine = _get_fallback_engine()
-                        engine.say(cleaned)
-                        if not _stop_flag.is_set():
-                            engine.runAndWait()
-                except Exception as exc:
-                    logger.exception("Fallback pyttsx3 runtime failed: %s", exc)
 
-            with _session_lock:
-                if session_id == _speech_session_id:
-                    _is_speaking.clear()
+                    # Verify file generated
+                    if os.path.exists(temp_wav) and os.path.getsize(temp_wav) > 0:
+                        edge_tts_success = True
+
+                except Exception as e:
+                    logger.warning("edge-tts generation failed: %s. Falling back to pyttsx3.", e)
+
+                if edge_tts_success and FFPLAY_PATH and os.path.exists(FFPLAY_PATH):
+                    try:
+                        # Spawn ffplay subprocess
+                        with _session_lock:
+                            if session_id != _speech_session_id:
+                                return
+                                
+                        proc = None
+                        with _process_lock:
+                            if not _stop_flag.is_set():
+                                _ffplay_process = subprocess.Popen(
+                                    [FFPLAY_PATH, "-nodisp", "-autoexit", temp_wav],
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL
+                                )
+                                proc = _ffplay_process
+
+                        if proc:
+                            proc.wait()
+                    except Exception as e:
+                        logger.error("ffplay execution failed: %s. Falling back to pyttsx3.", e)
+                        edge_tts_success = False
+                    finally:
+                        with _process_lock:
+                            _ffplay_process = None
+                else:
+                    edge_tts_success = False
+
+                # Fallback to pyttsx3 if edge-tts/ffplay failed
+                if not edge_tts_success:
+                    try:
+                        with _session_lock:
+                            if session_id != _speech_session_id:
+                                return
+                        with _fallback_lock:
+                            engine = _get_fallback_engine()
+                            engine.say(cleaned)
+                            if not _stop_flag.is_set():
+                                engine.runAndWait()
+                    except Exception as exc:
+                        logger.exception("Fallback pyttsx3 runtime failed: %s", exc)
+
+            finally:
+                # Clean up temp file
+                try:
+                    if temp_wav and os.path.exists(temp_wav):
+                        os.remove(temp_wav)
+                except Exception:
+                    pass
+                # Always clear speaking flag on exit if session matches
+                with _session_lock:
+                    if session_id == _speech_session_id:
+                        _is_speaking.clear()
 
         global _speak_thread
         _speak_thread = threading.Thread(target=_runner, args=(current_session,), daemon=True)

@@ -20,7 +20,7 @@ from typing import Optional, Callable
 logger = logging.getLogger("VOID-WakeWord")
 
 # Default wake word
-WAKE_WORD = "void"
+WAKE_WORD = "open void"
 
 # Recognition settings
 PHRASE_TIME_LIMIT = 3  # seconds
@@ -123,6 +123,7 @@ def listen_for_wake_word(timeout: Optional[float] = None,
     _init_sr()
     if _recognizer is None or _microphone is None:
         logger.error("[WAKE WORD] Recognizer or microphone not available")
+        time.sleep(5)
         return False
 
     logger.info(f"Listening for wake word '{WAKE_WORD}'...")
@@ -189,7 +190,9 @@ def listen_for_wake_word(timeout: Optional[float] = None,
                 except Exception as e:
                     logger.error(f"Wake word loop error: {e}")
                     time.sleep(0.5)
-
+    except Exception as e:
+        logger.error(f"[WAKE WORD] Error in wake word listener: {e}")
+        time.sleep(5)
     return False
 
 

@@ -212,7 +212,7 @@ class VoiceSTT:
                 logger.error(f"[STT INIT ERROR] Failed loading Vosk model: {e}")
                 
         # Initialize SpeechRecognition as a secondary online parser
-        if SR_AVAILABLE and self._recognizer is None:
+        if SR_AVAILABLE:
             try:
                 self._sr_recognizer = sr.Recognizer()
                 logger.info("[VOID STT] SpeechRecognition online engine active.")

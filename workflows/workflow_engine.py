@@ -580,10 +580,16 @@ class WorkflowEngine:
             endpoints = ["/health", "/stats", "/time"]
             results = []
             for ep in endpoints:
-                try:
-                    r = requests.get(f"http://127.0.0.1:8002{ep}", timeout=2)
-                    results.append(f"{ep}: {r.status_code}")
-                except Exception:
+                ep_ok = False
+                for port in [8003, 8002]:
+                    try:
+                        r = requests.get(f"http://127.0.0.1:{port}{ep}", timeout=2)
+                        results.append(f"{ep}: {r.status_code}")
+                        ep_ok = True
+                        break
+                    except Exception:
+                        continue
+                if not ep_ok:
                     results.append(f"{ep}: UNREACHABLE")
             return {"success": True, "message": " | ".join(results)}
         except Exception as e:

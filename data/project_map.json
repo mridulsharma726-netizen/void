@@ -345,7 +345,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 3102,
+      "size_bytes": 3619,
       "suffix": ".log"
     },
     {
@@ -355,7 +355,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 6620,
+      "size_bytes": 7229,
       "suffix": ".log"
     },
     {
@@ -579,6 +579,21 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/search_history_context.py",
+      "size_bytes": 292,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/search_history_details.py",
+      "size_bytes": 343,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/search_memory.py",
+      "size_bytes": 2132,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/search_stages.py",
       "size_bytes": 802,
       "suffix": ".py"
@@ -666,6 +681,16 @@
     {
       "path": "scratch/test_logging.py",
       "size_bytes": 2631,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/test_models_system.py",
+      "size_bytes": 767,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/test_ollama_query.py",
+      "size_bytes": 788,
       "suffix": ".py"
     },
     {
@@ -850,7 +875,7 @@
     },
     {
       "path": "server/backend/owner_profile.py",
-      "size_bytes": 4306,
+      "size_bytes": 4584,
       "suffix": ".py"
     },
     {
