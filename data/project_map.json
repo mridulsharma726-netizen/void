@@ -114,6 +114,11 @@
       "suffix": ".py"
     },
     {
+      "path": "test_routing_upgrade.py",
+      "size_bytes": 4249,
+      "suffix": ".py"
+    },
+    {
       "path": "test_safety.py",
       "size_bytes": 2275,
       "suffix": ".py"
@@ -325,12 +330,12 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 30406,
+      "size_bytes": 30648,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 41640,
+      "size_bytes": 51290,
       "suffix": ".json"
     },
     {
@@ -355,7 +360,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 5687,
+      "size_bytes": 6204,
       "suffix": ".log"
     },
     {
@@ -365,7 +370,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 9665,
+      "size_bytes": 10274,
       "suffix": ".log"
     },
     {
@@ -895,7 +900,7 @@
     },
     {
       "path": "server/main.py",
-      "size_bytes": 125965,
+      "size_bytes": 139424,
       "suffix": ".py"
     },
     {
@@ -965,7 +970,7 @@
     },
     {
       "path": "server/backend/llm_client.py",
-      "size_bytes": 28712,
+      "size_bytes": 29382,
       "suffix": ".py"
     },
     {

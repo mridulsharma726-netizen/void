@@ -24,9 +24,9 @@
       "size": 10752
     },
     "launcher.py": {
-      "hash": "f6cd84d7a991e264502d8c2aed01910e663a86b716a45bedc4a4b70c1f940620",
-      "mtime": 1780826715.9743474,
-      "size": 3501
+      "hash": "929651b3e2f0162eb10b3dc78a7cd5b53557d61566bf3d1b3c1053f8444046c1",
+      "mtime": 1782412186.1058545,
+      "size": 3978
     },
     "package-lock.json": {
       "hash": "1c6d5d2eb0a9972cf5dc6112f5b67d0e801c17416ef23377db0d8038661fe8d3",
@@ -44,9 +44,9 @@
       "size": 1595
     },
     "requirements.txt": {
-      "hash": "5637f99453bc3f1d999be4ad0f50ae3011b8d319348715679d10b6f60e60122b",
-      "mtime": 1780822780.083872,
-      "size": 346
+      "hash": "654245b5506877e1ee5bd213201e34ff2a69618f33b57e5d1f83e220784b4e7d",
+      "mtime": 1781445217.9510121,
+      "size": 589
     },
     "setup.py": {
       "hash": "a5668097ba9be06ec540697672899f16d0d663426c890d74fbf419f280f7ccaa",
@@ -84,9 +84,9 @@
       "size": 661
     },
     "test_system.py": {
-      "hash": "ece41b2e4e73a33e53ee4f8a001f6f2c28f362bbfb98fdadab87b13ddddc2102",
-      "mtime": 1779990872.3025138,
-      "size": 7149
+      "hash": "3946ccafa458286eae5131e4402e6bb01e0baad1ddf1273901a2bc7bf4c019be",
+      "mtime": 1782407791.0542223,
+      "size": 8614
     },
     "test_tts.py": {
       "hash": "0dde5ef5e695930c4fd11ee24ca29fd826d2017a868269ffd39f9ce8a1d89fcd",
@@ -149,19 +149,19 @@
       "size": 170
     },
     "app/ui/app.js": {
-      "hash": "2c329a0dd7280a69ca3a6eebd261b8ff96b53542d9955d0b725c604344b73c8d",
-      "mtime": 1781184853.680652,
-      "size": 113643
+      "hash": "36a6341087767cc89f1d333ab1cf645409f3bf9792372d6d8514a641e61f63e1",
+      "mtime": 1782407687.868572,
+      "size": 135112
     },
     "app/ui/index.html": {
-      "hash": "0ef0281fbb079032f02a229747fa14a404291f49a91580db889a6d79c0e83822",
-      "mtime": 1781184801.3562648,
-      "size": 68917
+      "hash": "9e121322ae5c1f2430df37e7b24cd21e93644f46bf1dd91577f38bf423c6f996",
+      "mtime": 1782407671.668125,
+      "size": 86169
     },
     "app/ui/style.css": {
-      "hash": "4e3659869c232c94f5599183dcd65ae79df396fe0cafe55ce11f90420d8d56f8",
-      "mtime": 1781184813.2077563,
-      "size": 48179
+      "hash": "dd18455c17bc4067f0de32b4ca699b7837d8f53f7b9328f50ae95cda671c970f",
+      "mtime": 1781448820.8323174,
+      "size": 50875
     },
     "core/brain.py": {
       "hash": "ab9905331b0c6d2ae05f04c3baa53fc363ec62e72c1c6c1b9cfeb2b9a16cd3d7",
@@ -249,14 +249,14 @@
       "size": 37
     },
     "data/project_map.json": {
-      "hash": "9819f5a2870368a4a7de0acf53b5668667f9af464e7405caef17387a6676b9f0",
-      "mtime": 1781429395.0215714,
-      "size": 24824
+      "hash": "72d19409a996716da7b908217ac7bd3bd92684b0434d048f19928d03d0924989",
+      "mtime": 1782422337.1729531,
+      "size": 30648
     },
     "desktop/main.js": {
-      "hash": "09408ecab9287677b398fb2180d61f1f6ea59ba4990d2cc387aab450e96a14dd",
-      "mtime": 1781164211.6381917,
-      "size": 7416
+      "hash": "893f0374a7fe50f56c48e10b49d14220feaea126e998b5046c64f5347dd57532",
+      "mtime": 1781454369.934491,
+      "size": 8026
     },
     "desktop/package-lock.json": {
       "hash": "67b2a6e7e57f7c77eabe19e5700fac029e324442f4af41f2116143947657d5b9",
@@ -264,19 +264,19 @@
       "size": 31619
     },
     "desktop/package.json": {
-      "hash": "b3f7aad1f76268315676f668dc825710f1c117861c06ae5cfe56b00aa71311c6",
-      "mtime": 1780169897.0107136,
-      "size": 577
+      "hash": "b1c79f1e92ce31ff76fd20e4d954f7304e9696482271203a7727449cf91a5954",
+      "mtime": 1782406612.5356648,
+      "size": 620
     },
     "logs/brain.log": {
-      "hash": "be2c3a7f9076becc393535ddfb4b3f78433065ddb24274e37042ef3958089447",
-      "mtime": 1780292518.3945048,
-      "size": 2969
+      "hash": "64d0908a0dca8cc3236cf0365d5f9783fcd1b7fad5231fe8098bf12f0c1115f3",
+      "mtime": 1782422164.1835136,
+      "size": 10274
     },
     "logs/desktop_control.log": {
-      "hash": "e5fd80ec84b67d831f1dca6a97e4889d180dd73ca5ff10dedcfcb20f401e1a09",
-      "mtime": 1780428119.2587192,
-      "size": 171
+      "hash": "4b0f326d7fbcf0741ea37bfa62c961f29d2a174e6f7ded0026eeb270672e6501",
+      "mtime": 1781436216.3519647,
+      "size": 559
     },
     "logs/system.log": {
       "hash": "70e830fac549a01a0fa564eefd2e337e1df06675f7f578f3ef6719b85b14457c",
@@ -299,8 +299,8 @@
       "size": 80
     },
     "memory/data/cvcs_config.json": {
-      "hash": "ec51ccd729612659a4efccf7944aedb41a50d2370ee3d8c82247b095a2519b5b",
-      "mtime": 1781087739.2352026,
+      "hash": "5cec69987458950c094b41f49ec8c8f189fe186426914359beac17dbd524da6f",
+      "mtime": 1782422169.111357,
       "size": 119
     },
     "memory/data/memory.json": {
@@ -379,9 +379,9 @@
       "size": 1471
     },
     "scratch/read_transcript.py": {
-      "hash": "dace1688b62dc40fdb3074e939a1e49620a3597293fab39f18c87bb97b8a9be9",
-      "mtime": 1780341415.659956,
-      "size": 1387
+      "hash": "abafbf4c6200e7e2e8a8d6c8be436c13d0650ca32f80097943ef6bc3d83d557a",
+      "mtime": 1781555956.345239,
+      "size": 966
     },
     "scratch/refactor_imports.py": {
       "hash": "696f019e28d4c11811b12efb094b9b2811f8807e9f246d9810c401b74b514db6",
@@ -394,9 +394,9 @@
       "size": 802
     },
     "scratch/test_academic_system.py": {
-      "hash": "dba7854835127d9338b7a67a968d4a75230b77fafb3cd6ff6b7de94763d691fb",
-      "mtime": 1780426865.1685843,
-      "size": 3936
+      "hash": "8b4bbfae0a1381041eb95aece6381f9c876d6e035493b2bdf4c3779a92783453",
+      "mtime": 1781557535.0669272,
+      "size": 4041
     },
     "scratch/test_agent_network.py": {
       "hash": "b86a6d25ecc77e423a657eaa3e78688a2c2b7ba5e9d073f5dde3499d42e2d789",
@@ -534,9 +534,9 @@
       "size": 3593
     },
     "server/main.py": {
-      "hash": "4bd0fa6160e9174e656bf8ea2ec76b7b5e2123a833dced6de3fa4ef7fe5982ec",
-      "mtime": 1781428305.0686905,
-      "size": 95134
+      "hash": "a4fe78e119055d5369638b63e8a86157cf1aa5fd7ef91b499d1b07a936342fbd",
+      "mtime": 1782422125.205016,
+      "size": 139424
     },
     "server/backend/academic_engine.py": {
       "hash": "4a2ba3520ab83ff207636fcb23c9b0cedc8472612ca4fcb7d41f94cec6af0e1e",
@@ -569,9 +569,9 @@
       "size": 23681
     },
     "server/backend/diagnostics.py": {
-      "hash": "310412a353b2538e31df6bc225dc1aaae97d5a265c06cb174cb51fa3dca853ae",
-      "mtime": 1780340569.157171,
-      "size": 14365
+      "hash": "279891260a7bdc1d6aba6180a2937e42e0179b9dd8682e61b3d4494002828a90",
+      "mtime": 1781554496.2081537,
+      "size": 14286
     },
     "server/backend/emotion_engine.py": {
       "hash": "3c74e7cd023e40a425095a08e4168ce708440aa7dc63cf57f5ee886c108931e8",
@@ -579,14 +579,14 @@
       "size": 7236
     },
     "server/backend/intent_router.py": {
-      "hash": "3f00aae83f66ce44ace29b8d49bf44571898857b39d2cadaeacc35109272b01e",
-      "mtime": 1781082863.555534,
-      "size": 32720
+      "hash": "e3e5ea91df1629b68ce74e14fef5ac87c3a89a0dd081bd53b280216cac045803",
+      "mtime": 1782421861.9282365,
+      "size": 40302
     },
     "server/backend/llm_client.py": {
-      "hash": "126ac27e0895ffbb8f83631e04cb569954eb68daf3e5deaf38bf49d7a92c4337",
-      "mtime": 1781428794.598713,
-      "size": 32592
+      "hash": "c76e1467d2350c7c88cf4a5d8dec0c8ec9c0508100c2af4993f3ecd924a6d390",
+      "mtime": 1782422041.194734,
+      "size": 29382
     },
     "server/backend/memory_manager.py": {
       "hash": "f0b41f4547807052a6f18baf99b702ff337ba9410e0b88a961beceb6ab0b9f22",
@@ -594,14 +594,14 @@
       "size": 8305
     },
     "server/backend/memory_sqlite.py": {
-      "hash": "1cbcb4abfa89579dfa0dc64670e4b6452c840b79e84a3c2bedc56790e4ae40c9",
-      "mtime": 1781090736.8763373,
-      "size": 38630
+      "hash": "68aa1bf1a619da484a8459e88f0dfa4edbff1140b281027a32a47259edfd4d9a",
+      "mtime": 1781445733.2559166,
+      "size": 45488
     },
     "server/backend/owner_profile.py": {
-      "hash": "7f59afb4559d30a33980ec2d714034891418ecb333078164e2f2684ac5e34bd9",
-      "mtime": 1780811962.9609635,
-      "size": 4306
+      "hash": "10789f4915d5fe7eeb55251f2568274b5986d022a2c3028fde93fff4ed32c4bd",
+      "mtime": 1781555303.6157062,
+      "size": 5036
     },
     "server/backend/pipeline.py": {
       "hash": "d63743e3b7297450d5e45eed718021a1d73cc2edcf5317a930510137f46c1aec",
@@ -619,9 +619,9 @@
       "size": 11270
     },
     "server/backend/schemas.py": {
-      "hash": "11093833c1ac5e463d9d95f1c27904bb97ca4e29782bf37b27ed05062b8864c2",
-      "mtime": 1780427674.5712376,
-      "size": 1651
+      "hash": "d4078f3c08804e169944a8a7a0b5ab0db7b0f5dc50b0e67ed94032947d1e63e8",
+      "mtime": 1782421849.2902596,
+      "size": 1680
     },
     "server/backend/screen_monitor.py": {
       "hash": "46c59c094c6224c10389de45e6d8b7bc17318def3730940ac9e241044101f8b0",
@@ -639,8 +639,8 @@
       "size": 5403
     },
     "server/backend/tool_schemas.py": {
-      "hash": "e692cbfdeec6410613869882a4e29f5fa4cc534fcc8dde3dbeabe428f1ff714c",
-      "mtime": 1781085212.9146376,
+      "hash": "02eefbe9d63e7d056d3189b09f723f0fc1ffcc6988437befe219b289a74fd6ba",
+      "mtime": 1781432198.6679618,
       "size": 12159
     },
     "server/backend/validator.py": {
@@ -669,9 +669,9 @@
       "size": 7129
     },
     "tools/agent_network.py": {
-      "hash": "de67363191af26d5f5fa07440b3688cb082551a452e179beae8c915015ec2b8b",
-      "mtime": 1780340577.309603,
-      "size": 24127
+      "hash": "ce434bafbe1b6b8e074782757a91dfb54142cf914a0b021ab1b7c1b923ad37ac",
+      "mtime": 1781451345.6210468,
+      "size": 28384
     },
     "tools/base_tool.py": {
       "hash": "a376362560ff6e3fb824c5c96e8c3c69f110677dceed148de7399d411bd3dd1a",
@@ -844,9 +844,9 @@
       "size": 12271
     },
     "tools/terminal_tools.py": {
-      "hash": "f7ff662a6257dc4b3c910f4022d91aed640b350cb1ddd0eacd69e3f9bd562a27",
-      "mtime": 1780294044.2981923,
-      "size": 10337
+      "hash": "60a93b105e3a8fe40122769443511ba22317de3479ca4fd12e25627b9055ba59",
+      "mtime": 1781445665.7946308,
+      "size": 16689
     },
     "tools/tts_speaker.py": {
       "hash": "dff37f2c308ae79f51c74002f6577484d155220052092eff08e03e9a5d61bc8e",
@@ -864,24 +864,24 @@
       "size": 3518
     },
     "tools/voice_listener.py": {
-      "hash": "d781897b9010110553bbeba51c384aa617ed9abe5745e205cc80dd40a916c353",
-      "mtime": 1780309919.6759565,
-      "size": 7825
+      "hash": "0d054cb1fbeab7852900e431081f1e8a87eca73a325771585163e4b2a5a8b463",
+      "mtime": 1781554463.8623998,
+      "size": 7991
     },
     "tools/voice_stt.py": {
-      "hash": "b4abb81b79425a7c3a51160129c5943d45b7581f00da437e9c4654d23132a7a0",
-      "mtime": 1781164244.1306577,
-      "size": 21664
+      "hash": "6a1419c80db3e1f6a3b866881ffa08ae92141739ef903fde50bdcce320d4032a",
+      "mtime": 1781557297.6388733,
+      "size": 21697
     },
     "tools/voice_tts.py": {
-      "hash": "c1e943d41ce884fa8bdb1adfc6cf5ad0d1407e137b849c4b688efbef266827c0",
-      "mtime": 1781029370.2707028,
-      "size": 10331
+      "hash": "922ea73f807ee7523c79e022f0d09045ecd62fd149af893b26e2d5baebf6f4d0",
+      "mtime": 1781557330.6264958,
+      "size": 10433
     },
     "tools/wake_word.py": {
-      "hash": "7662a61499d1d0eced84ea818c94406d241bb44679bcb878855dcd4d3fb6c45b",
-      "mtime": 1781029185.3969424,
-      "size": 7783
+      "hash": "47733cb3ef98966ed683c7230659320b6a3e231b4b6b9f44c353e9e103817569",
+      "mtime": 1781554474.237915,
+      "size": 7928
     },
     "tools/web_search.py": {
       "hash": "89786207222cd7b2c8848eecedd28a3948ff50d2cd2d681a199548f54825d07e",
@@ -929,9 +929,9 @@
       "size": 348
     },
     "workflows/workflow_engine.py": {
-      "hash": "5080954000014146350a1b422d86d8d9b22fe9f32afdac71758c561d83700caf",
-      "mtime": 1781024563.4988716,
-      "size": 27489
+      "hash": "455b1264d119705257d9c704a34c355729af2673f38a4567a717277ab3c5c266",
+      "mtime": 1781554500.9715483,
+      "size": 27709
     },
     "workflows/__init__.py": {
       "hash": "add3fb526e80526bc44d01e6c7333737df58659eef0df0b3e7c2538a07f09a85",
@@ -939,9 +939,9 @@
       "size": 19
     },
     "data/project_memory.json": {
-      "hash": "bc6bce5059bd112eadd8a23360f20108e9d29545f7c6eea9ec0de72c0320bd2d",
-      "mtime": 1781429427.8269515,
-      "size": 41640
+      "hash": "59b1104d2a117dfc2d893234b3d0479d9f85f7e502d872eeba059aed67985a7e",
+      "mtime": 1782422337.2765632,
+      "size": 51290
     },
     "logs/agent_terminal.log": {
       "hash": "b2bb6e79e80fcd43646a89a811a2446a3c053358687b2d0b467cb15439467662",
@@ -1034,14 +1034,14 @@
       "size": 281
     },
     "scratch/check_db.py": {
-      "hash": "09af49ae88cc57261f18771cebdd0bce011734a804077a0b74df17c265917c3d",
-      "mtime": 1781023178.529367,
-      "size": 393
+      "hash": "5be68c1fde6af730c792ae67dc5d06f831bd12223bc92ac14e61e6986adf7097",
+      "mtime": 1781555325.4443352,
+      "size": 872
     },
     "tools/meeting_assistant.py": {
-      "hash": "eba9d62df784b8a7b261ef79d3ed84c0fade45d027d9476af32317a230ea3e27",
-      "mtime": 1781023073.3694136,
-      "size": 7311
+      "hash": "ae7ad1781254ed51891cdc4c221de271fa29a0d527da2912327b29b0d970eba6",
+      "mtime": 1781557979.5283444,
+      "size": 7349
     },
     "tools/project_intelligence.py": {
       "hash": "a11b04720b7498e677580dd65c55e158d8bd01057cf6675c6e2ff13b34bb10d3",
@@ -1132,6 +1132,266 @@
       "hash": "c956d677e69ffbd9d6495fd2314db552c33a73682532e44486638699cc4f94e1",
       "mtime": 1781429374.2320018,
       "size": 194
+    },
+    "pytest.ini": {
+      "hash": "fa73726c2f64135cf385adc7c7bce6735a555744dc57682007767580c0d61a7b",
+      "mtime": 1781554702.9972885,
+      "size": 43
+    },
+    "test_agent_swarm.py": {
+      "hash": "4bfdec58fd76245ef12f17598fba20ef12b23ba06ab09caa21e375b92cd77eca",
+      "mtime": 1781451356.020737,
+      "size": 3175
+    },
+    "test_brain_manager.py": {
+      "hash": "dce3fc9260de80bd6dc2d264918e2da7dd14ab981d34fa055e17cef1fe939b7f",
+      "mtime": 1781451299.3368852,
+      "size": 4145
+    },
+    "test_realtime_intelligence.py": {
+      "hash": "ff2358463446580ca39c2acd822e755ef85840740b25c307a30ca42841363f76",
+      "mtime": 1781451540.3579738,
+      "size": 17569
+    },
+    "test_routing_upgrade.py": {
+      "hash": "4293317336b422f8158c602480133845b75552a7db947c9e5512fcdb0fcaca10",
+      "mtime": 1782422320.6647365,
+      "size": 4249
+    },
+    "void_audit_report.md": {
+      "hash": "75f77c87093d2aedf8a58f2b868b184d85cf057af80865d1ffac278f376139ab",
+      "mtime": 1781553667.6507115,
+      "size": 32494
+    },
+    "logs/agent_swarm.log": {
+      "hash": "d2ba430d457ffdd39354688f8be3f2ec675621f41da6aca84768e76c6787bca9",
+      "mtime": 1782422164.041035,
+      "size": 6204
+    },
+    "logs/terminal.log": {
+      "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mtime": 1781448778.3175652,
+      "size": 0
+    },
+    "logs/terminal_history.log": {
+      "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mtime": 1781448778.3189304,
+      "size": 0
+    },
+    "memory/academic_documents/oop/rag_index_cache.json": {
+      "hash": "8538ce0061117a793cf038ee0114eac177fe0e1fda3a9876b0ff811a6fa412f3",
+      "mtime": 1782412867.6029274,
+      "size": 71
+    },
+    "memory/data/llm_config.json": {
+      "hash": "1141126fb5819cd6ecf9f24d8a18cb73ac859e06624cefe2a2f5483a9fd4cf92",
+      "mtime": 1781448778.2634473,
+      "size": 161
+    },
+    "news/rss_cache.py": {
+      "hash": "724887d602c6ba71f9e8e2d932a8d6715c7ae87d5f659f781abf463bb6bdf6c6",
+      "mtime": 1781445293.488758,
+      "size": 8445
+    },
+    "news/rss_engine.py": {
+      "hash": "4f9ff4cf1a3ae08b8b36186a3b5119f4ffa82ddbb340e3b471d779e51c8a7fb1",
+      "mtime": 1781445340.6196487,
+      "size": 14230
+    },
+    "news/__init__.py": {
+      "hash": "444cb828a81dfbc2606df384bb186a1a507926f1324cf998d296a060b092c26a",
+      "mtime": 1781445264.70204,
+      "size": 267
+    },
+    "scratch/audit_buttons.py": {
+      "hash": "5ab6c8e81bdb5ef6c99bc3ac7a84249135f66e2f7d77486848de4e4c2957ed98",
+      "mtime": 1781556240.0479758,
+      "size": 4053
+    },
+    "scratch/capture_screen.py": {
+      "hash": "4506e41a4015f2c97cb85322c0e52e6e8e71f5b3a4af0513254f4eb3c021e880",
+      "mtime": 1781557112.6962326,
+      "size": 941
+    },
+    "scratch/extract_reports.py": {
+      "hash": "598d377ac2ca87c14c3d73fd7463c9e8386373d8084d34e7e407e4630f49d8d7",
+      "mtime": 1781556091.7477086,
+      "size": 2404
+    },
+    "scratch/kill_port_8003.py": {
+      "hash": "6693ba89636d684c0fe9a16440a2c7abb3a4b7add252cda6a2934a62181e6b59",
+      "mtime": 1781497223.872248,
+      "size": 758
+    },
+    "scratch/print_last_response.py": {
+      "hash": "66f6260dbf77a689b0730804ef4299990e76fe986c5f13829c308e7897b9a1b4",
+      "mtime": 1781556062.545929,
+      "size": 1280
+    },
+    "scratch/query_endpoints.py": {
+      "hash": "9d64807b70734c9f72a2ed2874f52cd58d690854dc238f1ebcc6dcb4268ab786",
+      "mtime": 1781557007.3014507,
+      "size": 646
+    },
+    "scratch/query_stats.py": {
+      "hash": "74f3ce15d594efa8330653b54049648e903ba75a91a4c24344578316a73e81c5",
+      "mtime": 1781556827.879739,
+      "size": 474
+    },
+    "scratch/search_history_context.py": {
+      "hash": "bae6cde2097178adeed6f51df5ab0cd4d36f43c8a8239a30bc2af9cd430175d4",
+      "mtime": 1781457060.2209418,
+      "size": 292
+    },
+    "scratch/search_history_details.py": {
+      "hash": "75b0a64747e49c1b1daf322fe86bc6185fa602303e1fadd3bf7b23c63b953e7b",
+      "mtime": 1781457054.1067903,
+      "size": 343
+    },
+    "scratch/search_memory.py": {
+      "hash": "f9507ecd805dca14950ec02d4dfbd105b4f0703db3ad8be3dd02d9d2f9736d3c",
+      "mtime": 1781457049.0776596,
+      "size": 2132
+    },
+    "scratch/search_voice_thread.py": {
+      "hash": "4a6d2673bcca28d41b2f304f5057892ebcd4fce1d0f83c25c1793cc4a93f540a",
+      "mtime": 1781429520.5775046,
+      "size": 194
+    },
+    "scratch/test_chat_queries.py": {
+      "hash": "b3d753ae2ce64a7a3d56884c97e444e87703ee9f31185139de3b7a0cd6df7fb3",
+      "mtime": 1781555854.6811438,
+      "size": 728
+    },
+    "scratch/test_clean_recall.py": {
+      "hash": "63bebbf1566a97f7ba42704b34ee10eed241d745352b1a3513525615595855a6",
+      "mtime": 1781555913.1798882,
+      "size": 1174
+    },
+    "scratch/test_diagnostics.py": {
+      "hash": "f0b23f810dfb0dec1d39909cb1b779650252039bbb539efeedafd075fd8d04b7",
+      "mtime": 1781556154.8334506,
+      "size": 756
+    },
+    "scratch/test_endpoints_extra.py": {
+      "hash": "c6b7430b48dc97665e70825da15af34a20f1595c273a8fc5904d29b086b9ab68",
+      "mtime": 1781556145.1651847,
+      "size": 814
+    },
+    "scratch/test_meeting_system.py": {
+      "hash": "df1a9551a7ad2e6b408219be00403cc2ca22462a80ee57c4cb44459483875500",
+      "mtime": 1781557395.2090056,
+      "size": 1264
+    },
+    "scratch/test_models_system.py": {
+      "hash": "7fe7e4b66f7ed96f569bdfd5dd713b248f5be6e95b3eaf578aa41b01ed400ef6",
+      "mtime": 1781457205.7877185,
+      "size": 767
+    },
+    "scratch/test_ollama_query.py": {
+      "hash": "d154df41a74af74a83217c8c6e2876caba84b92fbcb5183ef8d00741592fd53c",
+      "mtime": 1781497142.787797,
+      "size": 788
+    },
+    "scratch/test_pc_control.py": {
+      "hash": "f7ed390fc8cfab3893cc41c19d1adf39a3cc258c97e73f3473771aac155209c7",
+      "mtime": 1781556022.8303568,
+      "size": 693
+    },
+    "scratch/test_pc_control_click_type.py": {
+      "hash": "a2cb77d16b5d80f6df61883358021603eed587b455716ff8f2ac7761230759ed",
+      "mtime": 1781556138.0581417,
+      "size": 1483
+    },
+    "scratch/test_pc_typing.py": {
+      "hash": "448c1ed552087d5723c1871698e3bf3e0aa31618e79d9c82aed070edadaa249b",
+      "mtime": 1781556128.719331,
+      "size": 1571
+    },
+    "scratch/test_prompt_polish.py": {
+      "hash": "205a2d9256b61aecb25fb15509aa85ed6102f5bc5ff7e5ff4aaffbf7ada8343c",
+      "mtime": 1781555891.6999629,
+      "size": 1874
+    },
+    "scratch/test_voice_tts.py": {
+      "hash": "086fe45140f285a934a1e70243e805aae84e1d2e640a4d71ead6bd5532018e4f",
+      "mtime": 1781555972.6399102,
+      "size": 683
+    },
+    "scratch/verify_system.py": {
+      "hash": "dd8b359ff0abb34a931ae24697d6d30829b50a61ff98bbcad76ca1e54c0925a1",
+      "mtime": 1781557809.631568,
+      "size": 1673
+    },
+    "search/duckduckgo_provider.py": {
+      "hash": "c4fc5488e57761637d1e4c5e98733a2bbbc36a8102ca7b179a80df0b3719331f",
+      "mtime": 1781445258.5673845,
+      "size": 10218
+    },
+    "search/__init__.py": {
+      "hash": "ac59190fb47873be79627017efd7a2b70ff190bddb9ffe76e65de24d5e6d5360",
+      "mtime": 1781445222.7466302,
+      "size": 224
+    },
+    "server/backend/builder_agent.py": {
+      "hash": "d4890cac2ebcbd087604b782bf63d5124b7dcc9565425355a01c0f8d8ea75ee5",
+      "mtime": 1781445597.5340693,
+      "size": 29106
+    },
+    "server/backend/engineering_mode.py": {
+      "hash": "ba3d1e69e8870e542e6937bddd79c3e9e0a24a2abd6c0e1bcd2e301814574148",
+      "mtime": 1781445440.9822268,
+      "size": 16846
+    },
+    "server/backend/fs_tools.py": {
+      "hash": "c57615bad821182bc0146505bbdad427b66f1b14696382b478ce3e17cced648b",
+      "mtime": 1781445497.5631688,
+      "size": 15541
+    },
+    "server/backend/knowledge_fusion.py": {
+      "hash": "e9c56964233078e07dc824566a93c7b0c79e2e7469d04efdc1d38de0cbb8576c",
+      "mtime": 1781445381.448685,
+      "size": 11799
+    },
+    "server/backend/project_analyzer.py": {
+      "hash": "e967a43f478366e9f42776b388143cefe080b408cb09123669f7e5c38b8870b1",
+      "mtime": 1781436418.1520517,
+      "size": 5736
+    },
+    "server/backend/providers/anthropic_compatible.py": {
+      "hash": "fb44f958aa04dff1ba9d6dcfee2ae6f41c8ae6b5f42bcbb8820b12feb0f27abf",
+      "mtime": 1781451268.279815,
+      "size": 5838
+    },
+    "server/backend/providers/base.py": {
+      "hash": "81174a906de89efef84cbe6c3c52565edb14e3f80e9459e7f7918395008e8a09",
+      "mtime": 1781436396.647881,
+      "size": 1194
+    },
+    "server/backend/providers/gemini_compatible.py": {
+      "hash": "2c3f394fcec16caa076b67617099576588a67e38f0da5b8867231d5969ab9245",
+      "mtime": 1781451264.7274716,
+      "size": 5483
+    },
+    "server/backend/providers/kimi_cloud.py": {
+      "hash": "0dee9b73497a8e685f2c6e38c422594ceb36d8e249eb5b8f82b58bcb2e6b65be",
+      "mtime": 1781436405.5571313,
+      "size": 5090
+    },
+    "server/backend/providers/ollama_local.py": {
+      "hash": "562462ab126a5306ddffdcd5403a4179a2bc178991e1b92c3e8d641460acd974",
+      "mtime": 1781451276.4709554,
+      "size": 9183
+    },
+    "server/backend/providers/openai_compatible.py": {
+      "hash": "6130633e1f5a06dd7b503a209a16f1002c86805964b7b4a2ad07d608a0ac0d6f",
+      "mtime": 1781451260.6851847,
+      "size": 5175
+    },
+    "server/backend/providers/router.py": {
+      "hash": "d0df3f423095248ed9c7920e973c098dccf9e27640c04f2a0645db45229fc657",
+      "mtime": 1781556939.8724763,
+      "size": 20144
     }
   }
 }
