@@ -57,10 +57,23 @@ def start_server():
     print(f"[LAUNCHER] Starting server: {' '.join(cmd)}")
     return subprocess.Popen(cmd, cwd=VOID_ROOT)
 
-def open_ui():
+def get_token():
+    config_file = os.path.join(VOID_ROOT, "memory", "data", "secure_config.json")
+    if os.path.exists(config_file):
+        try:
+            import json
+            with open(config_file, "r", encoding="utf-8") as f:
+                return json.load(f).get("api_token")
+        except:
+            pass
+    return None
+
+def open_ui(token=None):
     """Open UI in default browser"""
     ui_path = os.path.join(VOID_ROOT, "app", "ui", "index.html")
     url = f"file:///{ui_path.replace(chr(92), '/').replace(':', '%3A')}"
+    if token:
+        url += f"?token={token}"
     print(f"[LAUNCHER] Opening UI: {url}")
     webbrowser.open(url)
 
@@ -100,8 +113,11 @@ def main():
     except Exception as e:
         print(f"[LAUNCHER] Backend health check failed: {e}")
     
-    # 6. Open UI
-    open_ui()
+    # 6. Retrieve secure token
+    token = get_token()
+    
+    # 7. Open UI
+    open_ui(token)
     
     print("\n[SUCCESS] VOID FULLY ONLINE!")
     print("- Backend: http://127.0.0.1:8003")

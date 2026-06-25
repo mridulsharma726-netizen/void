@@ -195,12 +195,12 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 131894,
+      "size_bytes": 135112,
       "suffix": ".js"
     },
     {
       "path": "app/ui/index.html",
-      "size_bytes": 84552,
+      "size_bytes": 86169,
       "suffix": ".html"
     },
     {
@@ -325,7 +325,7 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 28524,
+      "size_bytes": 30406,
       "suffix": ".json"
     },
     {
@@ -345,7 +345,7 @@
     },
     {
       "path": "desktop/package.json",
-      "size_bytes": 577,
+      "size_bytes": 620,
       "suffix": ".json"
     },
     {
@@ -355,7 +355,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 4653,
+      "size_bytes": 5170,
       "suffix": ".log"
     },
     {
@@ -365,7 +365,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 8447,
+      "size_bytes": 9056,
       "suffix": ".log"
     },
     {
@@ -890,7 +890,7 @@
     },
     {
       "path": "server/main.py",
-      "size_bytes": 123123,
+      "size_bytes": 125965,
       "suffix": ".py"
     },
     {
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "tools/meeting_assistant.py",
-      "size_bytes": 7311,
+      "size_bytes": 7349,
       "suffix": ".py"
     },
     {

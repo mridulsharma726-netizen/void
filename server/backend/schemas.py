@@ -24,6 +24,7 @@ class IntentResult(BaseModel):
     intent: IntentType
     action: Optional[str] = None
     params: Dict[str, Any] = Field(default_factory=dict)
+    confidence: float = 1.0
 
 class PipelineResponse(BaseModel):
     reply: str

@@ -37,7 +37,9 @@ class IntentRouter:
             PREFIX + r"(?:system|cpu|ram|disk|battery|network|wifi)\s+(?:info|status|stats|usage|level)" + SUFFIX,
             PREFIX + r"(?:show|get)\s+(?:system|cpu|ram|disk|battery|network|wifi)\s*(?:info|status|stats|usage|level)?" + SUFFIX,
             PREFIX + r"battery(?:\s+status|\s+level)?" + SUFFIX,
-            PREFIX + r"network(?:\s+status)?" + SUFFIX
+            PREFIX + r"network(?:\s+status)?" + SUFFIX,
+            r"(?:what\s+is|what's|show|get|analyze|check|inspect|tell\s+me)\s+(?:my\s+)?(?:current\s+)?(?:system|cpu|ram|disk|battery|network|wifi|computer|pc)\s*(?:status|info|stats|usage|level|health|performance)?",
+            r"(?:system|computer|pc|cpu|ram)\s*(?:status|info|stats|usage|level|health|performance)"
         ],
         "open_app": [PREFIX + r"(?:open|launch|start)\s+([a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*)" + SUFFIX],
         "close_app": [PREFIX + r"close\s+(?:kill\s+|quit\s+)?([a-zA-Z0-9]+)" + SUFFIX],
@@ -154,12 +156,16 @@ class IntentRouter:
             PREFIX + r"(?:set|change|update)\s+(?:permission\s+level|permissions?|control\s+mode)\s+(?:to\s+)?(\d+\.?\d*)" + SUFFIX
         ],
         "agent_scan": [
-            PREFIX + r"scan\s+(?:this\s+)?(?:project|codebase|folder)" + SUFFIX,
-            PREFIX + r"project\s+scan" + SUFFIX
+            PREFIX + r"scan\s+(?:this\s+|my\s+|the\s+|current\s+)?(?:project|codebase|folder)" + SUFFIX,
+            PREFIX + r"project\s+scan" + SUFFIX,
+            r"\bscan\s+(?:my\s+)?(?:current\s+)?project\b",
+            r"\bscan\s+(?:this\s+)?codebase\b"
         ],
         "agent_explain": [
-            PREFIX + r"explain\s+(?:the\s+)?(?:codebase\s+)?architecture" + SUFFIX,
-            PREFIX + r"explain\s+(?:the\s+)?codebase" + SUFFIX
+            PREFIX + r"explain\s+(?:the\s+|my\s+|this\s+)?(?:codebase\s+|project\s+)?architecture" + SUFFIX,
+            PREFIX + r"explain\s+(?:the\s+|my\s+|this\s+)?codebase" + SUFFIX,
+            r"\bexplain\s+(?:my\s+)?project\s+architecture\b",
+            r"\bexplain\s+(?:the\s+)?architecture\b"
         ],
         "agent_code": [
             PREFIX + r"(?:add|create|modify|fix|write)\s+(?:code|feature|forgot\s+password|stub|forgot\s+password\s+stub|to|file|bug)\s+(.+)" + SUFFIX
@@ -189,12 +195,15 @@ class IntentRouter:
         ],
         "get_action_items": [
             PREFIX + r"(?:show|get|what\s+are)\s+(?:my\s+)?(?:pending\s+tasks|action\s+items)" + SUFFIX,
-            PREFIX + r"which\s+(?:tasks|action\s+items)\s+are\s+(?:overdue|pending)" + SUFFIX
+            PREFIX + r"which\s+(?:tasks|action\s+items)\s+are\s+(?:overdue|pending)" + SUFFIX,
+            r"\bshow\s+(?:all\s+)?todos?\b",
+            r"\blist\s+(?:all\s+)?todos?\b",
+            r"\bwhat\s+are\s+(?:my\s+)?todos?\b"
         ],
         "register_project": [
             PREFIX + r"(?:track|register|monitor|analyze)\s+(?:this\s+)?(?:project|folder|codebase)(?:\s+(.+))?" + SUFFIX,
             PREFIX + r"start\s+tracking\s+(?:project\s+)?(.+)?" + SUFFIX,
-            PREFIX + r"analyze\s+(?:project\s+)?(.+)" + SUFFIX
+            PREFIX + r"analyze\s+(?:project|codebase|folder)\s+(.+)" + SUFFIX
         ],
         "scan_project_changes": [
             PREFIX + r"(?:scan|check|detect)\s+(?:project\s+)?changes?(?:\s+(?:in|for)\s+(.+))?" + SUFFIX,
@@ -298,9 +307,10 @@ class IntentRouter:
         
         # Check academic triggers immediately
         academic_keywords = [
-            "viva", "test me", "test my", "quiz me", "teach me", "explain", "lesson",
+            "viva", "test me", "test my", "quiz me", "teach me", "lesson",
             "practice question", "lab assistant", "lab experiment", "study roadmap",
-            "dsa lesson", "dbms lab", "os lab", "explain polymorphism", "explain encapsulation"
+            "dsa lesson", "dbms lab", "os lab", "explain polymorphism", "explain encapsulation",
+            "explain inheritance", "explain data structures", "academic lesson", "tutor me"
         ]
         if any(kw in lower for kw in academic_keywords):
             logger.info(f"[ACADEMIC INTENT DETECTED] Query: {raw}")
