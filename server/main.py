@@ -2331,16 +2331,25 @@ def humanize_tool_output_locally(action: str, params: Dict[str, Any], output: st
     return f"Action {action} executed successfully, Sir. Result: {output}"
 
 
-def log_chat_request(intent_detected: str, execution_path: str, tool_used: str, status: str, start_time: float):
+def log_chat_request(intent_detected: str, execution_path: str, tool_used: str, status: str, start_time: float, confidence: float = 1.0, endpoint: str = "None"):
     elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+    
+    # Map parameters to requested fields
+    detected_intent = intent_detected
+    selected_tool = tool_used if tool_used != "None" else "None"
+    confidence_score = f"{confidence:.2f}"
+    endpoint_called = endpoint
+    response_status = status
+    execution_time = f"{elapsed_ms}ms"
+    
     logger.info(
-        f"\n--- Chat Request Execution Log ---\n"
-        f"Intent Detected: {intent_detected}\n"
-        f"Execution Path: {execution_path}\n"
-        f"Execution Time: {elapsed_ms}ms\n"
-        f"Tool Used: {tool_used}\n"
-        f"Success or Failure: {status}\n"
-        f"----------------------------------"
+        f"\n[STRUCTURED LOG]\n"
+        f"- Detected intent: {detected_intent}\n"
+        f"- Selected tool: {selected_tool}\n"
+        f"- Confidence score: {confidence_score}\n"
+        f"- Endpoint called: {endpoint_called}\n"
+        f"- Response status: {response_status}\n"
+        f"- Execution time: {execution_time}\n"
     )
 
 
@@ -2415,6 +2424,250 @@ async def chat(req: ChatRequest, background_tasks: BackgroundTasks = None):
     
     memory = _get_memory()
     
+    # -------------------------------------------------------------
+    # ROUTING & HALLUCINATION ELIMINATION INTERCEPTS
+    # -------------------------------------------------------------
+    lower_text = text.lower().strip()
+    
+    # Project Scanner Force Rules
+    is_scan_project = any(p in lower_text for p in ["scan my current project", "scan my project", "scan project", "scan current project"])
+    is_explain_project = any(p in lower_text for p in ["explain my project architecture", "explain project architecture", "explain codebase architecture", "explain my codebase architecture", "explain codebase"])
+    
+    if is_scan_project or is_explain_project:
+        from core.autonomous_agent import AutonomousAgent
+        from pathlib import Path
+        root = Path(__file__).parent.parent
+        agent = AutonomousAgent(str(root))
+        
+        if is_scan_project:
+            res = await agent.scan_and_map()
+            reply = f"🔍 **Project Scan Complete**, Sir!\n- **Technology Stack**: {', '.join(res.get('frameworks', [])) or 'None detected'}\n- **Entry Points**: {', '.join(res.get('entry_points', [])) or 'None detected'}\n- **Files Scanned**: {len(res.get('files', []))}"
+            action_name = "agent_scan"
+        else:
+            reply = await agent.explain_architecture()
+            action_name = "agent_explain"
+            
+        memory.remember_turn("user", text)
+        memory.remember_turn("void", reply)
+        log_chat_request(action_name, "DIRECT_TOOL", "AutonomousAgent", "Success", start_time, confidence=1.0, endpoint="AutonomousAgent.scan_and_map" if is_scan_project else "AutonomousAgent.explain_architecture")
+        return {"reply": reply, "meta": {"intent": "command", "action": action_name}}
+        
+    # Memory Writes/Deletes
+    is_remember = any(lower_text.startswith(prefix) for prefix in ["remember", "store", "save this"]) or "remember" in lower_text or "save this" in lower_text
+    is_forget = lower_text.startswith("forget") or "forget that" in lower_text
+    
+    if is_remember:
+        fact_text = text
+        for prefix in [
+            "please remember that my", "please remember that", "please remember my", "please remember",
+            "remember that my", "remember that", "remember my", "remember",
+            "store that my", "store that", "store my", "store",
+            "save this that my", "save this that", "save this my", "save this", "save my"
+        ]:
+            if fact_text.lower().startswith(prefix):
+                fact_text = fact_text[len(prefix):].strip()
+                break
+        
+        fact_text_clean = fact_text.strip()
+        if fact_text_clean.lower().startswith("that "):
+            fact_text_clean = fact_text_clean[5:].strip()
+        elif fact_text_clean.lower().startswith("to "):
+            fact_text_clean = fact_text_clean[3:].strip()
+            
+        if fact_text_clean.endswith("."):
+            fact_text_clean = fact_text_clean[:-1].strip()
+            
+        memory.add_fact(fact_text_clean)
+        reply = f"I have stored that in memory, Sir: {fact_text_clean}"
+        
+        memory.remember_turn("user", text)
+        memory.remember_turn("void", reply)
+        log_chat_request("memory_write", "DIRECT_TOOL", "SQLite", "Success", start_time, confidence=1.0, endpoint="memory_sqlite.add_fact")
+        return {"reply": reply, "meta": {"intent": "memory", "action": "remember"}}
+        
+    if is_forget:
+        forget_text = text
+        for prefix in ["forget that my", "forget that", "forget my", "forget"]:
+            if forget_text.lower().startswith(prefix):
+                forget_text = forget_text[len(prefix):].strip()
+                break
+        
+        forget_text_clean = forget_text.strip()
+        if forget_text_clean.endswith("."):
+            forget_text_clean = forget_text_clean[:-1].strip()
+            
+        all_facts = memory.list_facts()
+        found_any = False
+        for fact in all_facts:
+            if forget_text_clean.lower() in fact.lower() or fact.lower() in forget_text_clean.lower():
+                from backend.memory_manager import forget_fact
+                forget_fact(fact)
+                found_any = True
+                
+        if found_any:
+            reply = f"I have removed that from memory, Sir: {forget_text_clean}"
+            status = "Success"
+        else:
+            reply = f"I couldn't find a matching memory for '{forget_text_clean}', Sir."
+            status = "Failure"
+            
+        memory.remember_turn("user", text)
+        memory.remember_turn("void", reply)
+        log_chat_request("memory_delete", "DIRECT_TOOL", "SQLite", status, start_time, confidence=1.0, endpoint="memory_sqlite.forget_fact")
+        return {"reply": reply, "meta": {"intent": "memory", "action": "forget"}}
+        
+    # Memory Reads
+    is_show_memory = "show memory database" in lower_text or lower_text in ["show memory", "show memory database", "show memory database."]
+    is_deadline_query = "deadline" in lower_text or "my deadline" in lower_text
+    
+    if is_show_memory:
+        facts = memory.list_facts()
+        if not facts:
+            reply = "Memory database is empty, Sir."
+        else:
+            facts_list = "\n".join([f"- {fact}" for fact in facts])
+            reply = f"Here is the contents of the memory database, Sir:\n{facts_list}"
+            
+        memory.remember_turn("user", text)
+        memory.remember_turn("void", reply)
+        log_chat_request("memory_read", "DIRECT_TOOL", "SQLite", "Success", start_time, confidence=1.0, endpoint="memory_sqlite.get_all_facts")
+        return {"reply": reply, "meta": {"intent": "memory", "action": "show"}}
+        
+    if is_deadline_query:
+        facts = memory.query_relevant(text, limit=3)
+        if facts:
+            reply = f"According to your memory database, Sir: {facts[0]}."
+            status = "Success"
+        else:
+            reply = "I couldn't find any deadline in my memory database, Sir."
+            status = "Failure"
+            
+        memory.remember_turn("user", text)
+        memory.remember_turn("void", reply)
+        log_chat_request("memory_read", "DIRECT_TOOL", "SQLite", status, start_time, confidence=1.0, endpoint="memory_sqlite.query_semantic_facts")
+        return {"reply": reply, "meta": {"intent": "memory", "action": "recall"}}
+        
+    # Telemetry and Diagnostics
+    telemetry_keywords = [
+        "system status", "current system status", "cpu", "ram", "storage",
+        "battery", "temperature", "performance", "diagnostics", "computer health",
+        "system info", "system stats", "computer stats", "pc health", "pc status"
+    ]
+    is_telemetry_query = any(kw in lower_text for kw in telemetry_keywords)
+    
+    if is_telemetry_query:
+        stats_data = stats_collector.get_all_stats()
+        cpu = stats_data.get("cpu_usage", 0)
+        ram = stats_data.get("ram_usage", 0)
+        ram_used = stats_data.get("ram_used_gb", 0)
+        ram_total = stats_data.get("ram_total_gb", 0)
+        storage_used = stats_data.get("storage_used_gb", 0)
+        storage_total = stats_data.get("storage_total_gb", 0)
+        battery = stats_data.get("battery_percent", "N/A")
+        battery_plugged = "plugged in" if stats_data.get("battery_power_plugged") else "discharging"
+        cpu_temp = stats_data.get("cpu_temp")
+        temp_str = f", CPU Temp: {cpu_temp}°C" if cpu_temp else ""
+        
+        if any(w in lower_text for w in ["health", "diagnostics", "analyze", "check"]):
+            cpu_status = "Healthy" if cpu < 80 else "High Load ⚠️"
+            ram_status = "Healthy" if ram < 85 else "High Load ⚠️"
+            storage_pct = (storage_used / (storage_total or 1)) * 100
+            storage_status = "Healthy" if storage_pct < 90 else "Low Space ⚠️"
+            
+            reply = (
+                f"📊 **Computer Health & Diagnostics Check**, Sir:\n"
+                f"- **Overall Health**: Operational\n"
+                f"- **CPU Status**: {cpu_status} (Currently at {cpu}%)\n"
+                f"- **RAM Status**: {ram_status} ({ram}% used)\n"
+                f"- **Storage Status**: {storage_status} ({storage_used} GB / {storage_total} GB)\n"
+                f"- **Battery Level**: {battery}% ({battery_plugged})\n"
+                f"- **Action Recommendation**: System diagnostics indicate operational stability."
+            )
+            intent_name = "diagnostics"
+        else:
+            reply = (
+                f"🖥️ **System Telemetry & Health Report**, Sir:\n"
+                f"- **CPU Usage**: {cpu}%{temp_str}\n"
+                f"- **RAM Usage**: {ram}% ({ram_used} GB / {ram_total} GB)\n"
+                f"- **Storage**: {storage_used} GB used / {storage_total} GB total\n"
+                f"- **Battery**: {battery}% ({battery_plugged})"
+            )
+            intent_name = "system_status"
+            
+        memory.remember_turn("user", text)
+        memory.remember_turn("void", reply)
+        log_chat_request(intent_name, "DIRECT_TOOL", "SystemStats", "Success", start_time, confidence=1.0, endpoint="GET /stats")
+        return {"reply": reply, "meta": {"intent": "system", "action": "stats"}}
+        
+    # Local Model discovery
+    model_keywords = [
+        "installed models", "ollama", "available models", "active model",
+        "coding model", "vision model", "local ai models", "installed ai models",
+        "list installed models", "list models"
+    ]
+    is_model_query = any(kw in lower_text for kw in model_keywords)
+    
+    if is_model_query:
+        llm = VoidSingletons.get("llm") or OllamaClient()
+        discovered = {"Coding": [], "Reasoning": [], "Planning": [], "Vision": [], "Chat": [], "Lightweight": [], "Large": []}
+        if llm and hasattr(llm, "router") and hasattr(llm.router, "ollama_provider"):
+            discovered = llm.router.ollama_provider.discover_and_categorize_models()
+        
+        active_model = "None"
+        routing_mode = "AUTO"
+        if llm and hasattr(llm, "router"):
+            cfg = getattr(llm.router, "config", {})
+            active_model = cfg.get("local_model", "qwen2.5:0.5b")
+            routing_mode = cfg.get("routing_mode", "AUTO")
+            
+        all_models = []
+        for cat, list_models in discovered.items():
+            if list_models:
+                all_models.extend(list_models)
+                
+        if not all_models:
+            reply = (
+                f"🤖 **Local AI Models Configuration**, Sir:\n"
+                f"- **Active Local Model**: `{active_model}`\n"
+                f"- **Routing Mode**: `{routing_mode}`\n"
+                f"- **Discovered Models**: No local Ollama models detected. Please ensure the Ollama service is active and models are downloaded."
+            )
+        else:
+            formatted_models = ", ".join([f"`{m}`" for m in all_models])
+            reply = (
+                f"🤖 **Local AI Models Configuration**, Sir:\n"
+                f"- **Active Local Model**: `{active_model}`\n"
+                f"- **Routing Mode**: `{routing_mode}`\n"
+                f"- **Installed Models**: {formatted_models}"
+            )
+            
+        memory.remember_turn("user", text)
+        memory.remember_turn("void", reply)
+        log_chat_request("model_discovery", "DIRECT_TOOL", "OllamaProvider", "Success", start_time, confidence=1.0, endpoint="GET /api/llm/discovered-models")
+        return {"reply": reply, "meta": {"intent": "system", "action": "discovered-models"}}
+        
+    # TODOs/Action Items
+    is_todo_query = lower_text in ["show all todos", "show all todos.", "list todos", "what are my todos", "show todos"] or "todos" in lower_text or "todo" in lower_text
+    
+    if is_todo_query:
+        from tools.meeting_assistant import get_action_items
+        res = get_action_items()
+        action_items = res.get("action_items", [])
+        if not action_items:
+            reply = "There are no pending action items or TODOs in my database, Sir."
+        else:
+            formatted = []
+            for item in action_items:
+                owner_str = f" (Assigned to: {item['owner']})" if item.get('owner') else ""
+                deadline_str = f" [Due: {item['deadline']}]" if item.get('deadline') else ""
+                formatted.append(f"- {item.get('description', 'Task')}{owner_str}{deadline_str}")
+            reply = "Here are your pending action items and TODOs, Sir:\n" + "\n".join(formatted)
+            
+        memory.remember_turn("user", text)
+        memory.remember_turn("void", reply)
+        log_chat_request("get_action_items", "DIRECT_TOOL", "MeetingAssistant", "Success", start_time, confidence=1.0, endpoint="tools.meeting_assistant.get_action_items")
+        return {"reply": reply, "meta": {"intent": "command", "action": "get_action_items"}}
+        
     # Intercept workflow commands
     from workflow_mode import is_workflow_command, execute_workflow_text
     if is_workflow_command(text):

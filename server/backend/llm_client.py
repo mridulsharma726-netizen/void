@@ -373,6 +373,12 @@ class OllamaClient:
                         active_proj = None
                 
                 has_evidence = False
+                try:
+                    from backend.memory_manager import query_semantic_facts
+                    if query_semantic_facts(user_text, limit=3):
+                        has_evidence = True
+                except Exception as e:
+                    logger.error(f"Error checking semantic facts in evidence check: {e}")
                 if active_proj:
                     proj_id = active_proj["project_id"]
                     all_files = get_project_files(proj_id)
@@ -466,6 +472,12 @@ class OllamaClient:
                         active_proj = None
                 
                 has_evidence = False
+                try:
+                    from backend.memory_manager import query_semantic_facts
+                    if query_semantic_facts(user_text, limit=3):
+                        has_evidence = True
+                except Exception as e:
+                    logger.error(f"Error checking semantic facts in evidence check: {e}")
                 if active_proj:
                     proj_id = active_proj["project_id"]
                     all_files = get_project_files(proj_id)

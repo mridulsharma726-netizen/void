@@ -25,7 +25,7 @@
     },
     {
       "path": "launcher.py",
-      "size_bytes": 3501,
+      "size_bytes": 3978,
       "suffix": ".py"
     },
     {
@@ -125,7 +125,7 @@
     },
     {
       "path": "test_system.py",
-      "size_bytes": 7149,
+      "size_bytes": 8614,
       "suffix": ".py"
     },
     {
@@ -355,7 +355,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 5170,
+      "size_bytes": 5687,
       "suffix": ".log"
     },
     {
@@ -365,7 +365,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 9056,
+      "size_bytes": 9665,
       "suffix": ".log"
     },
     {
@@ -432,6 +432,11 @@
       "path": "memory/academic_documents/maths/unit_4_study_guide.md",
       "size_bytes": 3128,
       "suffix": ".md"
+    },
+    {
+      "path": "memory/academic_documents/oop/rag_index_cache.json",
+      "size_bytes": 71,
+      "suffix": ".json"
     },
     {
       "path": "memory/academic_documents/os/rag_index_cache.json",
@@ -950,7 +955,7 @@
     },
     {
       "path": "server/backend/intent_router.py",
-      "size_bytes": 39457,
+      "size_bytes": 40302,
       "suffix": ".py"
     },
     {
@@ -1000,7 +1005,7 @@
     },
     {
       "path": "server/backend/schemas.py",
-      "size_bytes": 1651,
+      "size_bytes": 1680,
       "suffix": ".py"
     },
     {
