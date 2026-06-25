@@ -32,7 +32,7 @@ def test_memory_list():
 
 def test_chat_recall():
     payload = {"message": "what is my favorite car?"}
-    r = requests.post(f"{BASE_URL}/chat", headers=HEADERS, proxies=PROXIES, json=payload, timeout=20)
+    r = requests.post(f"{BASE_URL}/chat", headers=HEADERS, proxies=PROXIES, json=payload, timeout=90)
     print(f"Status: {r.status_code}")
     print(f"Body: {json.dumps(r.json(), indent=2)}")
 

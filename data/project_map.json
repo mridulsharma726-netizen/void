@@ -195,7 +195,7 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 131857,
+      "size_bytes": 131894,
       "suffix": ".js"
     },
     {
@@ -325,7 +325,7 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 28218,
+      "size_bytes": 28524,
       "suffix": ".json"
     },
     {
@@ -355,7 +355,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 4136,
+      "size_bytes": 4653,
       "suffix": ".log"
     },
     {
@@ -365,7 +365,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 7838,
+      "size_bytes": 8447,
       "suffix": ".log"
     },
     {
@@ -529,14 +529,29 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/audit_buttons.py",
+      "size_bytes": 4053,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/capture_screen.py",
+      "size_bytes": 941,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/check_db.py",
-      "size_bytes": 393,
+      "size_bytes": 872,
       "suffix": ".py"
     },
     {
       "path": "scratch/ddg_sample.html",
       "size_bytes": 42806,
       "suffix": ".html"
+    },
+    {
+      "path": "scratch/extract_reports.py",
+      "size_bytes": 2404,
+      "suffix": ".py"
     },
     {
       "path": "scratch/get_active_chat.py",
@@ -569,6 +584,21 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/print_last_response.py",
+      "size_bytes": 1280,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/query_endpoints.py",
+      "size_bytes": 646,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/query_stats.py",
+      "size_bytes": 474,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/read_db.py",
       "size_bytes": 631,
       "suffix": ".py"
@@ -580,7 +610,7 @@
     },
     {
       "path": "scratch/read_transcript.py",
-      "size_bytes": 1387,
+      "size_bytes": 966,
       "suffix": ".py"
     },
     {
@@ -620,7 +650,7 @@
     },
     {
       "path": "scratch/test_academic_system.py",
-      "size_bytes": 3936,
+      "size_bytes": 4041,
       "suffix": ".py"
     },
     {
@@ -641,6 +671,16 @@
     {
       "path": "scratch/test_chat_integration.py",
       "size_bytes": 1352,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/test_chat_queries.py",
+      "size_bytes": 728,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/test_clean_recall.py",
+      "size_bytes": 1174,
       "suffix": ".py"
     },
     {
@@ -674,6 +714,11 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/test_diagnostics.py",
+      "size_bytes": 756,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/test_direct_layer.py",
       "size_bytes": 2217,
       "suffix": ".py"
@@ -689,6 +734,11 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/test_endpoints_extra.py",
+      "size_bytes": 814,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/test_founder.py",
       "size_bytes": 2430,
       "suffix": ".py"
@@ -696,6 +746,11 @@
     {
       "path": "scratch/test_logging.py",
       "size_bytes": 2631,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/test_meeting_system.py",
+      "size_bytes": 1264,
       "suffix": ".py"
     },
     {
@@ -709,6 +764,21 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/test_pc_control.py",
+      "size_bytes": 693,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/test_pc_control_click_type.py",
+      "size_bytes": 1483,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/test_pc_typing.py",
+      "size_bytes": 1571,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/test_phase2.py",
       "size_bytes": 2947,
       "suffix": ".py"
@@ -716,6 +786,11 @@
     {
       "path": "scratch/test_pitch_perf.py",
       "size_bytes": 1343,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/test_prompt_polish.py",
+      "size_bytes": 1874,
       "suffix": ".py"
     },
     {
@@ -769,6 +844,11 @@
       "suffix": ".py"
     },
     {
+      "path": "scratch/test_voice_tts.py",
+      "size_bytes": 683,
+      "suffix": ".py"
+    },
+    {
       "path": "scratch/test_whatsapp.py",
       "size_bytes": 1267,
       "suffix": ".py"
@@ -781,6 +861,11 @@
     {
       "path": "scratch/test_whatsapp_integration.py",
       "size_bytes": 3041,
+      "suffix": ".py"
+    },
+    {
+      "path": "scratch/verify_system.py",
+      "size_bytes": 1673,
       "suffix": ".py"
     },
     {
@@ -890,7 +975,7 @@
     },
     {
       "path": "server/backend/owner_profile.py",
-      "size_bytes": 4584,
+      "size_bytes": 5036,
       "suffix": ".py"
     },
     {
@@ -980,7 +1065,7 @@
     },
     {
       "path": "server/backend/providers/router.py",
-      "size_bytes": 19814,
+      "size_bytes": 20144,
       "suffix": ".py"
     },
     {
@@ -1220,12 +1305,12 @@
     },
     {
       "path": "tools/voice_stt.py",
-      "size_bytes": 21635,
+      "size_bytes": 21697,
       "suffix": ".py"
     },
     {
       "path": "tools/voice_tts.py",
-      "size_bytes": 10332,
+      "size_bytes": 10433,
       "suffix": ".py"
     },
     {

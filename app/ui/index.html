@@ -763,7 +763,8 @@
                     <div style="font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: bold; color: var(--accent-neon);">VOID</div>
                   </div>
                 </div>
-                <div style="font-size: 11px; color: var(--text-dim); text-align: center; margin-bottom: 15px;">VOICE ENGINE PROTOCOL // ACTIVE</div>
+                <div id="voiceEngineStatusText" style="font-size: 11px; color: var(--text-dim); text-align: center; margin-bottom: 8px;">VOICE ENGINE PROTOCOL // ACTIVE</div>
+                <button id="uiWakeWordToggleBtn" class="btn btn-primary" style="margin-bottom: 15px; font-size: 11px; padding: 6px 16px; border: 1px solid var(--accent-neon); font-family: 'Orbitron', sans-serif; cursor: pointer;">DISABLE WAKE WORD</button>
               </div>
               <div class="card">
                 <div class="card-title">Speech Synthesizer Configuration</div>
@@ -771,6 +772,22 @@
                   <div class="spec-line"><span>Speed Rate:</span><input type="range" id="voiceSpeedRange" min="50" max="250" value="150" style="flex-grow: 1; accent-color: var(--accent-neon); margin-left: 10px;"></div>
                   <div class="spec-line"><span>Pitch Accent:</span><input type="range" id="voicePitchRange" min="0" max="2" step="0.1" value="1" style="flex-grow: 1; accent-color: var(--accent-neon); margin-left: 10px;"></div>
                   <div class="spec-line"><span>Wake Sensitivity:</span><input type="range" id="voiceSensRange" min="0.1" max="1" step="0.05" value="0.5" style="flex-grow: 1; accent-color: var(--accent-neon); margin-left: 10px;"></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Windows Integration & Audio Ducking</div>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                  <p style="font-size: 11px; color: var(--text-dim); margin: 0; line-height: 1.4;">
+                    Windows automatically lowers YouTube / music volume when the microphone is recording in the background.
+                  </p>
+                  <div style="display: flex; gap: 8px; margin-top: 4px;">
+                    <button id="fixAudioDuckingBtn" class="btn btn-secondary" style="font-size: 10px; padding: 6px 12px; flex-grow: 1; border: 1px solid var(--accent-neon); background: transparent; color: var(--accent-neon); cursor: pointer;">
+                      FIX DUCKING (REGISTRY)
+                    </button>
+                  </div>
+                  <div style="font-size: 10px; color: var(--text-dim); margin-top: 4px; line-height: 1.3;">
+                    <strong>Manual Fix:</strong> Run <code style="color: var(--accent-neon);">mmsys.cpl</code> &rarr; Communications tab &rarr; Select "Do nothing".
+                  </div>
                 </div>
               </div>
             </div>
@@ -1080,8 +1097,8 @@
         <span class="status-icon">🎙️</span> VOICE: <strong class="glow-text">ACTIVE</strong>
       </div>
       <div class="status-separator">|</div>
-      <div class="status-item">
-        <span class="status-icon">🔊</span> WAKE WORD: <strong class="glow-text">ON</strong>
+      <div class="status-item" id="statusBarWakeWordToggle" style="cursor: pointer;" title="Click to toggle Wake Word">
+        <span class="status-icon">🔊</span> WAKE WORD: <strong id="statusBarWakeWordState" class="glow-text">ON</strong>
       </div>
       <div class="status-separator">|</div>
       <div class="status-item">

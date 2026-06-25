@@ -146,7 +146,8 @@ Return ONLY valid JSON.
             "status": "ok", 
             "message": f"Meeting ended and saved as '{structured_data.get('title', 'Untitled Meeting')}'. {len(action_items)} action items recorded.{linked_msg}",
             "data": structured_data,
-            "linked_projects": linked_projects
+            "linked_projects": linked_projects,
+            "meeting_id": meeting_id
         }
         
     except Exception as e:

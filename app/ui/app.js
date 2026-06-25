@@ -905,6 +905,94 @@ async function toggleVoice() {
   }
 }
 
+// === WAKE WORD & AUDIO DUCKING CONTROLS ===
+async function toggleWakeWord() {
+  const toggleBtn = getEl('uiWakeWordToggleBtn');
+  const footerToggle = getEl('statusBarWakeWordToggle');
+  if (toggleBtn) {
+    toggleBtn.disabled = true;
+    toggleBtn.textContent = 'PENDING...';
+  }
+  try {
+    const res = await api('/api/voice/wake-word/toggle', { method: 'POST' });
+    if (res && !res.error) {
+      updateWakeWordUI(res.active);
+      addMessage('system', `Wake Word detection ${res.active ? 'ENABLED' : 'DISABLED'}`);
+    } else {
+      addMessage('system', '⚠️ Failed to toggle Wake Word.');
+    }
+  } catch (e) {
+    console.error('Error toggling wake word:', e);
+  } finally {
+    if (toggleBtn) toggleBtn.disabled = false;
+  }
+}
+
+async function handleFixAudioDucking() {
+  const btn = getEl('fixAudioDuckingBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'APPLYING...';
+  }
+  try {
+    const res = await api('/api/voice/wake-word/fix-ducking', { method: 'POST' });
+    if (res && res.status === 'success') {
+      addMessage('system', `✔️ Audio Ducking: ${res.message}`);
+      alert(res.message);
+    } else {
+      const err = res?.message || 'Error occurred.';
+      addMessage('system', `⚠️ Failed to fix audio ducking: ${err}`);
+      alert(`Failed to apply fix: ${err}`);
+    }
+  } catch (e) {
+    console.error('Error fixing audio ducking:', e);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'FIX DUCKING (REGISTRY)';
+    }
+  }
+}
+
+async function refreshWakeWordStatus() {
+  try {
+    const res = await api('/api/voice/wake-word/status');
+    if (res && !res.error) {
+      updateWakeWordUI(res.active);
+    }
+  } catch (e) {
+    console.error('Error refreshing wake word status:', e);
+  }
+}
+
+function updateWakeWordUI(active) {
+  const stateStr = active ? 'ON' : 'OFF';
+  
+  // Update footer text and glow class
+  const footerState = getEl('statusBarWakeWordState');
+  if (footerState) {
+    footerState.textContent = stateStr;
+    footerState.className = active ? 'glow-text' : '';
+    footerState.style.color = active ? '#39ff14' : '#888';
+  }
+  
+  // Update Settings button text and visual class
+  const toggleBtn = getEl('uiWakeWordToggleBtn');
+  if (toggleBtn) {
+    toggleBtn.textContent = active ? 'DISABLE WAKE WORD' : 'ENABLE WAKE WORD';
+    toggleBtn.style.background = active ? 'var(--accent-neon)' : 'transparent';
+    toggleBtn.style.color = active ? '#000' : 'var(--accent-neon)';
+    toggleBtn.style.borderColor = 'var(--accent-neon)';
+  }
+  
+  // Update Settings status text
+  const statusText = getEl('voiceEngineStatusText');
+  if (statusText) {
+    statusText.textContent = `VOICE ENGINE PROTOCOL // ${active ? 'ACTIVE (LISTENING)' : 'STANDBY'}`;
+    statusText.style.color = active ? 'var(--accent-neon)' : 'var(--text-dim)';
+  }
+}
+
 let micLevelInterval = null;
 
 function startMicLevelPolling() {
@@ -1661,6 +1749,11 @@ function bindEvents() {
   
   const soundToggleBtn = getEl('soundToggleBtn');
   if (soundToggleBtn) soundToggleBtn.onclick = toggleVoice;
+
+  // Wake Word & Ducking Controls
+  getEl('statusBarWakeWordToggle')?.addEventListener('click', toggleWakeWord);
+  getEl('uiWakeWordToggleBtn')?.addEventListener('click', toggleWakeWord);
+  getEl('fixAudioDuckingBtn')?.addEventListener('click', handleFixAudioDucking);
 
   // Gamification triggers
   getEl('viewBadgesBtn')?.addEventListener('click', showAchievements);
@@ -2622,6 +2715,7 @@ async function initApp() {
     (async () => {
       try {
         await refreshHealth();
+        await refreshWakeWordStatus();
         await refreshStats();
         await refreshCVCS();
         await refreshRecommendations();
@@ -2658,6 +2752,7 @@ async function initApp() {
     })();
     
     setInterval(refreshHealth, 10000);       // 10s — health is lightweight
+    setInterval(refreshWakeWordStatus, 5000); // 5s — wake word status
     setInterval(refreshStats, 15000);        // 15s — stats don't change fast
     setInterval(refreshCVCS, 2000);          // 2s — CVCS updates frequently
     setInterval(refreshRecommendations, 30000); // 30s

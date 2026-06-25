@@ -1482,6 +1482,74 @@ async def mic_level():
     except Exception as e:
         return {"active": False, "rms": 0.0, "level_pct": 0.0, "error": str(e)}
 
+@app.get("/api/voice/wake-word/status")
+async def get_wake_word_status():
+    try:
+        from tools.voice_listener import is_listening
+        return {"active": is_listening()}
+    except Exception as e:
+        logger.error(f"Error checking wake word status: {e}")
+        return {"active": False, "error": str(e)}
+
+@app.post("/api/voice/wake-word/toggle")
+async def toggle_wake_word(req: dict = None):
+    global _voice_thread
+    try:
+        from tools.voice_listener import is_listening, stop_voice_loop, start_voice_loop_thread
+        
+        target = None
+        if req and "active" in req:
+            target = req["active"]
+            
+        current = is_listening()
+        if target is None:
+            target = not current
+            
+        if target == current:
+            return {"active": current}
+            
+        if target:
+            from tools.voice_listener import set_command_callback, set_activation_phrase
+            set_activation_phrase("Yes?")
+            set_command_callback(process_voice_command)
+            _voice_thread = start_voice_loop_thread()
+            # Wait briefly to let it start and set _listening = True
+            await asyncio.sleep(0.5)
+        else:
+            stop_voice_loop()
+            # Wait briefly to let it stop
+            await asyncio.sleep(0.5)
+            
+        return {"active": is_listening()}
+    except Exception as e:
+        logger.error(f"Error toggling wake word: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/voice/wake-word/fix-ducking")
+async def fix_audio_ducking():
+    try:
+        import platform
+        if platform.system() != "Windows":
+            return {"status": "error", "message": "Audio ducking configuration is only supported on Windows."}
+            
+        import winreg
+        key_path = r"Software\Microsoft\Multimedia\Audio"
+        try:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+        except FileNotFoundError:
+            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path)
+            
+        # 3 = Do nothing when communications activity is detected
+        winreg.SetValueEx(key, "UserDuckingPreference", 0, winreg.REG_DWORD, 3)
+        winreg.CloseKey(key)
+        
+        logger.info("[VOICE ENGINE] Registry fix applied: UserDuckingPreference set to 3 (Do nothing)")
+        return {"status": "success", "message": "Windows Communications Ducking preference updated to 'Do Nothing'. Please restart the system or browser/application for the changes to fully apply."}
+    except Exception as e:
+        logger.error(f"Failed to fix audio ducking: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update registry: {str(e)}")
+
+
 @app.get("/tools/health")
 async def tools_health():
     """Full tool health."""
@@ -2855,4 +2923,4 @@ async def get_gamification_achievements():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8002)
+    uvicorn.run(app, host="127.0.0.1", port=8003)
