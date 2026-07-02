@@ -43,10 +43,22 @@
       </div>
 
       <!-- Center: Status Panel -->
-      <div class="top-center">
+      <div class="top-center" style="display: flex; gap: 12px; align-items: center;">
         <div class="system-status-panel">
           <span class="status-marker">●</span>
           <span>SYSTEM STATUS: <strong id="statusLabel">ONLINE</strong></span>
+        </div>
+        <div class="system-status-panel" id="ollamaStatusPanel" style="cursor: pointer; border-color: rgba(0, 255, 255, 0.2);" title="Click to check Ollama connection">
+          <span class="status-marker" id="ollamaStatusDot" style="color: var(--warning);">●</span>
+          <span>OLLAMA: <strong id="ollamaStatusLabel">CONNECTING</strong></span>
+        </div>
+        <!-- Persistent Recording Indicator Bar -->
+        <div class="system-status-panel hidden" id="persistentRecordingBar" style="border-color: #ff073a; background: rgba(255, 7, 58, 0.08); display: flex; align-items: center; gap: 8px;">
+          <span class="status-marker blink" style="color: #ff073a;">●</span>
+          <span style="color: #ff073a; font-weight: bold; font-size: 10px;">REC</span>
+          <span id="recBarDuration" style="font-family: monospace; font-size: 11px; color: #fff;">00:00</span>
+          <span id="recBarMic" style="font-size: 9px; color: var(--text-dim); max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Default</span>
+          <canvas id="recBarAudioMeter" width="40" height="8" style="background: rgba(0,0,0,0.4); border-radius: 2px; border: 1px solid rgba(255,255,255,0.05);"></canvas>
         </div>
       </div>
 
@@ -79,11 +91,11 @@
           <span class="metric-title">CPU USAGE</span>
           <span class="metric-value" id="statCPU">--</span>
         </div>
-        <div class="chart-container">
-          <svg id="perfChart" viewBox="0 0 300 100" class="svg-chart"></svg>
+        <div class="chart-container" style="height: 50px;">
+          <canvas id="cpuLiveChart" width="300" height="50" style="width: 100%; height: 100%;"></canvas>
         </div>
         <div class="metric-footer">
-          <span>TEMP: <strong id="statCPUTemp">--</strong></span>
+          <span>TEMP: <strong id="statCPUTemp">N/A</strong></span>
           <span>UPTIME: <strong id="statUptime">--</strong></span>
         </div>
       </div>
@@ -94,11 +106,11 @@
           <span class="metric-title">MEMORY</span>
           <span class="metric-value" id="statRAM">--</span>
         </div>
-        <div class="progress-container">
-          <div class="progress-bar"><div id="barMemory" class="progress-fill" style="width: 32%;"></div></div>
+        <div class="chart-container" style="height: 50px;">
+          <canvas id="ramLiveChart" width="300" height="50" style="width: 100%; height: 100%;"></canvas>
         </div>
         <div class="metric-footer">
-          <span>ALLOCATED: <strong id="statRAMDetail">5.2 GB / 16 GB</strong></span>
+          <span>ALLOCATED: <strong id="statRAMDetail">-- / --</strong></span>
         </div>
       </div>
 
@@ -191,8 +203,14 @@
           <a href="#" class="nav-item" data-view="meetings">
             <span class="nav-icon">◫</span> Meetings
           </a>
-          <a href="#" class="nav-item" data-view="automation">
+           <a href="#" class="nav-item" data-view="automation">
             <span class="nav-icon">⚡</span> Automation
+          </a>
+          <a href="#" class="nav-item" data-view="tasks">
+            <span class="nav-icon">☱</span> Tasks
+          </a>
+          <a href="#" class="nav-item" data-view="recordings">
+            <span class="nav-icon">🎙️</span> Recordings
           </a>
           <a href="#" class="nav-item" data-view="settings">
             <span class="nav-icon">⊕</span> Settings
@@ -262,7 +280,7 @@
             <p>VOID Core AI Status & System Diagnostics</p>
           </div>
           
-          <div class="dashboard-grid">
+          <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
             <!-- System Health Card -->
             <div class="card health-card">
               <div class="card-title">SYSTEM HEALTH CENTER</div>
@@ -299,6 +317,48 @@
                 <div class="spec-line"><span>Memory:</span><strong id="specRAM">--</strong></div>
                 <div class="spec-line"><span>Hostname:</span><strong id="specHost">--</strong></div>
               </div>
+            </div>
+
+            <!-- Background Services Card -->
+            <div class="card services-card">
+              <div class="card-title">BACKGROUND SERVICES</div>
+              <div class="services-status-grid" id="bgServicesGrid" style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 10px;">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Memory Statistics Card -->
+            <div class="card memory-stats-card">
+              <div class="card-title">MEMORY STATISTICS</div>
+              <div class="stats-details" id="memoryStatsDetails" style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 10px;">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Current Task Panel -->
+          <div class="card current-task-card" style="margin-top: 12px; display: flex; flex-direction: column;">
+            <div class="card-title" style="color: var(--accent-neon); font-family: 'Orbitron', sans-serif;">CURRENT TASK EXECUTION CORE</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; font-size: 11px;">
+              <div>
+                <div class="spec-line"><span>Goal:</span><strong id="taskGoal">Standing by...</strong></div>
+                <div class="spec-line"><span>Step:</span><strong id="taskStep">--</strong></div>
+                <div class="spec-line" style="margin-top: 6px; display: flex; align-items: center;">
+                  <span style="margin-right: 8px;">Progress:</span>
+                  <div class="progress-container" style="flex-grow: 1;">
+                    <div class="progress-bar" style="height: 6px;"><div id="taskProgressBar" class="progress-fill" style="width: 0%; height: 100%;"></div></div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="spec-line"><span>Running Tool:</span><strong id="taskTool" style="color: var(--accent-neon);">None</strong></div>
+                <div class="spec-line"><span>Remaining Time:</span><strong id="taskTimeRemaining">--</strong></div>
+                <div class="spec-line"><span>Verification:</span><strong id="taskVerificationStatus">--</strong></div>
+              </div>
+            </div>
+            <div style="margin-top: 10px;">
+              <span style="font-size: 10px; color: var(--text-dim); display: block; margin-bottom: 4px;">EXECUTION LOGS:</span>
+              <div id="taskExecutionLogs" style="height: 80px; overflow-y: auto; background: #000; border: 1px solid #111; padding: 6px; font-family: monospace; font-size: 10px; color: #39ff14; white-space: pre-wrap; border-radius: 4px;">System idle. Standing by for task sequence dispatch...</div>
             </div>
           </div>
 
@@ -766,6 +826,23 @@
                 <div id="voiceEngineStatusText" style="font-size: 11px; color: var(--text-dim); text-align: center; margin-bottom: 8px;">VOICE ENGINE PROTOCOL // ACTIVE</div>
                 <button id="uiWakeWordToggleBtn" class="btn btn-primary" style="margin-bottom: 15px; font-size: 11px; padding: 6px 16px; border: 1px solid var(--accent-neon); font-family: 'Orbitron', sans-serif; cursor: pointer;">DISABLE WAKE WORD</button>
               </div>
+              <div class="card voice-status-panel">
+                <div class="card-title">Voice Status Diagnostics</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; font-size: 11px;">
+                  <div class="spec-line"><span>Microphone:</span><strong id="voiceMicStatus">ACTIVE</strong></div>
+                  <div class="spec-line"><span>Recording:</span><strong id="voiceRecStatus" style="color: var(--text-dim);">STANDBY</strong></div>
+                  <div class="spec-line"><span>Wake Word:</span><strong id="voiceWakeStatus">ON</strong></div>
+                  <div class="spec-line"><span>VAD:</span><strong id="voiceVadStatus">WAITING</strong></div>
+                  <div class="spec-line"><span>Duration:</span><strong id="voiceDuration">0:00</strong></div>
+                  <div class="spec-line"><span>Noise Level:</span><strong id="voiceNoiseLevel">0%</strong></div>
+                  <div class="spec-line"><span>Quality:</span><strong id="voiceAudioQuality" style="color: var(--accent-neon);">Nominal</strong></div>
+                  <div class="spec-line"><span>Last Voice:</span><strong id="voiceLastDetected">--</strong></div>
+                </div>
+                <div class="spec-line" style="margin-top: 8px; font-size: 11px;">
+                  <span>Current Device:</span>
+                  <strong id="voiceCurrentDevice" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">--</strong>
+                </div>
+              </div>
               <div class="card">
                 <div class="card-title">Speech Synthesizer Configuration</div>
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
@@ -784,9 +861,6 @@
                     <button id="fixAudioDuckingBtn" class="btn btn-secondary" style="font-size: 10px; padding: 6px 12px; flex-grow: 1; border: 1px solid var(--accent-neon); background: transparent; color: var(--accent-neon); cursor: pointer;">
                       FIX DUCKING (REGISTRY)
                     </button>
-                  </div>
-                  <div style="font-size: 10px; color: var(--text-dim); margin-top: 4px; line-height: 1.3;">
-                    <strong>Manual Fix:</strong> Run <code style="color: var(--accent-neon);">mmsys.cpl</code> &rarr; Communications tab &rarr; Select "Do nothing".
                   </div>
                 </div>
               </div>
@@ -891,6 +965,242 @@
                   <button id="toolsRunRepairBtn" class="btn btn-danger" style="font-size: 11px; padding: 6px 14px;">RUN REPAIR SYSTEM</button>
                   <button id="toolsRunDiagBtn" class="btn btn-primary" style="font-size: 11px; padding: 6px 14px;">RUN DIAGNOSTICS</button>
                 </div>
+              </div>
+          </div>
+        </div>
+
+        <!-- === 4J. TASK PLANNER & EXECUTION OS === -->
+        <div id="view-tasks" class="workspace-view hidden">
+          <div class="view-header" style="margin-bottom: 12px;">
+            <h2>AUTONOMOUS TASK PLANNER CONSOLE</h2>
+            <p>Orchestrate, monitor, and audit multi-step task graphs executing on your system</p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; height: calc(100% - 60px); overflow: hidden;">
+            <!-- Active Task Summary Card -->
+            <div class="card" style="padding: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="card-title">ACTIVE TASK ORCHESTRATION</span>
+                <div>
+                  <button id="tasksClearBtn" class="btn btn-danger" style="font-size: 10px; padding: 4px 10px; border-color: rgba(255,0,0,0.4);">PURGE HISTORY</button>
+                </div>
+              </div>
+              <div id="activeTaskInfo" style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                  <span>Goal: <strong id="taskGoalText" style="color: var(--accent-neon);">No active tasks, Sir.</strong></span>
+                  <span id="taskStatusBadge" class="status-badge" style="background: rgba(255,255,255,0.05); color: #888; font-size: 10px; padding: 2px 6px; border-radius: 4px;">IDLE</span>
+                </div>
+                <div class="metric-bar" style="height: 8px; margin-top: 4px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                  <div id="taskProgressBar" class="metric-fill" style="width: 0%; background: var(--accent-neon); box-shadow: 0 0 8px var(--accent-neon); height: 100%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 2px;">
+                  <span>Progress: <strong id="taskProgressPct" style="color: #fff;">0%</strong></span>
+                  <span>Duration: <strong id="taskDurationText" style="color: #fff;">0.0s</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Task Details Workspace -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex-grow: 1; min-height: 0; overflow: hidden;">
+              <!-- Task Tree / Graph Panel -->
+              <div class="card" style="display: flex; flex-direction: column; overflow: hidden; padding: 12px;">
+                <div class="card-title" style="margin-bottom: 8px;">TASK GRAPH STRUCT</div>
+                <div id="taskTreeContainer" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid #111; border-radius: 4px;">
+                  <div style="text-align: center; color: var(--text-dim); padding: 40px; font-size: 11px;">
+                    No task graph is loaded. Start a multi-step query via Chat, Sir.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live Log Terminal Panel -->
+              <div class="card" style="display: flex; flex-direction: column; overflow: hidden; padding: 12px; border-color: rgba(0,255,255,0.15);">
+                <div class="card-title" style="margin-bottom: 8px; color: var(--accent-neon); display: flex; justify-content: space-between; align-items: center;">
+                  <span>LIVE EXECUTION LOGS</span>
+                  <span class="blink-dot" id="logBlinkDot" style="display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-neon); box-shadow: 0 0 6px var(--accent-neon);"></span>
+                </div>
+                <div id="taskLogTerminal" style="flex-grow: 1; overflow-y: auto; background: #000; border: 1px solid #111; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 11px; color: #39ff14; line-height: 1.4; white-space: pre-wrap;">[VOID TERM v2.0.0-planner]
+System idle. Standing by for task sequence dispatch...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recordings View (Phase 3) -->
+        <div id="view-recordings" class="workspace-view hidden">
+          <div class="recordings-layout">
+            <!-- Left Panel: Controls, Search, List -->
+            <div class="recordings-sidebar">
+              <!-- Background Recording Status Card -->
+              <div class="card bg-rec-status-card">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>BG AUDIO CAPTURE</span>
+                  <span class="rec-status-dot" id="recStatusDot"></span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 11px; color: var(--text-dim);">STATUS:</span>
+                    <strong id="recStatusLabel" style="font-size: 11px; color: var(--text-dim);">STANDBY</strong>
+                  </div>
+                  <div style="display: flex; gap: 6px; margin-top: 4px;">
+                    <button class="btn btn-sm" id="toggleRecBtn" style="flex-grow: 1;">ENABLE BG</button>
+                    <select id="recModeSelect" class="settings-select" style="font-size: 10px; padding: 4px; width: 90px; background: #000; border-color: var(--accent-neon); color: var(--accent-neon);">
+                      <option value="continuous">Continuous</option>
+                      <option value="lecture">Lecture Mode</option>
+                      <option value="meeting">Meeting Mode</option>
+                      <option value="voice_note">Voice Note</option>
+                    </select>
+                    <button class="btn btn-sm btn-primary" id="manualRecStartBtn" style="font-size: 9px; padding: 4px 8px; font-weight: bold; background: #ff073a; border-color: #ff073a;">START</button>
+                  </div>
+                  <div style="margin-top: 8px;">
+                    <label for="recMicSelect" style="font-size: 9px; color: var(--text-dim); display: block; margin-bottom: 2px;">MICROPHONE DEV:</label>
+                    <select id="recMicSelect" class="settings-select" style="font-size: 11px; padding: 4px; width: 100%;">
+                      <option value="">Default System Microphone</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Search and Filters -->
+              <div class="card search-filter-card">
+                <div class="card-title">SEARCH &amp; FILTERS</div>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                  <input type="text" id="recSearchInput" placeholder="Search transcripts, keywords..." class="settings-input" style="font-size: 11px; padding: 6px;">
+                  <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-sm btn-block" id="recFilterAllBtn" class="active">ALL</button>
+                    <button class="btn btn-sm btn-block" id="recFilterFavBtn">★ FAVS</button>
+                    <button class="btn btn-sm btn-block" id="recFilterPinBtn">📌 PINS</button>
+                  </div>
+                  <!-- Calendar Filter Toggle -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                    <span style="font-size: 9px; color: var(--text-dim);">CALENDAR FILTER:</span>
+                    <input type="date" id="recCalendarInput" class="settings-input" style="font-size: 10px; padding: 2px 4px; width: 110px; background: #000; color: var(--accent-neon); border-color: rgba(0, 255, 255, 0.2);">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Recordings List -->
+              <div class="card list-card" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 180px;">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>RECORDINGS</span>
+                  <strong id="recCountLabel" style="font-size: 11px; color: var(--accent-neon);">0</strong>
+                </div>
+                <div id="recordingsList" class="recordings-list-scroll">
+                  <div class="empty-list-msg">No recordings found.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Panel: Recording Details, Audio Player, Synced Transcript, Summary -->
+            <div class="recordings-main">
+              <!-- Detail Card (shown when a recording is selected) -->
+              <div id="recordingDetailPanel" class="card detail-card hidden" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+                <div class="detail-header">
+                  <div class="detail-title-wrap" style="display: flex; align-items: center; gap: 8px;">
+                    <h3 id="detailTitle" style="color: var(--accent-neon); font-family: 'Orbitron', sans-serif; margin: 0; font-size: 15px; cursor: pointer;" title="Click to rename">Recording</h3>
+                    <button id="renameRecBtn" style="background: transparent; border: none; color: var(--text-dim); cursor: pointer; font-size: 10px; padding: 2px;">✏️</button>
+                    <span id="detailTimestamp" style="font-size: 11px; color: var(--text-dim); margin-left: 12px;">Timestamp</span>
+                  </div>
+                  <div class="detail-actions" style="display: flex; align-items: center; gap: 6px;">
+                    <button class="icon-btn" id="detailPinBtn" title="Pin recording">📌</button>
+                    <button class="icon-btn" id="detailFavBtn" title="Favorite recording">★</button>
+                    
+                    <!-- Export Dropdown -->
+                    <div class="export-dropdown-container" style="position: relative; display: inline-block;">
+                      <button class="icon-btn" id="exportRecBtn" title="Export recording data" style="font-size: 11px; padding: 4px 8px;">EXPORT 📥</button>
+                      <div id="exportDropdownMenu" class="export-menu hidden" style="position: absolute; right: 0; top: 24px; background: #080808; border: 1px solid var(--accent-neon); border-radius: 4px; width: 110px; z-index: 10; display: flex; flex-direction: column; gap: 2px; padding: 4px;">
+                        <button id="exportAudioBtn" class="btn btn-sm btn-block" style="font-size: 9px; text-align: left;">WAV Audio</button>
+                        <button id="exportTranscriptBtn" class="btn btn-sm btn-block" style="font-size: 9px; text-align: left;">Transcript TXT</button>
+                        <button id="exportSummaryBtn" class="btn btn-sm btn-block" style="font-size: 9px; text-align: left;">Summary MD</button>
+                      </div>
+                    </div>
+                    
+                    <button class="icon-btn" id="detailExplainBtn" style="background: rgba(0, 255, 255, 0.1); border-color: var(--accent-neon); color: var(--accent-neon); padding: 4px 10px; font-size: 10px;" title="Ask VOID to explain this recording">EXPLAIN</button>
+                    <button class="icon-btn close" id="detailDeleteBtn" title="Delete recording">×</button>
+                  </div>
+                </div>
+
+                <!-- Custom Player Area with Waveform Canvas -->
+                <div class="player-container" style="display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+                  <audio id="recordingAudioPlayer"></audio>
+                  
+                  <!-- Waveform Canvas -->
+                  <div style="height: 40px; width: 100%; position: relative;">
+                    <canvas id="playerWaveformCanvas" width="800" height="40" style="width: 100%; height: 100%; background: rgba(0,0,0,0.4); border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);"></canvas>
+                  </div>
+                  
+                  <div class="player-controls">
+                    <button class="player-btn" id="playerPlayBtn">▶</button>
+                    <div class="player-timeline-wrap">
+                      <span id="playerCurrentTime" class="time-readout">0:00</span>
+                      <input type="range" id="playerTimeline" min="0" max="100" value="0" class="timeline-slider">
+                      <span id="playerTotalTime" class="time-readout">0:00</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tabs: Transcript, Summary -->
+                <div class="detail-tabs-bar">
+                  <button class="tab-btn active" id="tabTranscriptBtn">TRANSCRIPT</button>
+                  <button class="tab-btn" id="tabSummaryBtn">AI ANALYSIS</button>
+                </div>
+
+                <!-- Tab Content: Transcript -->
+                <div id="tabTranscriptContent" class="tab-pane active" style="flex-grow: 1; overflow-y: auto; padding: 12px;">
+                  <div id="transcriptTextWrap" class="transcript-words-wrap">
+                    <!-- Clickable words will be injected here -->
+                  </div>
+                </div>
+
+                <!-- Tab Content: Summary & Metadata -->
+                <div id="tabSummaryContent" class="tab-pane" style="flex-grow: 1; overflow-y: auto; padding: 12px; display: none;">
+                  <div class="summary-section">
+                    <h4 style="margin-top:0; color:var(--accent-neon); font-size:12px; font-family:'Orbitron',sans-serif;">SHORT SUMMARY</h4>
+                    <p id="sumShortText" style="font-size:12px; line-height:1.5; color:rgba(255,255,255,0.85); margin-bottom:15px;">Summary text...</p>
+                  </div>
+                  <div class="summary-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="summary-col">
+                      <h4 style="color:var(--accent-neon); font-size:12px; font-family:'Orbitron',sans-serif; margin-bottom:6px;">ACTION ITEMS</h4>
+                      <ul id="sumActionItems" style="font-size:11px; padding-left:15px; margin:0; line-height:1.6; color:rgba(255,255,255,0.85);"></ul>
+                    </div>
+                    <div class="summary-col">
+                      <h4 style="color:var(--accent-neon); font-size:12px; font-family:'Orbitron',sans-serif; margin-bottom:6px;">DECISIONS MENTIONED</h4>
+                      <ul id="sumDecisions" style="font-size:11px; padding-left:15px; margin:0; line-height:1.6; color:rgba(255,255,255,0.85);"></ul>
+                    </div>
+                  </div>
+                  <div class="summary-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:15px;">
+                    <div class="summary-col">
+                      <h4 style="color:var(--accent-neon); font-size:12px; font-family:'Orbitron',sans-serif; margin-bottom:6px;">PEOPLE MENTIONED</h4>
+                      <div id="sumPeople" class="tags-container" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+                    </div>
+                    <div class="summary-col">
+                      <h4 style="color:var(--accent-neon); font-size:12px; font-family:'Orbitron',sans-serif; margin-bottom:6px;">KEYWORDS / TAGS</h4>
+                      <div id="sumKeywords" class="tags-container" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+                    </div>
+                  </div>
+                  
+                  <!-- Bookmarks and Notes Section (Phase 3) -->
+                  <div class="bookmarks-section" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+                    <h4 style="color:var(--accent-neon); font-size:12px; font-family:'Orbitron',sans-serif; margin-bottom:8px;">BOOKMARKS &amp; NOTES</h4>
+                    
+                    <!-- Create Bookmark Form -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                      <input type="text" id="bookmarkNoteInput" placeholder="Add note at current playback time..." class="hud-search-input" style="flex-grow: 1; font-size: 11px; padding: 4px 8px;">
+                      <button id="addBookmarkBtn" class="btn btn-sm btn-primary" style="font-size: 10px; padding: 4px 12px;">ADD NOTE</button>
+                    </div>
+                    
+                    <!-- Bookmarks List -->
+                    <div id="recordingBookmarksList" style="display: flex; flex-direction: column; gap: 6px;">
+                      <!-- Populated dynamically -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Placeholder (shown when no recording is selected) -->
+              <div id="recordingPlaceholderPanel" class="card placeholder-card" style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height:100%;">
+                <span style="font-size: 48px; color: rgba(255, 255, 255, 0.05); margin-bottom: 12px;">🎙️</span>
+                <h3 style="font-family: 'Orbitron', sans-serif; color: var(--text-dim); font-size: 14px; margin: 0;">SELECT A RECORDING</h3>
+                <p style="font-size: 11px; color: var(--text-dim); max-width: 250px; margin: 8px 0 0 0;">Select a voice recording from the sidebar to view its transcript, synchronized audio, and AI summary, Sir.</p>
               </div>
             </div>
           </div>

@@ -274,6 +274,56 @@ def init_db():
     if cursor.fetchone()[0] == 0:
         cursor.execute("INSERT INTO user_xp (points, level) VALUES (0, 1)")
         
+    # 16. Audio Recordings table (Phase 3)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audio_recordings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            recording_path TEXT UNIQUE,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            duration REAL DEFAULT 0.0,
+            transcript TEXT,
+            summary TEXT,
+            tasks TEXT,
+            reminders TEXT,
+            names TEXT,
+            projects TEXT,
+            action_items TEXT,
+            keywords TEXT,
+            embedding TEXT,
+            confidence REAL DEFAULT 1.0,
+            speaker_segments TEXT,
+            is_favorite INTEGER DEFAULT 0,
+            is_pinned INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'completed',
+            mode TEXT DEFAULT 'continuous',
+            mic_used TEXT,
+            sample_rate INTEGER DEFAULT 16000,
+            important_points TEXT DEFAULT '[]',
+            bookmarks TEXT DEFAULT '[]'
+        )
+    """)
+    
+    # Run migrations for existing databases that might be missing Phase 3 columns
+    try:
+        cursor.execute("PRAGMA table_info(audio_recordings)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        migrations = [
+            ("status", "TEXT DEFAULT 'completed'"),
+            ("mode", "TEXT DEFAULT 'continuous'"),
+            ("mic_used", "TEXT"),
+            ("sample_rate", "INTEGER DEFAULT 16000"),
+            ("important_points", "TEXT DEFAULT '[]'"),
+            ("bookmarks", "TEXT DEFAULT '[]'")
+        ]
+        
+        for col_name, col_def in migrations:
+            if col_name not in columns:
+                logger.info(f"[SQLITE MEMORY] Migrating audio_recordings table: adding column {col_name}")
+                cursor.execute(f"ALTER TABLE audio_recordings ADD COLUMN {col_name} {col_def}")
+    except Exception as me:
+        logger.warning(f"[SQLITE MEMORY] Audio recordings migration check failed: {me}")
+        
     conn.commit()
     conn.close()
     _DB_INITIALIZED = True
@@ -1270,3 +1320,332 @@ def update_project_field(project_id: str, field: str, value: str) -> bool:
         return False
     finally:
         conn.close()
+
+
+# ===========================================================================
+# PERSISTENT AUDIO MEMORY FUNCTIONS (Phase 3)
+# ===========================================================================
+
+def add_audio_recording(
+    recording_path: str,
+    duration: float,
+    transcript: str,
+    summary: str = "",
+    tasks: List[str] = None,
+    reminders: List[str] = None,
+    names: List[str] = None,
+    projects: List[str] = None,
+    action_items: List[str] = None,
+    keywords: List[str] = None,
+    embedding: List[float] = None,
+    confidence: float = 1.0,
+    speaker_segments: List[dict] = None,
+    **kwargs
+) -> bool:
+    """Adds a new audio recording entry to the database, automatically generating embeddings if needed."""
+    init_db()
+    
+    # Generate embedding on the transcript/summary if not provided
+    if not embedding:
+        text_to_embed = summary if summary else transcript
+        if text_to_embed:
+            embedding = get_embedding(text_to_embed)
+        else:
+            embedding = [0.0] * 128
+            
+    embedding_json = json.dumps(embedding)
+    tasks_json = json.dumps(tasks or [])
+    reminders_json = json.dumps(reminders or [])
+    names_json = json.dumps(names or [])
+    projects_json = json.dumps(projects or [])
+    action_items_json = json.dumps(action_items or [])
+    keywords_json = json.dumps(keywords or [])
+    speaker_json = json.dumps(speaker_segments or [])
+    
+    status = kwargs.get("status", "completed")
+    mode = kwargs.get("mode", "continuous")
+    mic_used = kwargs.get("mic_used", "Default")
+    sample_rate = kwargs.get("sample_rate", 16000)
+    important_points_json = json.dumps(kwargs.get("important_points", []))
+    bookmarks_json = json.dumps(kwargs.get("bookmarks", []))
+    
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT OR REPLACE INTO audio_recordings (
+                recording_path, duration, transcript, summary, tasks, reminders, 
+                names, projects, action_items, keywords, embedding, confidence, 
+                speaker_segments, status, mode, mic_used, sample_rate, 
+                important_points, bookmarks, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (
+            recording_path, duration, transcript, summary, tasks_json, reminders_json,
+            names_json, projects_json, action_items_json, keywords_json, embedding_json,
+            confidence, speaker_json, status, mode, mic_used, sample_rate, 
+            important_points_json, bookmarks_json
+        ))
+        conn.commit()
+        logger.info(f"[SQLITE MEMORY] Added audio recording: {recording_path}")
+        return True
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY] Failed to add audio recording: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_audio_recordings(search_query: str = "", limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    """Retrieves list of recordings."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        if search_query:
+            q = f"%{search_query}%"
+            cursor.execute("""
+                SELECT id, recording_path, timestamp, duration, transcript, summary,
+                       tasks, reminders, names, projects, action_items, keywords,
+                       confidence, speaker_segments, is_favorite, is_pinned,
+                       status, mode, mic_used, sample_rate, important_points, bookmarks
+                FROM audio_recordings
+                WHERE transcript LIKE ? OR summary LIKE ? OR keywords LIKE ?
+                ORDER BY is_pinned DESC, timestamp DESC
+                LIMIT ? OFFSET ?
+            """, (q, q, q, limit, offset))
+        else:
+            cursor.execute("""
+                SELECT id, recording_path, timestamp, duration, transcript, summary,
+                       tasks, reminders, names, projects, action_items, keywords,
+                       confidence, speaker_segments, is_favorite, is_pinned,
+                       status, mode, mic_used, sample_rate, important_points, bookmarks
+                FROM audio_recordings
+                ORDER BY is_pinned DESC, timestamp DESC
+                LIMIT ? OFFSET ?
+            """, (limit, offset))
+            
+        rows = cursor.fetchall()
+        results = []
+        for r in rows:
+            results.append({
+                "id": r[0],
+                "recording_path": r[1],
+                "timestamp": r[2],
+                "duration": r[3],
+                "transcript": r[4],
+                "summary": r[5],
+                "tasks": json.loads(r[6] or "[]"),
+                "reminders": json.loads(r[7] or "[]"),
+                "names": json.loads(r[8] or "[]"),
+                "projects": json.loads(r[9] or "[]"),
+                "action_items": json.loads(r[10] or "[]"),
+                "keywords": json.loads(r[11] or "[]"),
+                "confidence": r[12],
+                "speaker_segments": json.loads(r[13] or "[]"),
+                "is_favorite": bool(r[14]),
+                "is_pinned": bool(r[15]),
+                "status": r[16],
+                "mode": r[17],
+                "mic_used": r[18],
+                "sample_rate": r[19],
+                "important_points": json.loads(r[20] or "[]"),
+                "bookmarks": json.loads(r[21] or "[]")
+            })
+        return results
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY] Failed to get audio recordings: {e}")
+        return []
+    finally:
+        conn.close()
+
+def get_audio_recording(recording_id: int) -> Optional[Dict[str, Any]]:
+    """Gets a single recording by ID."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT id, recording_path, timestamp, duration, transcript, summary,
+                   tasks, reminders, names, projects, action_items, keywords,
+                   confidence, speaker_segments, is_favorite, is_pinned,
+                   status, mode, mic_used, sample_rate, important_points, bookmarks
+            FROM audio_recordings
+            WHERE id = ?
+        """, (recording_id,))
+        r = cursor.fetchone()
+        if not r:
+            return None
+        return {
+            "id": r[0],
+            "recording_path": r[1],
+            "timestamp": r[2],
+            "duration": r[3],
+            "transcript": r[4],
+            "summary": r[5],
+            "tasks": json.loads(r[6] or "[]"),
+            "reminders": json.loads(r[7] or "[]"),
+            "names": json.loads(r[8] or "[]"),
+            "projects": json.loads(r[9] or "[]"),
+            "action_items": json.loads(r[10] or "[]"),
+            "keywords": json.loads(r[11] or "[]"),
+            "confidence": r[12],
+            "speaker_segments": json.loads(r[13] or "[]"),
+            "is_favorite": bool(r[14]),
+            "is_pinned": bool(r[15]),
+            "status": r[16],
+            "mode": r[17],
+            "mic_used": r[18],
+            "sample_rate": r[19],
+            "important_points": json.loads(r[20] or "[]"),
+            "bookmarks": json.loads(r[21] or "[]")
+        }
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY] Failed to get audio recording {recording_id}: {e}")
+        return None
+    finally:
+        conn.close()
+
+def update_recording_status(recording_id: int, status: str) -> bool:
+    """Updates the status of a recording."""
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE audio_recordings SET status = ? WHERE id = ?", (status, recording_id))
+        conn.commit()
+        return True
+    except: return False
+    finally: conn.close()
+
+def add_bookmark(recording_id: int, timestamp: float, label: str) -> bool:
+    """Adds a timestamped bookmark to a recording."""
+    rec = get_audio_recording(recording_id)
+    if not rec: return False
+    bookmarks = rec.get("bookmarks", [])
+    bookmarks.append({"timestamp": timestamp, "label": label})
+    return update_recording_bookmarks(recording_id, bookmarks)
+
+def update_recording_metadata(recording_id: int, **metadata) -> bool:
+    """Updates arbitrary metadata fields for a recording."""
+    conn = sqlite3.connect(str(DB_FILE))
+    try:
+        cursor = conn.cursor()
+        for key, val in metadata.items():
+            if key in ["status", "mode", "mic_used", "sample_rate"]:
+                cursor.execute(f"UPDATE audio_recordings SET {key} = ? WHERE id = ?", (val, recording_id))
+        conn.commit()
+        return True
+    except: return False
+    finally: conn.close()
+
+def update_recording_bookmarks(recording_id: int, bookmarks: List[dict]) -> bool:
+    """Updates the bookmarks list for a recording."""
+    conn = sqlite3.connect(str(DB_FILE))
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE audio_recordings SET bookmarks = ? WHERE id = ?", (json.dumps(bookmarks), recording_id))
+        conn.commit()
+        return True
+    except: return False
+    finally: conn.close()
+
+def delete_audio_recording(recording_id: int) -> bool:
+    """Deletes a recording entry from database."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM audio_recordings WHERE id = ?", (recording_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY] Failed to delete audio recording {recording_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
+def toggle_audio_recording_favorite(recording_id: int) -> bool:
+    """Toggles the favorite flag of a recording."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE audio_recordings SET is_favorite = 1 - is_favorite WHERE id = ?", (recording_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY] Failed to toggle favorite for {recording_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
+def toggle_audio_recording_pinned(recording_id: int) -> bool:
+    """Toggles the pinned flag of a recording."""
+    init_db()
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE audio_recordings SET is_pinned = 1 - is_pinned WHERE id = ?", (recording_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY] Failed to toggle pinned for {recording_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
+def semantic_search_recordings(query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """Performs cosine similarity search using Ollama embeddings against all transcripts."""
+    init_db()
+    query_vector = get_embedding(query)
+    
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, recording_path, timestamp, duration, transcript, summary, embedding, is_favorite, is_pinned FROM audio_recordings")
+        rows = cursor.fetchall()
+        
+        matches = []
+        for r in rows:
+            embedding_json = r[6]
+            if not embedding_json:
+                continue
+            try:
+                rec_vector = json.loads(embedding_json)
+                sim = cosine_similarity(query_vector, rec_vector)
+                
+                # Add recency boost (e.g. up to +0.1 for very recent recordings)
+                try:
+                    dt = datetime.strptime(r[2], "%Y-%m-%d %H:%M:%S")
+                    days_diff = (datetime.now() - dt).days
+                    recency_boost = 0.1 * math.exp(-days_diff / 7.0) # decays over a week
+                except Exception:
+                    recency_boost = 0.0
+                    
+                score = sim + recency_boost
+                matches.append((score, sim, r))
+            except Exception as ex:
+                logger.warning(f"Error parsing embedding for recording {r[0]}: {ex}")
+                
+        # Sort by score descending
+        matches.sort(key=lambda x: x[0], reverse=True)
+        
+        results = []
+        for score, sim, r in matches[:limit]:
+            results.append({
+                "id": r[0],
+                "recording_path": r[1],
+                "timestamp": r[2],
+                "duration": r[3],
+                "transcript": r[4],
+                "summary": r[5],
+                "similarity": sim,
+                "score": score,
+                "is_favorite": bool(r[7]),
+                "is_pinned": bool(r[8])
+            })
+        return results
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY] Semantic search recordings failed: {e}")
+        return []
+    finally:
+        conn.close()
+

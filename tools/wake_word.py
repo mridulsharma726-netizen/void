@@ -19,6 +19,33 @@ from typing import Optional, Callable
 # Configure logging
 logger = logging.getLogger("VOID-WakeWord")
 
+# Monkey patch SpeechRecognition to handle PyAudio stream failures gracefully
+try:
+    import speech_recognition as sr
+    original_enter = sr.Microphone.__enter__
+    original_exit = sr.Microphone.__exit__
+
+    def patched_enter(self):
+        res = original_enter(self)
+        if self.stream is None:
+            raise OSError("Microphone stream failed to initialize. The device might be busy or unsupported.")
+        return res
+
+    def patched_exit(self, exc_type, exc_value, traceback):
+        if self.stream is None:
+            try:
+                self.audio.terminate()
+            except Exception:
+                pass
+            return False
+        return original_exit(self, exc_type, exc_value, traceback)
+
+    sr.Microphone.__enter__ = patched_enter
+    sr.Microphone.__exit__ = patched_exit
+    logger.info("[WAKE WORD] Successfully applied SpeechRecognition Microphone monkey-patch.")
+except Exception as e:
+    logger.warning(f"[WAKE WORD] Could not apply SpeechRecognition monkey-patch: {e}")
+
 # Default wake word
 WAKE_WORD = "open void"
 
@@ -49,8 +76,24 @@ def _init_sr():
                 _recognizer = sr.Recognizer()
                 _recognizer.energy_threshold = ENERGY_THRESHOLD
                 idx = get_best_microphone_index()
-                _microphone = sr.Microphone(device_index=idx)
-                logger.info(f"[WAKE WORD] Initialized SpeechRecognition recognizer and microphone with index {idx}")
+                
+                # Detect native sample rate of the microphone to avoid PyAudio sample rate errors
+                sample_rate = 16000
+                if idx is not None:
+                    try:
+                        import pyaudio
+                        p = pyaudio.PyAudio()
+                        try:
+                            dev_info = p.get_device_info_by_index(idx)
+                            sample_rate = int(dev_info.get('defaultSampleRate', 16000))
+                            logger.info(f"[WAKE WORD] Detected native sample rate {sample_rate} for mic index {idx}")
+                        finally:
+                            p.terminate()
+                    except Exception as ex:
+                        logger.debug(f"[WAKE WORD] Could not query native sample rate: {ex}")
+                
+                _microphone = sr.Microphone(device_index=idx, sample_rate=sample_rate)
+                logger.info(f"[WAKE WORD] Initialized SpeechRecognition recognizer and microphone with index {idx} (sample rate {sample_rate})")
             except Exception as e:
                 logger.error("[WAKE WORD] Init failed: %s", e)
 
@@ -110,7 +153,7 @@ def listen_for_wake_word(timeout: Optional[float] = None,
     Returns:
         True if wake word detected
     """
-    global _running
+    global _running, _microphone, _calibrated
     with _running_lock:
         _running = True
 
@@ -192,6 +235,9 @@ def listen_for_wake_word(timeout: Optional[float] = None,
                     time.sleep(0.5)
     except Exception as e:
         logger.error(f"[WAKE WORD] Error in wake word listener: {e}")
+        # Reset microphone and calibration status to trigger self-healing re-initialization on next loop
+        _microphone = None
+        _calibrated = False
         time.sleep(5)
     return False
 

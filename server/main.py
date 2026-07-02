@@ -255,6 +255,22 @@ async def run_background_startup():
     except Exception as e:
         logger.error(f"[BACKGROUND STARTUP] Failed to start wake word daemon: {e}")
 
+    # Proactively apply Windows audio ducking registry fix on startup
+    try:
+        import platform
+        if platform.system() == "Windows":
+            import winreg
+            key_path = r"Software\Microsoft\Multimedia\Audio"
+            try:
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+            except FileNotFoundError:
+                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path)
+            winreg.SetValueEx(key, "UserDuckingPreference", 0, winreg.REG_DWORD, 3)
+            winreg.CloseKey(key)
+            logger.info("[BACKGROUND STARTUP] Proactively applied Windows Audio Ducking registry fix (UserDuckingPreference=3).")
+    except Exception as e:
+        logger.warning(f"[BACKGROUND STARTUP] Could not proactively apply Audio Ducking fix: {e}")
+
     # 6. Start CVCS Monitor Loop
     try:
         from server.backend.screen_monitor import get_monitor_instance
@@ -263,6 +279,25 @@ async def run_background_startup():
         logger.info("[BACKGROUND STARTUP] CVCS background monitor loop initiated.")
     except Exception as e:
         logger.error(f"[BACKGROUND STARTUP] Failed to start CVCS monitor: {e}")
+
+    # 6a. Start Ollama Connection Manager (Phase 3)
+    try:
+        from backend.ollama_manager import ollama_manager
+        ollama_manager.start()
+        logger.info("[BACKGROUND STARTUP] Ollama Connection Manager started.")
+    except Exception as e:
+        logger.error(f"[BACKGROUND STARTUP] Failed to start Ollama Manager: {e}")
+
+    # 6b. Start Audio Memory Service (Phase 3)
+    try:
+        from backend.audio_memory_service import audio_memory_service
+        from backend.memory_sqlite import get_preference
+        pref = get_preference("bg_recording_enabled")
+        audio_memory_service.is_enabled = (pref == "true")
+        audio_memory_service.start()
+        logger.info(f"[BACKGROUND STARTUP] Audio Memory Service started (enabled={audio_memory_service.is_enabled}).")
+    except Exception as e:
+        logger.error(f"[BACKGROUND STARTUP] Failed to start Audio Memory Service: {e}")
 
     # 7. Clean up dead projects and auto-register current workspace
     try:
@@ -323,6 +358,23 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("VOID shutdown...")
+    
+    # Stop Ollama manager (Phase 3)
+    try:
+        from backend.ollama_manager import ollama_manager
+        ollama_manager.stop()
+        logger.info("[LIFESPAN] Ollama Connection Manager stopped.")
+    except Exception:
+        pass
+        
+    # Stop Audio Memory Service (Phase 3)
+    try:
+        from backend.audio_memory_service import audio_memory_service
+        audio_memory_service.stop()
+        logger.info("[LIFESPAN] Audio Memory Service stopped.")
+    except Exception:
+        pass
+
     # Stop RSS engine
     try:
         from news.rss_engine import get_engine as get_rss_engine
@@ -1153,15 +1205,15 @@ async def search(query: str = ""):
     
     # 1. Search memory facts
     try:
-        facts = _get_memory().list_facts()
+        from backend.memory_sqlite import search_facts
+        facts = search_facts(query, limit=5)
         for f in facts:
-            if query in f.lower():
-                results.append({
-                    "type": "memory",
-                    "title": "Remembered Fact",
-                    "snippet": f,
-                    "action": f"Search: {f}"
-                })
+            results.append({
+                "type": "memory",
+                "title": "Remembered Fact",
+                "snippet": f.get("fact", ""),
+                "action": f"Recall fact: {f.get('fact', '')}"
+            })
     except Exception as e:
         logger.error(f"Search memory facts failed: {e}")
         
@@ -1175,7 +1227,7 @@ async def search(query: str = ""):
                 results.append({
                     "type": "chat",
                     "title": f"Chat History ({role})",
-                    "snippet": content,
+                    "snippet": content[:120] + ("..." if len(content) > 120 else ""),
                     "action": content
                 })
     except Exception as e:
@@ -1189,7 +1241,6 @@ async def search(query: str = ""):
             sub_id = sub["subject_id"]
             sub_name = sub["subject_name"]
             
-            # Check subject name
             if query in sub_name.lower():
                 results.append({
                     "type": "academic",
@@ -1198,7 +1249,6 @@ async def search(query: str = ""):
                     "action": f"study subject {sub_name}"
                 })
                 
-            # Check curriculum topics
             curric = get_curriculum(sub_id)
             for unit in curric:
                 unit_title = unit.get("unit_title", "")
@@ -1220,6 +1270,56 @@ async def search(query: str = ""):
                         })
     except Exception as e:
         logger.error(f"Search academic failed: {e}")
+        
+    # 4. Search voice recordings (Phase 3)
+    try:
+        from backend.memory_sqlite import semantic_search_recordings
+        sem_recs = semantic_search_recordings(query, limit=5)
+        for r in sem_recs:
+            snippet_text = r["summary"] or r["transcript"] or "No transcript content."
+            results.append({
+                "type": "recording",
+                "title": f"Voice Recording #{r['id']}",
+                "snippet": snippet_text[:120] + ("..." if len(snippet_text) > 120 else ""),
+                "action": f"Explain what was discussed in the voice recording from {r['timestamp']}"
+            })
+    except Exception as e:
+        logger.error(f"Search voice recordings failed: {e}")
+        
+    # 5. Search tracked projects (Phase 2)
+    try:
+        from backend.memory_sqlite import list_tracked_projects
+        projects = list_tracked_projects()
+        for p in projects:
+            name = p.get("name", "")
+            purpose = p.get("purpose", "")
+            path = p.get("path", "")
+            if query in name.lower() or query in purpose.lower():
+                results.append({
+                    "type": "project",
+                    "title": f"Project: {name}",
+                    "snippet": purpose[:120] + ("..." if len(purpose) > 120 else "") if purpose else path,
+                    "action": f"Analyze my project {name}"
+                })
+    except Exception as e:
+        logger.error(f"Search projects failed: {e}")
+        
+    # 6. Search active tasks (Phase 2)
+    try:
+        from core.autonomous_agent.task_planner import TaskPlanner
+        planner = TaskPlanner()
+        tasks = planner.list_tasks()
+        for t in tasks:
+            desc = t.get("description", "")
+            if query in desc.lower():
+                results.append({
+                    "type": "task",
+                    "title": f"Task: {desc[:50]}...",
+                    "snippet": f"Status: {t.get('status', 'pending')}",
+                    "action": f"Show details for task {t.get('task_id')}"
+                })
+    except Exception as e:
+        logger.error(f"Search tasks failed: {e}")
         
     return {"status": "ok", "results": results[:20]}
 
@@ -1550,10 +1650,429 @@ async def fix_audio_ducking():
         raise HTTPException(status_code=500, detail=f"Failed to update registry: {str(e)}")
 
 
+# ===========================================================================
+# OLLAMA & AUDIO RECORDING & GLOBAL SEARCH ENDPOINTS (Phase 3)
+# ===========================================================================
+
+@app.get("/api/ollama/status")
+async def get_ollama_status():
+    try:
+        from backend.ollama_manager import ollama_manager
+        return ollama_manager.get_status()
+    except Exception as e:
+        logger.error(f"Error getting Ollama status: {e}")
+        return {"status": "offline", "active_model": "", "error_message": str(e)}
+
+@app.post("/api/ollama/start")
+async def start_ollama_service():
+    try:
+        from backend.ollama_manager import ollama_manager
+        ollama_manager.check_connection()
+        return ollama_manager.get_status()
+    except Exception as e:
+        logger.error(f"Error starting Ollama: {e}")
+        return {"status": "offline", "error_message": str(e)}
+
+@app.get("/api/recordings")
+async def get_recordings_list(q: str = "", limit: int = 50, offset: int = 0):
+    try:
+        from backend.memory_sqlite import get_audio_recordings
+        recordings = get_audio_recordings(search_query=q, limit=limit, offset=offset)
+        return {"status": "ok", "recordings": recordings}
+    except Exception as e:
+        logger.error(f"Error listing recordings: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/recordings/{id}")
+async def get_recording_detail(id: int):
+    try:
+        from backend.memory_sqlite import get_audio_recording
+        recording = get_audio_recording(id)
+        if not recording:
+            raise HTTPException(status_code=404, detail="Recording not found")
+            
+        # Load word-level timestamps from transcript JSON if available
+        words = []
+        import json
+        json_path = recording["recording_path"].replace(".wav", "_transcript.json")
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    words = data.get("words", [])
+            except Exception as ex:
+                logger.warning(f"Could not read transcript JSON: {ex}")
+        recording["words"] = words
+        
+        return {"status": "ok", "recording": recording}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting recording detail: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/recordings/{id}/audio")
+async def get_recording_audio(id: int):
+    try:
+        from backend.memory_sqlite import get_audio_recording
+        recording = get_audio_recording(id)
+        if not recording or not os.path.exists(recording["recording_path"]):
+            raise HTTPException(status_code=404, detail="Audio file not found")
+        from fastapi.responses import FileResponse
+        return FileResponse(recording["recording_path"], media_type="audio/wav")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error streaming recording audio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/recordings/{id}")
+async def delete_recording(id: int):
+    try:
+        from backend.memory_sqlite import get_audio_recording, delete_audio_recording
+        recording = get_audio_recording(id)
+        if not recording:
+            raise HTTPException(status_code=404, detail="Recording not found")
+        
+        # Delete local files
+        path = recording["recording_path"]
+        for suffix in [".wav", "_transcript.json", "_summary.json"]:
+            file_to_del = path if suffix == ".wav" else path.replace(".wav", suffix)
+            try:
+                if os.path.exists(file_to_del):
+                    os.remove(file_to_del)
+            except Exception as e:
+                logger.warning(f"Could not delete file {file_to_del}: {e}")
+                
+        success = delete_audio_recording(id)
+        return {"status": "ok" if success else "error"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting recording: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/recordings/toggle")
+async def toggle_recordings(req: dict = None):
+    try:
+        from backend.audio_memory_service import audio_memory_service
+        active = req.get("active") if req else None
+        if active is None:
+            active = not audio_memory_service.is_enabled
+        audio_memory_service.enable_recording(active)
+        return {"status": "ok", "active": audio_memory_service.is_enabled}
+    except Exception as e:
+        logger.error(f"Error toggling background recording: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/recordings/status")
+async def get_recordings_status():
+    try:
+        from backend.audio_memory_service import audio_memory_service
+        mics = audio_memory_service.get_microphones()
+        return {
+            "status": "ok",
+            "active": audio_memory_service.is_enabled,
+            "microphones": mics,
+            "current_device": audio_memory_service.device_index
+        }
+    except Exception as e:
+        logger.error(f"Error getting recordings status: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/recordings/select-device")
+async def select_recording_device(req: dict = None):
+    try:
+        index = req.get("index") if req else None
+        if index is None:
+            raise HTTPException(status_code=400, detail="index is required")
+        from backend.audio_memory_service import audio_memory_service
+        audio_memory_service.select_device(index)
+        return {"status": "ok", "current_device": audio_memory_service.device_index}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error selecting recording device: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/recordings/{id}/favorite")
+async def toggle_favorite_recording(id: int):
+    try:
+        from backend.memory_sqlite import toggle_audio_recording_favorite
+        success = toggle_audio_recording_favorite(id)
+        return {"status": "ok" if success else "error"}
+    except Exception as e:
+        logger.error(f"Error favoriting recording {id}: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/recordings/{id}/pin")
+async def toggle_pin_recording(id: int):
+    try:
+        from backend.memory_sqlite import toggle_audio_recording_pinned
+        success = toggle_pin_recording(id)
+        return {"status": "ok" if success else "error"}
+    except Exception as e:
+        logger.error(f"Error pinning recording {id}: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/metrics")
+async def get_unified_metrics():
+    try:
+        from backend.metrics_service import metrics_collector
+        return metrics_collector.collect_all()
+    except Exception as e:
+        logger.error(f"Error getting unified metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/recordings/start")
+async def start_recording_api(req: dict = None):
+    try:
+        mode = req.get("mode", "continuous") if req else "continuous"
+        from backend.audio_memory_service import audio_memory_service
+        audio_memory_service.start_manual_recording(mode)
+        return {"status": "ok", "active": True, "mode": mode}
+    except Exception as e:
+        logger.error(f"Error starting manual recording: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/recordings/stop")
+async def stop_recording_api():
+    try:
+        from backend.audio_memory_service import audio_memory_service
+        audio_memory_service.stop_manual_recording()
+        return {"status": "ok", "active": False}
+    except Exception as e:
+        logger.error(f"Error stopping manual recording: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/recordings/{id}/bookmark")
+async def add_recording_bookmark_api(id: int, req: dict = None):
+    try:
+        timestamp = req.get("timestamp", 0.0) if req else 0.0
+        label = req.get("label", "Bookmark") if req else "Bookmark"
+        from backend.memory_sqlite import add_bookmark
+        success = add_bookmark(id, timestamp, label)
+        return {"status": "ok" if success else "error"}
+    except Exception as e:
+        logger.error(f"Error adding bookmark: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/recordings/{id}/rename")
+async def rename_recording_api(id: int, req: dict = None):
+    try:
+        title = req.get("title") if req else None
+        if not title:
+            raise HTTPException(status_code=400, detail="title is required")
+        from backend.memory_sqlite import get_audio_recording
+        recording = get_audio_recording(id)
+        if not recording:
+            raise HTTPException(status_code=404, detail="Recording not found")
+        
+        old_path = Path(recording["recording_path"])
+        import re
+        clean_title = re.sub(r'[^a-zA-Z0-9_-]', '_', title)
+        new_name = f"{clean_title}.wav"
+        new_path = old_path.parent / new_name
+        
+        if old_path.exists():
+            os.rename(old_path, new_path)
+            
+        for suffix in ["_transcript.json", "_summary.json"]:
+            old_json = Path(str(old_path).replace(".wav", suffix))
+            new_json = Path(str(new_path).replace(".wav", suffix))
+            if old_json.exists():
+                os.rename(old_json, new_json)
+                
+        from backend.memory_sqlite import DB_FILE
+        import sqlite3
+        conn = sqlite3.connect(str(DB_FILE))
+        cursor = conn.cursor()
+        cursor.execute("UPDATE audio_recordings SET recording_path = ? WHERE id = ?", (str(new_path), id))
+        conn.commit()
+        conn.close()
+        
+        return {"status": "ok", "new_path": str(new_path)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error renaming recording: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/recordings/{id}/export/{format}")
+async def export_recording_api(id: int, format: str):
+    try:
+        from backend.memory_sqlite import get_audio_recording
+        recording = get_audio_recording(id)
+        if not recording:
+            raise HTTPException(status_code=404, detail="Recording not found")
+            
+        if format == "audio":
+            if not os.path.exists(recording["recording_path"]):
+                raise HTTPException(status_code=404, detail="Audio file not found")
+            from fastapi.responses import FileResponse
+            return FileResponse(recording["recording_path"], filename=os.path.basename(recording["recording_path"]))
+            
+        elif format == "transcript":
+            from fastapi.responses import PlainTextResponse
+            content = recording.get("transcript", "")
+            return PlainTextResponse(content, headers={"Content-Disposition": f"attachment; filename=transcript_{id}.txt"})
+            
+        elif format == "summary":
+            from fastapi.responses import PlainTextResponse
+            content = f"# Summary for Recording #{id}\n\n"
+            content += f"**Timestamp**: {recording.get('timestamp')}\n"
+            content += f"**Duration**: {recording.get('duration')} seconds\n"
+            content += f"**Mode**: {recording.get('mode')}\n\n"
+            content += f"## AI Summary\n{recording.get('summary')}\n\n"
+            
+            content += "## Action Items\n"
+            for item in recording.get("action_items", []):
+                content += f"- [ ] {item}\n"
+            content += "\n"
+            
+            content += "## Tasks Detected\n"
+            for item in recording.get("tasks", []):
+                content += f"- {item}\n"
+            content += "\n"
+            
+            content += "## People Mentioned\n"
+            content += ", ".join(recording.get("names", [])) + "\n\n"
+            
+            content += "## Keywords\n"
+            content += ", ".join(recording.get("keywords", [])) + "\n"
+            
+            return PlainTextResponse(content, headers={"Content-Disposition": f"attachment; filename=summary_{id}.md"})
+            
+        else:
+            raise HTTPException(status_code=400, detail="Invalid export format")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting recording: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/search/global")
+async def global_search(q: str):
+    if not q or not q.strip():
+        return {"status": "ok", "results": []}
+        
+    results = []
+    
+    # 1. Search recordings (semantic search + keyword search)
+    try:
+        from backend.memory_sqlite import semantic_search_recordings
+        sem_recs = semantic_search_recordings(q, limit=5)
+        for r in sem_recs:
+            results.append({
+                "type": "recording",
+                "id": r["id"],
+                "title": f"Voice Recording {r['timestamp']}",
+                "subtitle": r["summary"] or (r["transcript"][:120] + "..." if r["transcript"] else ""),
+                "path": r["recording_path"],
+                "score": r["score"],
+                "timestamp": r["timestamp"]
+            })
+    except Exception as e:
+        logger.warning(f"Global search recordings failed: {e}")
+        
+    # 2. Search projects
+    try:
+        from backend.memory_sqlite import list_tracked_projects
+        projects = list_tracked_projects()
+        q_lower = q.lower()
+        for p in projects:
+            name = p.get("name", "")
+            purpose = p.get("purpose", "")
+            if q_lower in name.lower() or q_lower in purpose.lower():
+                results.append({
+                    "type": "project",
+                    "id": p.get("project_id"),
+                    "title": f"Project: {name}",
+                    "subtitle": purpose[:120] + "..." if purpose else "No description",
+                    "path": p.get("path"),
+                    "score": 0.85
+                })
+    except Exception as e:
+        logger.warning(f"Global search projects failed: {e}")
+        
+    # 3. Search facts (memories)
+    try:
+        from backend.memory_sqlite import search_facts
+        facts = search_facts(q, limit=5)
+        for f in facts:
+            results.append({
+                "type": "memory",
+                "id": f.get("id"),
+                "title": "Fact Memory",
+                "subtitle": f.get("fact"),
+                "score": f.get("score", 0.7),
+                "timestamp": f.get("timestamp")
+            })
+    except Exception as e:
+        logger.warning(f"Global search facts failed: {e}")
+        
+    # 4. Search tasks
+    try:
+        from core.autonomous_agent.task_planner import TaskPlanner
+        planner = TaskPlanner()
+        tasks = planner.list_tasks()
+        q_lower = q.lower()
+        for t in tasks:
+            desc = t.get("description", "")
+            if q_lower in desc.lower():
+                results.append({
+                    "type": "task",
+                    "id": t.get("task_id"),
+                    "title": f"Task: {desc[:50]}...",
+                    "subtitle": f"Status: {t.get('status', 'pending')}",
+                    "score": 0.8
+                })
+    except Exception as e:
+        logger.warning(f"Global search tasks failed: {e}")
+        
+    # Sort results by score descending
+    results.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+    return {"status": "ok", "results": results}
+
+
 @app.get("/tools/health")
 async def tools_health():
     """Full tool health."""
     return await check_all_tools()
+
+
+@app.get("/api/tasks")
+async def get_tasks():
+    from core.autonomous_agent.task_planner import TaskPlanner
+    planner = TaskPlanner()
+    return {"status": "ok", "tasks": planner.list_tasks()}
+
+
+@app.get("/api/tasks/{task_id}")
+async def get_task_by_id(task_id: str):
+    from core.autonomous_agent.task_planner import TaskPlanner
+    planner = TaskPlanner()
+    task = planner.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"status": "ok", "task": task.to_dict()}
+
+
+@app.post("/api/tasks/clear")
+async def clear_tasks():
+    from core.autonomous_agent.task_planner import TaskPlanner
+    planner = TaskPlanner()
+    planner.clear_tasks()
+    return {"status": "ok", "message": "Tasks cleared successfully"}
+
+
+@app.get("/api/tools")
+async def get_all_tools_metadata():
+    from core.tools.tool_orchestrator import ToolOrchestrator
+    orchestrator = ToolOrchestrator()
+    return {"status": "ok", "tools": orchestrator.list_all_tools()}
 
 @app.get("/repair")
 async def repair(dep=Depends(PermissionManager.check_admin)):
@@ -2429,6 +2948,45 @@ async def chat(req: ChatRequest, background_tasks: BackgroundTasks = None):
     # -------------------------------------------------------------
     lower_text = text.lower().strip()
     
+    # Autonomous Task Planner Intercept
+    is_complex_workflow = (
+        (("open vs code" in lower_text or "vscode" in lower_text) and
+         ("scan" in lower_text or "explain" in lower_text or "test" in lower_text or "todo" in lower_text))
+        or "task graph" in lower_text or "autonomous task" in lower_text or "execute workflow" in lower_text
+    )
+    
+    if is_complex_workflow:
+        from core.autonomous_agent.task_planner import TaskPlanner
+        planner = TaskPlanner()
+        root_task = planner.create_task_graph(text)
+        
+        async def run_task_graph():
+            tm = VoidSingletons.get("tool_manager")
+            await planner.execute_task_graph(root_task.id, tm)
+            
+        if background_tasks:
+            background_tasks.add_task(run_task_graph)
+        else:
+            asyncio.create_task(run_task_graph())
+            
+        reply = (
+            f"🤖 **Autonomous Task Planner Activated**, Sir!\n\n"
+            f"I have initialized a task graph with ID `{root_task.id}` to accomplish your goal:\n"
+            f"*\"{text}\"*\n\n"
+            f"**Plan Details**:\n"
+            f"1. Open Visual Studio Code\n"
+            f"2. Register VOID Project Path\n"
+            f"3. Scan codebase structure\n"
+            f"4. Summarize architecture\n"
+            f"5. Identify high-priority TODOs\n"
+            f"6. Run the test suite\n\n"
+            f"I am executing this workflow. You can monitor the live execution steps, progress, and logs in the **Tasks** console, Sir."
+        )
+        memory.remember_turn("user", text)
+        memory.remember_turn("void", reply)
+        log_chat_request("task_planning", "DIRECT_TOOL", "TaskPlanner", "Success", start_time, confidence=1.0, endpoint="TaskPlanner.create_task_graph")
+        return {"reply": reply, "meta": {"intent": "task_planning", "action": "execute", "task_id": root_task.id}}
+
     # Project Scanner Force Rules
     is_scan_project = any(p in lower_text for p in ["scan my current project", "scan my project", "scan project", "scan current project"])
     is_explain_project = any(p in lower_text for p in ["explain my project architecture", "explain project architecture", "explain codebase architecture", "explain my codebase architecture", "explain codebase"])
@@ -2515,6 +3073,97 @@ async def chat(req: ChatRequest, background_tasks: BackgroundTasks = None):
         memory.remember_turn("void", reply)
         log_chat_request("memory_delete", "DIRECT_TOOL", "SQLite", status, start_time, confidence=1.0, endpoint="memory_sqlite.forget_fact")
         return {"reply": reply, "meta": {"intent": "memory", "action": "forget"}}
+
+    # -------------------------------------------------------------
+    # AUDIO MEMORY RAG INTERCEPT (Phase 3)
+    # -------------------------------------------------------------
+    audio_memory_keywords = [
+        "what happened while", "what did we discuss", "conversations happened", "was discussed this",
+        "what tasks did i receive", "what were people talking about", "explain yesterday's", "explain yesterday",
+        "when did someone mention", "summarize all conversations", "i didn't understand what they explained",
+        "summarize our conversation", "what was said", "did anyone mention", "what did they say",
+        "summarize what was discussed", "explain what they said", "any missed conversation", "what was discussed"
+    ]
+    is_audio_memory_query = any(kw in lower_text for kw in audio_memory_keywords) or (
+        ("conversation" in lower_text or "discussion" in lower_text or "recording" in lower_text or "they said" in lower_text or "we talked" in lower_text)
+        and any(w in lower_text for w in ["what", "who", "when", "summarize", "explain", "recall", "yesterday", "today", "week", "recent"])
+    )
+    
+    if is_audio_memory_query:
+        try:
+            from backend.memory_sqlite import semantic_search_recordings, get_audio_recordings
+            
+            # Use semantic search as the primary retriever
+            recordings = semantic_search_recordings(text, limit=3)
+            
+            # If the user is asking about a specific timeframe (e.g. today, yesterday), 
+            # let's also fetch recent recordings by date to ensure we don't miss anything.
+            recent_recs = []
+            if "today" in lower_text or "this morning" in lower_text or "just now" in lower_text:
+                recent_recs = get_audio_recordings(limit=5)
+            elif "yesterday" in lower_text:
+                from datetime import datetime, timedelta
+                yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+                all_recent = get_audio_recordings(limit=20)
+                recent_recs = [r for r in all_recent if yesterday_str in r["timestamp"]]
+                
+            # Merge and de-duplicate
+            seen_ids = {r["id"] for r in recordings}
+            for r in recent_recs:
+                if r["id"] not in seen_ids:
+                    recordings.append(r)
+                    seen_ids.add(r["id"])
+                    
+            if not recordings:
+                reply = "I couldn't find any recorded conversations in my memory, Sir. Please make sure background recording is enabled and active."
+            else:
+                formatted_convs = []
+                for idx, r in enumerate(recordings):
+                    timestamp = r.get("timestamp", "Unknown time")
+                    transcript = r.get("transcript", "")
+                    summary = r.get("summary", "")
+                    formatted_convs.append(
+                        f"Conversation #{idx+1} (Date/Time: {timestamp})\n"
+                        f"- Summary: {summary}\n"
+                        f"- Transcript: {transcript}\n"
+                    )
+                formatted_conversations = "\n\n".join(formatted_convs)
+                
+                prompt = f"""
+You are VOID, the highly advanced AI desktop assistant. The user is asking a question about their past conversations or background audio.
+Answer the user's question accurately, clearly, and concisely, using only the provided conversation logs.
+
+Retrieved Conversation Logs:
+{formatted_conversations}
+
+User Question:
+{text}
+
+Guidelines:
+- Ground your answer strictly in the provided logs.
+- If the logs do not contain the answer, say: "I couldn't find any mention of that in my recorded conversations, Sir."
+- Avoid making up or inventing any details.
+- Speak naturally and in a premium, helpful assistant tone (use "Sir", keep it professional but advanced).
+"""
+                from backend.llm_client import OllamaClient
+                llm = VoidSingletons.get("llm") or OllamaClient()
+                
+                reply = await llm.router.chat(
+                    history=[],
+                    prompt=prompt,
+                    system_prompt="You are VOID, an advanced AI assistant. You answer questions based on the provided conversation logs. Speak naturally like a human assistant."
+                )
+                
+            memory.remember_turn("user", text)
+            memory.remember_turn("void", reply)
+            log_chat_request("memory_recall", "DIRECT_TOOL", "SQLite", "Success", start_time, confidence=1.0, endpoint="memory_sqlite.semantic_search_recordings")
+            return {"reply": reply, "meta": {"intent": "memory_recall", "recordings_found": len(recordings)}}
+        except Exception as e:
+            logger.error(f"Error in audio memory RAG recall: {e}")
+            reply = f"I encountered an error trying to search my conversation memory, Sir. Details: {e}"
+            memory.remember_turn("user", text)
+            memory.remember_turn("void", reply)
+            return {"reply": reply, "meta": {"intent": "memory_recall", "error": str(e)}}
         
     # Memory Reads
     is_show_memory = "show memory database" in lower_text or lower_text in ["show memory", "show memory database", "show memory database."]

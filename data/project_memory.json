@@ -1,5 +1,5 @@
 {
-  "architecture_summary": "I'm having a brief connection issue, Sir. Give me a moment.",
+  "architecture_summary": "I do not have enough project data to determine that.",
   "technology_stack": [
     "FastAPI",
     "Electron"
@@ -249,8 +249,8 @@
       "size": 37
     },
     "data/project_map.json": {
-      "hash": "72d19409a996716da7b908217ac7bd3bd92684b0434d048f19928d03d0924989",
-      "mtime": 1782422337.1729531,
+      "hash": "3d484aad92e475e3345d7d2d49f7f146067063818187656d0c766e6f15d77e20",
+      "mtime": 1782422743.2684836,
       "size": 30648
     },
     "desktop/main.js": {
@@ -269,9 +269,9 @@
       "size": 620
     },
     "logs/brain.log": {
-      "hash": "64d0908a0dca8cc3236cf0365d5f9783fcd1b7fad5231fe8098bf12f0c1115f3",
-      "mtime": 1782422164.1835136,
-      "size": 10274
+      "hash": "67a6a714bab5c44f96c024ba73abc365946a9c856b05fdae905ec0b45edea0dd",
+      "mtime": 1782422544.030752,
+      "size": 10883
     },
     "logs/desktop_control.log": {
       "hash": "4b0f326d7fbcf0741ea37bfa62c961f29d2a174e6f7ded0026eeb270672e6501",
@@ -939,9 +939,9 @@
       "size": 19
     },
     "data/project_memory.json": {
-      "hash": "59b1104d2a117dfc2d893234b3d0479d9f85f7e502d872eeba059aed67985a7e",
-      "mtime": 1782422337.2765632,
-      "size": 51290
+      "hash": "9039d62ff047743516fbee53c738bd4dec46e9cb62fbc4fb5319dd2dc9052dc1",
+      "mtime": 1782422761.9636364,
+      "size": 51283
     },
     "logs/agent_terminal.log": {
       "hash": "b2bb6e79e80fcd43646a89a811a2446a3c053358687b2d0b467cb15439467662",
@@ -1164,9 +1164,9 @@
       "size": 32494
     },
     "logs/agent_swarm.log": {
-      "hash": "d2ba430d457ffdd39354688f8be3f2ec675621f41da6aca84768e76c6787bca9",
-      "mtime": 1782422164.041035,
-      "size": 6204
+      "hash": "4777c6cf4c127b10d42917db7fe8a8dc79d51f6a1fbace373baa80f7dec9a1a9",
+      "mtime": 1782422543.8352888,
+      "size": 6721
     },
     "logs/terminal.log": {
       "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",

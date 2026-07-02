@@ -202,6 +202,60 @@ class CheckFileExistsInput(ToolInput):
 class ListDirectoryInput(ToolInput):
     path: Optional[str] = Field(None, description="Directory path to list")
 
+class AnalyzeCodeInput(ToolInput):
+    path: Optional[str] = Field(None, description="Absolute path to codebase to analyze")
+
+class LongTermMemoryInput(ToolInput):
+    category: str = Field(..., description="Memory category, e.g. projects, preferences, coding_style, tasks, deadlines")
+    action: str = Field("retrieve", description="Memory action: store, retrieve, update, forget, search, summarize")
+    key: Optional[str] = Field(None, description="Key for memory lookup or storage")
+    value: Optional[str] = Field(None, description="Value to store or update")
+
+class VisionAnalyzeInput(ToolInput):
+    image_path: Optional[str] = Field(None, description="Path to screenshot image. If omitted, captures screen first.")
+    action: str = Field("screenshot_analysis", description="Action: screenshot_analysis, ui_explanation, ocr, error_debugging")
+
+class VoiceSpeakInput(ToolInput):
+    text: str = Field(..., description="Text content to speak out loud")
+
+class GitSummaryInput(ToolInput):
+    path: Optional[str] = Field(None, description="Path to git repository")
+
+class SwitchToWindowInput(ToolInput):
+    title_query: str = Field(..., description="Query matching title of target window")
+
+class ReadActiveWindowInput(ToolInput):
+    pass
+
+class ReadClipboardInput(ToolInput):
+    pass
+
+class WriteClipboardInput(ToolInput):
+    text: str = Field(..., description="Text to write to clipboard")
+
+class RenameFileInput(ToolInput):
+    old_path: str = Field(..., description="Original file path")
+    new_path: str = Field(..., description="New target file path")
+
+class MoveSingleFileInput(ToolInput):
+    source: str = Field(..., description="Source file path")
+    destination: str = Field(..., description="Destination folder/file path")
+
+class DeleteFileInput(ToolInput):
+    path: str = Field(..., description="Path to file/folder to delete")
+
+class LaunchVSCodeInput(ToolInput):
+    path: Optional[str] = Field(None, description="Workspace path to open in VS Code")
+
+class LaunchBrowserInput(ToolInput):
+    url: Optional[str] = Field(None, description="URL to open in browser")
+
+class LaunchTerminalInput(ToolInput):
+    command: Optional[str] = Field(None, description="Initial command to run in terminal")
+
+class WeatherInput(ToolInput):
+    city: str = Field("New York", description="City name to fetch weather for")
+
 # Tool Registry - name → (input_model, output_model, timeout_sec)
 # Registered with generous 25-second timeouts for Digital Employee operations
 TOOL_REGISTRY = {
@@ -261,6 +315,22 @@ TOOL_REGISTRY = {
     "mouse_control": (MouseControlInput, ToolOutput, 5.0),
     "check_file_exists": (CheckFileExistsInput, ToolOutput, 5.0),
     "list_directory": (ListDirectoryInput, ToolOutput, 10.0),
+    "analyze_code": (AnalyzeCodeInput, ToolOutput, 60.0),
+    "long_term_memory": (LongTermMemoryInput, ToolOutput, 10.0),
+    "vision_analyze": (VisionAnalyzeInput, ToolOutput, 20.0),
+    "voice_speak": (VoiceSpeakInput, ToolOutput, 10.0),
+    "git_summary": (GitSummaryInput, ToolOutput, 15.0),
+    "switch_to_window": (SwitchToWindowInput, ToolOutput, 5.0),
+    "read_active_window": (ReadActiveWindowInput, ToolOutput, 5.0),
+    "read_clipboard": (ReadClipboardInput, ToolOutput, 5.0),
+    "write_clipboard": (WriteClipboardInput, ToolOutput, 5.0),
+    "rename_file": (RenameFileInput, ToolOutput, 5.0),
+    "move_file": (MoveSingleFileInput, ToolOutput, 5.0),
+    "delete_file": (DeleteFileInput, ToolOutput, 15.0),
+    "launch_vscode": (LaunchVSCodeInput, ToolOutput, 10.0),
+    "launch_browser": (LaunchBrowserInput, ToolOutput, 10.0),
+    "launch_terminal": (LaunchTerminalInput, ToolOutput, 10.0),
+    "weather": (WeatherInput, ToolOutput, 10.0),
 }
 
 def get_tool_spec(name: str):

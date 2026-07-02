@@ -457,42 +457,58 @@ const perfHistory = {
   ram: Array(15).fill(0)
 };
 
+function drawLiveChart(canvasId, history, lineColor, fillColor) {
+  const canvas = getEl(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  // Draw grid
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    const y = (i / 4) * h;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+  for (let i = 1; i < 6; i++) {
+    const x = (i / 6) * w;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+  }
+  
+  if (history.length === 0) return;
+  
+  // Area under curve
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  for (let i = 0; i < history.length; i++) {
+    const x = (i / (history.length - 1)) * w;
+    const y = h - (history[i] / 100) * h;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(w, h);
+  ctx.closePath();
+  ctx.fillStyle = fillColor;
+  ctx.fill();
+  
+  // Line
+  ctx.beginPath();
+  for (let i = 0; i < history.length; i++) {
+    const x = (i / (history.length - 1)) * w;
+    const y = h - (history[i] / 100) * h;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
 function renderPerfChart() {
-  const svg = getEl('perfChart');
-  if (!svg) return;
-  
-  const width = 300;
-  const height = 100;
-  const padding = 10;
-  const chartWidth = width - 2 * padding;
-  const chartHeight = height - 2 * padding;
-  
-  const getPointsPath = (data) => {
-    return data.map((val, index) => {
-      const x = padding + (index / (data.length - 1)) * chartWidth;
-      const y = padding + chartHeight - (val / 100) * chartHeight;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    });
-  };
-  
-  const cpuPoints = getPointsPath(perfHistory.cpu);
-  const ramPoints = getPointsPath(perfHistory.ram);
-  
-  let gridLinesHtml = '';
-  for (let i = 1; i <= 3; i++) {
-    const y = padding + (i / 4) * chartHeight;
-    gridLinesHtml += `<line x1="${padding}" y1="${y}" x2="${width - padding}" y2="${y}" class="chart-grid" />`;
-  }
-  for (let i = 1; i <= 4; i++) {
-    const x = padding + (i / 5) * chartWidth;
-    gridLinesHtml += `<line x1="${x}" y1="${padding}" x2="${x}" y2="${height - padding}" class="chart-grid" />`;
-  }
-  
-  svg.innerHTML = `
-    ${gridLinesHtml}
-    <polyline points="${cpuPoints.join(' ')}" class="chart-line-cpu" />
-    <polyline points="${ramPoints.join(' ')}" class="chart-line-ram" />
-  `;
+  drawLiveChart('cpuLiveChart', perfHistory.cpu, '#00ffcc', 'rgba(0, 255, 204, 0.08)');
+  drawLiveChart('ramLiveChart', perfHistory.ram, '#00e5ff', 'rgba(0, 229, 255, 0.08)');
 }
 
 function setStatIfChanged(id, value) {
@@ -516,43 +532,102 @@ async function refreshStats() {
   if (state.statsInFlight || !state.online || document.hidden) return;
   state.statsInFlight = true;
   
-  const data = await api('/stats');
+  // Centralized Metrics API Call (Phase 3)
+  const metrics = await api('/api/metrics');
   state.statsInFlight = false;
   
-  if (!data || data.error) return;
+  if (!metrics || metrics.error) return;
   
-  const cpu = data.cpu_usage || 0;
-  const cpuTemp = data.cpu_temp || 0;
-  const ram = data.ram_usage || 0;
-  const storage = data.storage_total_gb ? (data.storage_used_gb / data.storage_total_gb) * 100 : 0;
-  const battery = data.battery_percent || 0;
+  const sys = metrics.system || {};
+  const net = metrics.network || {};
+  const services = metrics.services || {};
+  const memStats = metrics.memory_stats || {};
+  
+  const cpu = sys.cpu_usage || 0;
+  const ram = sys.ram_usage_pct || 0;
+  const storage = sys.disk_total_bytes ? (sys.disk_used_bytes / sys.disk_total_bytes) * 100 : 0;
   
   setStatIfChanged('statCPU', `${cpu.toFixed(0)}%`);
-  
-  if (data.cpu_temp !== null && data.cpu_temp !== undefined) {
-    setStatIfChanged('statCPUTemp', `${cpuTemp.toFixed(1)}°C`);
-  } else {
-    setStatIfChanged('statCPUTemp', 'N/A');
-  }
-  
+  setStatIfChanged('statCPUTemp', sys.cpu_temp !== undefined ? `${sys.cpu_temp.toFixed(1)}°C` : 'N/A');
   setStatIfChanged('statRAM', `${ram.toFixed(0)}%`);
-  setBarIfChanged('barMemory', ram);
-  setStatIfChanged('statRAMDetail', `${data.ram_used_gb ? data.ram_used_gb.toFixed(1) : '5.2'} GB / ${data.ram_total_gb ? data.ram_total_gb.toFixed(1) : '16.0'} GB`);
+  setStatIfChanged('statRAMDetail', `${sys.ram_used_bytes ? (sys.ram_used_bytes / 1024**3).toFixed(1) : '0'} GB / ${sys.ram_total_bytes ? (sys.ram_total_bytes / 1024**3).toFixed(1) : '16'} GB`);
   
-  setStatIfChanged('statStorage', `${(data.storage_used_gb || 0).toFixed(0)}GB / ${(data.storage_total_gb || 0).toFixed(0)}GB`);
-  setStatIfChanged('statStorageDetail', `${(data.storage_used_gb || 0).toFixed(1)} GB / ${(data.storage_total_gb || 0).toFixed(1)} GB`);
+  setStatIfChanged('statStorage', `${sys.disk_used_bytes ? (sys.disk_used_bytes / 1024**3).toFixed(0) : '0'}GB / ${sys.disk_total_bytes ? (sys.disk_total_bytes / 1024**3).toFixed(0) : '0'}GB`);
+  setStatIfChanged('statStorageDetail', `${sys.disk_used_bytes ? (sys.disk_used_bytes / 1024**3).toFixed(1) : '0'} GB / ${sys.disk_total_bytes ? (sys.disk_total_bytes / 1024**3).toFixed(1) : '0'} GB`);
   setBarIfChanged('barStorage', storage);
-
-  if (data.battery_percent !== null && data.battery_percent !== undefined) {
-    setStatIfChanged('statBattery', `${battery}% ${data.battery_charging ? '⚡' : ''}`);
-    setBarIfChanged('barBattery', battery);
-  }
-
-  setStatIfChanged('statNetwork', data.network_online ? 'CONNECTED' : 'DISCONNECTED');
-  setStatIfChanged('statUptime', `${Math.floor((data.uptime || 0) / 60)}m`);
   
-  if (data.motd !== undefined && data.motd !== null) {
-    setText('motdText', data.motd);
+  setStatIfChanged('statNetwork', net.status === 'online' ? 'CONNECTED' : 'DISCONNECTED');
+  setStatIfChanged('statUptime', sys.uptime ? `${Math.floor(sys.uptime / 60)}m` : '--');
+  
+  // 1. Update Persistent Recording Indicator Bar
+  const recBar = getEl('persistentRecordingBar');
+  if (recBar) {
+    const recActive = services.recording_active || false;
+    recBar.classList.toggle('hidden', !recActive);
+    if (recActive) {
+      setText('recBarMic', services.current_microphone || 'Default');
+      // Audio Meter Simulation based on real VAD / Speech
+      const canvas = getEl('recBarAudioMeter');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ff073a';
+        const bars = 6;
+        const gap = 2;
+        const w = (canvas.width - (bars - 1) * gap) / bars;
+        for (let i = 0; i < bars; i++) {
+          const h = 2 + Math.random() * (canvas.height - 2);
+          ctx.fillRect(i * (w + gap), canvas.height - h, w, h);
+        }
+      }
+    }
+  }
+  
+  // 2. Update Voice Status Panel (if in view)
+  const voiceMic = getEl('voiceMicStatus');
+  if (voiceMic) {
+    setText('voiceMicStatus', services.recording_service === 'running' ? 'ACTIVE' : 'ERROR');
+    setText('voiceRecStatus', services.recording_active ? 'RECORDING' : 'STANDBY');
+    setText('voiceWakeStatus', services.wake_word === 'running' ? 'ON' : 'OFF');
+    setText('voiceVadStatus', services.recording_active ? 'LISTENING' : 'WAITING');
+    setText('voiceCurrentDevice', services.current_microphone || 'Default Microphone');
+  }
+  
+  // 3. Update Background Services Panel
+  const servicesGrid = getEl('bgServicesGrid');
+  if (servicesGrid) {
+    const list = [
+      { name: "Backend Core", status: services.backend },
+      { name: "Database Memory", status: services.database },
+      { name: "Ollama Model Service", status: services.ollama },
+      { name: "Wake Word Engine", status: services.wake_word },
+      { name: "Recording Daemon", status: services.recording_service },
+      { name: "Speech-to-Text (Vosk)", status: services.speech_to_text },
+      { name: "Project Monitor", status: services.project_monitor }
+    ];
+    servicesGrid.innerHTML = list.map(s => {
+      const color = s.status === 'running' || s.status === 'connected' ? '#39ff14' : '#ff073a';
+      return `<div style="display:flex; justify-content:space-between; align-items:center;">
+        <span>${s.name}</span>
+        <strong style="color:${color}; font-size:9px;">${(s.status || 'stopped').toUpperCase()}</strong>
+      </div>`;
+    }).join('');
+  }
+  
+  // 4. Update Memory Statistics Card
+  const memGrid = getEl('memoryStatsDetails');
+  if (memGrid) {
+    const dbSizeMB = memStats.database_size_bytes ? (memStats.database_size_bytes / 1024**2).toFixed(2) : '0';
+    const recTimeMin = memStats.recording_time_today_sec ? (memStats.recording_time_today_sec / 60).toFixed(1) : '0';
+    
+    memGrid.innerHTML = `
+      <div style="display:flex; justify-content:space-between;"><span>Conversations Today:</span><strong>${memStats.conversations_today || 0}</strong></div>
+      <div style="display:flex; justify-content:space-between;"><span>Recording Time Today:</span><strong>${recTimeMin}m</strong></div>
+      <div style="display:flex; justify-content:space-between;"><span>Stored Recordings:</span><strong>${memStats.recordings_count || 0}</strong></div>
+      <div style="display:flex; justify-content:space-between;"><span>Remembered Facts:</span><strong>${memStats.remembered_items_count || 0}</strong></div>
+      <div style="display:flex; justify-content:space-between;"><span>Meetings Captured:</span><strong>${memStats.meetings_recorded_count || 0}</strong></div>
+      <div style="display:flex; justify-content:space-between;"><span>Database File Size:</span><strong>${dbSizeMB} MB</strong></div>
+    `;
   }
   
   // Update perf chart history
@@ -734,6 +809,13 @@ async function sendChat(msg) {
       handleCVCSConfirmation(result.reply);
     } else {
       addMessage('void', result.reply);
+      // Auto-redirect if task graph is returned
+      if (result.meta && result.meta.task_id) {
+        setTimeout(() => {
+          handleNavSwitch('tasks');
+          startTaskPolling(result.meta.task_id);
+        }, 1500);
+      }
       // Auto-speak if enabled
       if (state.isVoiceEnabled) {
         await api('/speak', {method: 'POST', body: JSON.stringify({text: result.reply})});
@@ -1755,6 +1837,19 @@ function bindEvents() {
   getEl('uiWakeWordToggleBtn')?.addEventListener('click', toggleWakeWord);
   getEl('fixAudioDuckingBtn')?.addEventListener('click', handleFixAudioDucking);
 
+  // Ollama status click trigger (Phase 3)
+  getEl('ollamaStatusPanel')?.addEventListener('click', () => {
+    api('/api/ollama/start', { method: 'POST' }).then(res => {
+      if (res && res.status === 'model_missing') {
+        alert(res.error_message);
+      } else if (res && res.error_message) {
+        alert("Ollama Connection Alert:\n" + res.error_message);
+      } else {
+        pollOllamaStatus();
+      }
+    });
+  });
+
   // Gamification triggers
   getEl('viewBadgesBtn')?.addEventListener('click', showAchievements);
   getEl('closeAchievementsBtn')?.addEventListener('click', closeAchievements);
@@ -2500,8 +2595,14 @@ function handleNavSwitch(view) {
     case 'voice':
       initVoiceWorkspace();
       break;
+    case 'recordings':
+      initRecordingsWorkspace();
+      break;
     case 'tools':
       initToolsWorkspace();
+      break;
+    case 'tasks':
+      initTasksWorkspace();
       break;
   }
 }
@@ -2552,8 +2653,8 @@ function initSearchSystem() {
           setValue('chatInput', item.action);
           resultsPanel.classList.add('hidden');
           searchInput.value = '';
-          if (closeBtn) closeBtn.classList.add('hidden');
           document.querySelectorAll('.chat-message').forEach(el => el.classList.remove('hidden', 'search-highlight'));
+          handleNavSwitch('chat');
           sendChat(item.action);
         };
         
@@ -2727,6 +2828,10 @@ async function initApp() {
         await refreshSocialQueue();
         await refreshModelMetrics();   // Kimi/model dashboard
         await loadLlmConfig();         // Populate LLM settings form
+        
+        // Start Ollama status polling (Phase 3)
+        await pollOllamaStatus();
+        setInterval(pollOllamaStatus, 5000);
         const info = await api('/system-info');
         if (info.reply) setText('system-info-text', info.reply);
         // Check for any pending proposal from previous session
@@ -3957,3 +4062,894 @@ document.addEventListener('DOMContentLoaded', () => {
   if (approveBtn) approveBtn.addEventListener('click', () => sendApprovalResponse(true));
   if (denyBtn) denyBtn.addEventListener('click', () => sendApprovalResponse(false));
 });
+
+
+// === TASK PLANNER WORKSPACE INTEGRATION ===
+let taskPollInterval = null;
+let currentActiveTaskId = null;
+
+function initTasksWorkspace() {
+  const clearBtn = getEl('tasksClearBtn');
+  if (clearBtn) {
+    clearBtn.onclick = async () => {
+      if (confirm("Are you sure you want to purge all task execution history, Sir?")) {
+        await api('/api/tasks/clear', { method: 'POST' });
+        const container = getEl('taskTreeContainer');
+        if (container) container.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 40px; font-size: 11px;">No task graph is loaded. Start a multi-step query via Chat, Sir.</div>`;
+        getEl('taskGoalText').textContent = "No active tasks, Sir.";
+        getEl('taskProgressBar').style.width = '0%';
+        getEl('taskProgressPct').textContent = '0%';
+        getEl('taskStatusBadge').textContent = 'IDLE';
+        getEl('taskStatusBadge').style.background = 'rgba(255,255,255,0.05)';
+        getEl('taskStatusBadge').style.color = '#888';
+        getEl('taskDurationText').textContent = '0.0s';
+        getEl('taskLogTerminal').textContent = '[VOID TERM v2.0.0-planner]\nSystem idle. Standing by for task sequence dispatch...';
+        getEl('logBlinkDot').style.display = 'none';
+        if (taskPollInterval) {
+          clearInterval(taskPollInterval);
+          taskPollInterval = null;
+        }
+      }
+    };
+  }
+
+  pollTasks();
+  startTaskPolling();
+}
+
+function startTaskPolling(specificTaskId = null) {
+  if (specificTaskId) {
+    currentActiveTaskId = specificTaskId;
+  }
+  if (taskPollInterval) clearInterval(taskPollInterval);
+  taskPollInterval = setInterval(pollTasks, 1000);
+}
+
+async function pollTasks() {
+  try {
+    const res = await api('/api/tasks');
+    if (!res || !res.tasks) return;
+    
+    const tasks = res.tasks;
+    if (tasks.length === 0) return;
+
+    let activeTask = null;
+    if (currentActiveTaskId) {
+      activeTask = tasks.find(t => t.id === currentActiveTaskId);
+    }
+    
+    if (!activeTask) {
+      activeTask = tasks.find(t => t.status === 'Running' || t.status === 'Retrying' || t.status === 'Planning') || tasks[tasks.length - 1];
+    }
+
+    if (activeTask) {
+      currentActiveTaskId = activeTask.id;
+      renderActiveTaskSummary(activeTask);
+    }
+  } catch (err) {
+    console.error("Error polling tasks:", err);
+  }
+}
+
+function renderActiveTaskSummary(task) {
+  const goalText = getEl('taskGoalText');
+  const statusBadge = getEl('taskStatusBadge');
+  const progressBar = getEl('taskProgressBar');
+  const progressPct = getEl('taskProgressPct');
+  const durationText = getEl('taskDurationText');
+  const terminal = getEl('taskLogTerminal');
+  const blinkDot = getEl('logBlinkDot');
+
+  // Update new CURRENT TASK PANEL elements if they exist
+  setText('taskGoal', task.description || "Goal execution");
+  setText('taskStep', task.subtasks && task.subtasks.length > 0 ? (task.subtasks.find(s => s.status === 'Running') || task.subtasks[0]).description : '--');
+  setText('taskTool', task.running_tool || 'None');
+  setText('taskTimeRemaining', task.estimated_time_remaining || 'Calculating...');
+  setText('taskVerificationStatus', task.verification_status || 'Pending');
+
+  if (goalText) goalText.textContent = task.description || "Goal execution";
+  
+  if (statusBadge) {
+    statusBadge.textContent = task.status.toUpperCase();
+    const color = getStatusColor(task.status);
+    statusBadge.style.background = `${color}22`;
+    statusBadge.style.color = color;
+  }
+
+  if (progressBar) progressBar.style.width = `${task.progress || 0}%`;
+  if (progressPct) progressPct.textContent = `${task.progress || 0}%`;
+  if (durationText) durationText.textContent = `${task.execution_time || 0}s`;
+
+  renderTaskGraph(task);
+
+  let allLogs = [];
+  if (task.logs) {
+    allLogs = allLogs.concat(task.logs);
+  }
+  if (task.subtasks) {
+    task.subtasks.forEach(sub => {
+      if (sub.logs && sub.logs.length > 0) {
+        allLogs.push(`[Step: ${sub.description}]`);
+        allLogs = allLogs.concat(sub.logs);
+      }
+    });
+  }
+
+  if (terminal) {
+    if (allLogs.length === 0) {
+      terminal.textContent = `[Task ID: ${task.id}]\nInitializing sequence logs...`;
+    } else {
+      terminal.textContent = allLogs.join('\n');
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+  }
+
+  // Update new execution logs window
+  const taskLogs = getEl('taskExecutionLogs');
+  if (taskLogs) {
+    taskLogs.textContent = allLogs.join('\n');
+    taskLogs.scrollTop = taskLogs.scrollHeight;
+  }
+
+  if (blinkDot) {
+    if (task.status === 'Running' || task.status === 'Retrying') {
+      blinkDot.style.display = 'block';
+    } else {
+      blinkDot.style.display = 'none';
+    }
+  }
+
+  if (task.status === 'Completed' || task.status === 'Failed') {
+    if (taskPollInterval) {
+      clearInterval(taskPollInterval);
+      taskPollInterval = setInterval(pollTasks, 5000);
+    }
+  }
+}
+
+function renderTaskGraph(rootTask) {
+  const container = getEl('taskTreeContainer');
+  if (!container) return;
+
+  let html = `<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">`;
+  
+  const statusColor = getStatusColor(rootTask.status);
+  html += `
+    <div style="padding: 10px; border: 1px solid ${statusColor}; background: rgba(0,0,0,0.4); border-radius: 4px; box-shadow: 0 0 5px ${statusColor}1A;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: bold; font-family: 'Orbitron', sans-serif; font-size: 11px; color: ${statusColor};">GOAL ID: ${rootTask.id}</span>
+        <span style="font-size: 9px; padding: 2px 6px; background: ${statusColor}22; color: ${statusColor}; border-radius: 3px; font-weight: bold;">${rootTask.status.toUpperCase()}</span>
+      </div>
+      <div style="font-size: 11px; margin-top: 6px; color: #eee; line-height: 1.3;">${rootTask.description}</div>
+    </div>
+  `;
+
+  if (rootTask.subtasks && rootTask.subtasks.length > 0) {
+    html += `<div style="margin-left: 10px; border-left: 1px dashed rgba(0,255,255,0.2); padding-left: 10px; display: flex; flex-direction: column; gap: 6px; margin-top: 6px;">`;
+    rootTask.subtasks.forEach((sub, idx) => {
+      const subColor = getStatusColor(sub.status);
+      html += `
+        <div style="padding: 8px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01); border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; font-size: 11px; gap: 8px;">
+            <span style="line-height: 1.3;"><strong style="color: var(--accent-neon); font-family: monospace; font-size: 10px;">[Step ${idx + 1}]</strong> ${sub.description}</span>
+            <span style="font-size: 9px; padding: 1px 4px; background: ${subColor}22; color: ${subColor}; border-radius: 2px; font-weight: bold; white-space: nowrap;">${sub.status.toUpperCase()}</span>
+          </div>
+          ${sub.tool_name ? `<div style="font-size: 9px; color: var(--text-dim);">Module: <code style="color: #bbb;">${sub.tool_name}</code></div>` : ''}
+          ${sub.execution_time ? `<div style="font-size: 9px; color: var(--text-dim);">Duration: <strong style="color: #eee;">${sub.execution_time}s</strong></div>` : ''}
+          ${sub.error_reason ? `<div style="font-size: 9px; color: #ff073a; background: rgba(255,0,0,0.08); padding: 4px; border-radius: 2px; margin-top: 4px; border: 1px solid rgba(255,0,0,0.15); font-family: monospace; white-space: pre-wrap;">Error: ${sub.error_reason}</div>` : ''}
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+  
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function getStatusColor(status) {
+  switch (status.toLowerCase()) {
+    case 'completed': return '#39ff14'; // Green
+    case 'failed': return '#ff073a'; // Red
+    case 'running': return '#00ffff'; // Cyan
+    case 'retrying': return '#ffaa00'; // Orange
+    case 'waiting': return '#ffff00'; // Yellow
+    case 'planning': default: return '#888888';
+  }
+}
+
+
+// ===========================================================================
+// PERSISTENT AUDIO MEMORY & OLLAMA MONITORING (Phase 3)
+// ===========================================================================
+
+let selectedRec = null;
+let recordingsFilter = 'all';
+let recordingsInitialized = false;
+
+async function pollOllamaStatus() {
+  try {
+    const data = await api('/api/ollama/status');
+    const label = getEl('ollamaStatusLabel');
+    const dot = getEl('ollamaStatusDot');
+    const panel = getEl('ollamaStatusPanel');
+    
+    if (label && dot) {
+      if (data.status === 'connected') {
+        label.textContent = 'CONNECTED';
+        label.style.color = '#39ff14';
+        dot.style.color = '#39ff14';
+        if (panel) panel.title = `Model: ${data.active_model}`;
+      } else if (data.status === 'connecting') {
+        label.textContent = 'CONNECTING';
+        label.style.color = '#ffaa00';
+        dot.style.color = '#ffaa00';
+        if (panel) panel.title = data.error_message || 'Connecting to Ollama...';
+      } else if (data.status === 'model_missing') {
+        label.textContent = 'MODEL MISSING';
+        label.style.color = '#ff073a';
+        dot.style.color = '#ff073a';
+        if (panel) panel.title = data.error_message;
+      } else {
+        label.textContent = 'OFFLINE';
+        label.style.color = '#ff073a';
+        dot.style.color = '#ff073a';
+        if (panel) panel.title = data.error_message || 'Ollama is offline.';
+      }
+    }
+  } catch (err) {
+    console.error("Error polling Ollama status:", err);
+  }
+}
+
+function initRecordingsWorkspace() {
+  if (recordingsInitialized) {
+    loadRecordingsList();
+    refreshRecordingsStatus();
+    return;
+  }
+  recordingsInitialized = true;
+  
+  // Bind controls
+  const toggleRecBtn = getEl('toggleRecBtn');
+  if (toggleRecBtn) {
+    toggleRecBtn.onclick = async () => {
+      const res = await api('/api/recordings/toggle', { method: 'POST' });
+      if (res && !res.error) {
+        refreshRecordingsStatus();
+      }
+    };
+  }
+  
+  // Manual Recording controls (Phase 3)
+  const manualRecStartBtn = getEl('manualRecStartBtn');
+  if (manualRecStartBtn) {
+    manualRecStartBtn.onclick = async () => {
+      const player = getEl('recordingAudioPlayer');
+      const isRecording = manualRecStartBtn.textContent === 'STOP';
+      if (isRecording) {
+        const res = await api('/api/recordings/stop', { method: 'POST' });
+        if (res && !res.error) {
+          manualRecStartBtn.textContent = 'START';
+          manualRecStartBtn.style.background = '#ff073a';
+          refreshRecordingsStatus();
+          setTimeout(loadRecordingsList, 1000);
+        }
+      } else {
+        const mode = getEl('recModeSelect')?.value || 'continuous';
+        const res = await api('/api/recordings/start', {
+          method: 'POST',
+          body: JSON.stringify({ mode })
+        });
+        if (res && !res.error) {
+          manualRecStartBtn.textContent = 'STOP';
+          manualRecStartBtn.style.background = '#ffaa00';
+          refreshRecordingsStatus();
+        }
+      }
+    };
+  }
+  
+  const recMicSelect = getEl('recMicSelect');
+  if (recMicSelect) {
+    recMicSelect.onchange = async () => {
+      const idx = parseInt(recMicSelect.value);
+      if (!isNaN(idx)) {
+        await api('/api/recordings/select-device', {
+          method: 'POST',
+          body: JSON.stringify({ index: idx })
+        });
+      }
+    };
+  }
+  
+  const recSearchInput = getEl('recSearchInput');
+  if (recSearchInput) {
+    recSearchInput.oninput = () => {
+      loadRecordingsList();
+    };
+  }
+  
+  // Calendar input filter
+  const recCalendarInput = getEl('recCalendarInput');
+  if (recCalendarInput) {
+    recCalendarInput.onchange = () => {
+      loadRecordingsList();
+    };
+  }
+  
+  // Filter buttons
+  const fAll = getEl('recFilterAllBtn');
+  const fFav = getEl('recFilterFavBtn');
+  const fPin = getEl('recFilterPinBtn');
+  
+  const setFilter = (filterType, btn) => {
+    recordingsFilter = filterType;
+    [fAll, fFav, fPin].forEach(b => b?.classList.remove('active'));
+    btn?.classList.add('active');
+    loadRecordingsList();
+  };
+  
+  if (fAll) fAll.onclick = () => setFilter('all', fAll);
+  if (fFav) fFav.onclick = () => setFilter('favs', fFav);
+  if (fPin) fPin.onclick = () => setFilter('pins', fPin);
+  
+  // Audio Player
+  const player = getEl('recordingAudioPlayer');
+  const playBtn = getEl('playerPlayBtn');
+  const timeline = getEl('playerTimeline');
+  
+  if (playBtn && player) {
+    playBtn.onclick = () => {
+      if (player.paused) {
+        player.play();
+        playBtn.textContent = '⏸';
+      } else {
+        player.pause();
+        playBtn.textContent = '▶';
+      }
+    };
+  }
+  
+  if (timeline && player) {
+    timeline.oninput = () => {
+      if (player.duration) {
+        player.currentTime = (player.duration * parseFloat(timeline.value)) / 100;
+      }
+    };
+  }
+  
+  if (player) {
+    player.ontimeupdate = syncTranscriptPlayback;
+    player.onloadedmetadata = () => {
+      const totalTimeEl = getEl('playerTotalTime');
+      if (totalTimeEl) totalTimeEl.textContent = formatTime(player.duration);
+    };
+    player.onended = () => {
+      if (playBtn) playBtn.textContent = '▶';
+    };
+  }
+  
+  // Detail Actions
+  const detailPinBtn = getEl('detailPinBtn');
+  if (detailPinBtn) {
+    detailPinBtn.onclick = async () => {
+      if (selectedRec) {
+        const res = await api(`/api/recordings/${selectedRec.id}/pin`, { method: 'POST' });
+        if (res && res.status === 'ok') {
+          selectedRec.is_pinned = !selectedRec.is_pinned;
+          detailPinBtn.classList.toggle('active', selectedRec.is_pinned);
+          loadRecordingsList();
+        }
+      }
+    };
+  }
+  
+  const detailFavBtn = getEl('detailFavBtn');
+  if (detailFavBtn) {
+    detailFavBtn.onclick = async () => {
+      if (selectedRec) {
+        const res = await api(`/api/recordings/${selectedRec.id}/favorite`, { method: 'POST' });
+        if (res && res.status === 'ok') {
+          selectedRec.is_favorite = !selectedRec.is_favorite;
+          detailFavBtn.classList.toggle('active', selectedRec.is_favorite);
+          loadRecordingsList();
+        }
+      }
+    };
+  }
+  
+  // Rename Recording click handler
+  const renameRecBtn = getEl('renameRecBtn');
+  if (renameRecBtn) {
+    renameRecBtn.onclick = async () => {
+      if (selectedRec) {
+        const newTitle = prompt("Enter a new name for this recording, Sir:", selectedRec.recording_path.split(/[\\/]/).pop().replace('.wav', ''));
+        if (newTitle && newTitle.trim()) {
+          const res = await api(`/api/recordings/${selectedRec.id}/rename`, {
+            method: 'POST',
+            body: JSON.stringify({ title: newTitle.trim() })
+          });
+          if (res && res.status === 'ok') {
+            selectedRec.recording_path = res.new_path;
+            setText('detailTitle', newTitle.trim());
+            loadRecordingsList();
+          }
+        }
+      }
+    };
+  }
+  
+  // Export buttons
+  const exportRecBtn = getEl('exportRecBtn');
+  const exportMenu = getEl('exportDropdownMenu');
+  if (exportRecBtn && exportMenu) {
+    exportRecBtn.onclick = (e) => {
+      e.stopPropagation();
+      exportMenu.classList.toggle('hidden');
+    };
+    document.addEventListener('click', () => exportMenu.classList.add('hidden'));
+  }
+  
+  const bindExport = (btnId, format) => {
+    const btn = getEl(btnId);
+    if (btn) {
+      btn.onclick = () => {
+        if (selectedRec) {
+          window.open(`/api/recordings/${selectedRec.id}/export/${format}`);
+        }
+      };
+    }
+  };
+  bindExport('exportAudioBtn', 'audio');
+  bindExport('exportTranscriptBtn', 'transcript');
+  bindExport('exportSummaryBtn', 'summary');
+  
+  // Bookmarks creation
+  const addBookmarkBtn = getEl('addBookmarkBtn');
+  if (addBookmarkBtn) {
+    addBookmarkBtn.onclick = async () => {
+      if (selectedRec && player) {
+        const noteInput = getEl('bookmarkNoteInput');
+        const label = noteInput?.value || 'Bookmark';
+        const res = await api(`/api/recordings/${selectedRec.id}/bookmark`, {
+          method: 'POST',
+          body: JSON.stringify({ timestamp: player.currentTime, label })
+        });
+        if (res && res.status === 'ok') {
+          if (noteInput) noteInput.value = '';
+          // Reload details to show bookmark
+          selectRecording(selectedRec);
+        }
+      }
+    };
+  }
+  
+  const detailExplainBtn = getEl('detailExplainBtn');
+  if (detailExplainBtn) {
+    detailExplainBtn.onclick = () => {
+      if (selectedRec) {
+        explainRecording(selectedRec);
+      }
+    };
+  }
+  
+  const detailDeleteBtn = getEl('detailDeleteBtn');
+  if (detailDeleteBtn) {
+    detailDeleteBtn.onclick = async () => {
+      if (selectedRec && confirm("Are you sure you want to delete this recording, Sir?")) {
+        const res = await api(`/api/recordings/${selectedRec.id}`, { method: 'DELETE' });
+        if (res && res.status === 'ok') {
+          selectedRec = null;
+          getEl('recordingDetailPanel')?.classList.add('hidden');
+          getEl('recordingPlaceholderPanel')?.classList.remove('hidden');
+          loadRecordingsList();
+        }
+      }
+    };
+  }
+  
+  // Tabs switching
+  const tabTranscriptBtn = getEl('tabTranscriptBtn');
+  const tabSummaryBtn = getEl('tabSummaryBtn');
+  const tContent = getEl('tabTranscriptContent');
+  const sContent = getEl('tabSummaryContent');
+  
+  if (tabTranscriptBtn && tabSummaryBtn) {
+    tabTranscriptBtn.onclick = () => {
+      tabTranscriptBtn.classList.add('active');
+      tabSummaryBtn.classList.remove('active');
+      if (tContent) tContent.style.display = 'block';
+      if (sContent) sContent.style.display = 'none';
+    };
+    tabSummaryBtn.onclick = () => {
+      tabTranscriptBtn.classList.remove('active');
+      tabSummaryBtn.classList.add('active');
+      if (tContent) tContent.style.display = 'none';
+      if (sContent) sContent.style.display = 'block';
+    };
+  }
+  
+  loadRecordingsList();
+  refreshRecordingsStatus();
+}
+
+async function refreshRecordingsStatus() {
+  try {
+    const data = await api('/api/recordings/status');
+    const dot = getEl('recStatusDot');
+    const label = getEl('recStatusLabel');
+    const btn = getEl('toggleRecBtn');
+    const select = getEl('recMicSelect');
+    
+    if (data && !data.error) {
+      const active = data.active;
+      if (dot) dot.classList.toggle('active', active);
+      if (label) {
+        label.textContent = active ? 'RECORDING' : 'STANDBY';
+        label.style.color = active ? '#ff003c' : 'var(--text-dim)';
+      }
+      if (btn) {
+        btn.textContent = active ? 'DISABLE' : 'ENABLE';
+        btn.className = `btn btn-sm ${active ? 'btn-danger' : 'btn-success'}`;
+      }
+      
+      // Populate mics
+      if (select && data.microphones) {
+        select.innerHTML = '';
+        data.microphones.forEach(mic => {
+          const opt = document.createElement('option');
+          opt.value = mic.index;
+          opt.textContent = mic.name + (mic.is_default ? ' (Default)' : '');
+          select.appendChild(opt);
+        });
+        
+        if (data.current_device !== null) {
+          select.value = data.current_device;
+        } else {
+          const def = data.microphones.find(m => m.is_default);
+          if (def) select.value = def.index;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error refreshing recordings status:", err);
+  }
+}
+
+async function loadRecordingsList() {
+  try {
+    const q = getEl('recSearchInput')?.value || '';
+    const dateVal = getEl('recCalendarInput')?.value;
+    const res = await api(`/api/recordings?q=${encodeURIComponent(q)}`);
+    const container = getEl('recordingsList');
+    
+    if (res && res.recordings && container) {
+      container.innerHTML = '';
+      
+      // Filter list
+      let filtered = res.recordings;
+      if (recordingsFilter === 'favs') {
+        filtered = filtered.filter(r => r.is_favorite);
+      } else if (recordingsFilter === 'pins') {
+        filtered = filtered.filter(r => r.is_pinned);
+      }
+      
+      // Calendar filter
+      if (dateVal) {
+        filtered = filtered.filter(r => r.timestamp.startsWith(dateVal));
+      }
+      
+      const countLabel = getEl('recCountLabel');
+      if (countLabel) countLabel.textContent = filtered.length;
+      
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-list-msg">No recordings found, Sir.</div>';
+        return;
+      }
+      
+      filtered.forEach(rec => {
+        const item = document.createElement('div');
+        item.className = `recording-item-card ${rec.is_pinned ? 'pinned' : ''} ${selectedRec && selectedRec.id === rec.id ? 'active' : ''}`;
+        item.onclick = () => selectRecording(rec);
+        
+        const date = new Date(rec.timestamp);
+        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        item.innerHTML = `
+          <div class="rec-item-header">
+            <span class="rec-item-title">${rec.is_pinned ? '📌 ' : ''}Recording #${rec.id}</span>
+            <span class="rec-item-time">${dateStr}</span>
+          </div>
+          <div class="rec-item-desc">${rec.summary || rec.transcript || 'No transcript available.'}</div>
+          <div class="rec-item-footer">
+            <span class="rec-item-duration">⏱ ${formatTime(rec.duration)}</span>
+            <div class="rec-item-tags">
+              ${rec.is_favorite ? '<span class="rec-badge" style="color:var(--warning)">★</span>' : ''}
+              ${rec.mode ? `<span class="rec-badge" style="color:var(--accent-neon)">${rec.mode.toUpperCase()}</span>` : ''}
+            </div>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+  } catch (err) {
+    console.error("Error loading recordings list:", err);
+  }
+}
+
+async function selectRecording(rec) {
+  try {
+    const res = await api(`/api/recordings/${rec.id}`);
+    if (!res || !res.recording) return;
+    
+    selectedRec = res.recording;
+    
+    // Highlight item in list
+    document.querySelectorAll('.recording-item-card').forEach(card => {
+      card.classList.remove('active');
+    });
+    
+    // Show panel
+    getEl('recordingPlaceholderPanel')?.classList.add('hidden');
+    const detailPanel = getEl('recordingDetailPanel');
+    if (detailPanel) detailPanel.classList.remove('hidden');
+    
+    // Populate details
+    const date = new Date(selectedRec.timestamp);
+    const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    
+    // Get filename or title
+    const fname = selectedRec.recording_path.split(/[\\/]/).pop().replace('.wav', '');
+    setText('detailTitle', fname);
+    setText('detailTimestamp', dateStr);
+    
+    // Pin/Fav states
+    getEl('detailPinBtn')?.classList.toggle('active', selectedRec.is_pinned);
+    getEl('detailFavBtn')?.classList.toggle('active', selectedRec.is_favorite);
+    
+    // Set Audio Player Source
+    const player = getEl('recordingAudioPlayer');
+    const playBtn = getEl('playerPlayBtn');
+    if (player) {
+      player.src = `/api/recordings/${selectedRec.id}/audio`;
+      player.load();
+      if (playBtn) playBtn.textContent = '▶';
+    }
+    
+    // Draw Waveform
+    drawWaveform('playerWaveformCanvas', selectedRec.duration);
+    
+    // Render Transcript
+    renderTranscript(selectedRec.words || []);
+    
+    // Populate Summary
+    setText('sumShortText', selectedRec.summary || 'No summary available.');
+    
+    const actionList = getEl('sumActionItems');
+    if (actionList) {
+      actionList.innerHTML = '';
+      const items = selectedRec.action_items || selectedRec.tasks || [];
+      if (items.length > 0) {
+        items.forEach(it => {
+          const li = document.createElement('li');
+          li.textContent = it;
+          actionList.appendChild(li);
+        });
+      } else {
+        actionList.innerHTML = '<li style="color:var(--text-dim)">No action items detected, Sir.</li>';
+      }
+    }
+    
+    const decisionList = getEl('sumDecisions');
+    if (decisionList) {
+      decisionList.innerHTML = '';
+      const items = selectedRec.decisions || [];
+      if (items.length > 0) {
+        items.forEach(it => {
+          const li = document.createElement('li');
+          li.textContent = it;
+          decisionList.appendChild(li);
+        });
+      } else {
+        decisionList.innerHTML = '<li style="color:var(--text-dim)">No key decisions recorded, Sir.</li>';
+      }
+    }
+    
+    const peopleContainer = getEl('sumPeople');
+    if (peopleContainer) {
+      peopleContainer.innerHTML = '';
+      const items = selectedRec.names || [];
+      if (items.length > 0) {
+        items.forEach(name => {
+          const span = document.createElement('span');
+          span.className = 'tag-item';
+          span.textContent = name;
+          peopleContainer.appendChild(span);
+        });
+      } else {
+        peopleContainer.innerHTML = '<span style="font-size:10px; color:var(--text-dim)">None mentioned</span>';
+      }
+    }
+    
+    const keywordsContainer = getEl('sumKeywords');
+    if (keywordsContainer) {
+      keywordsContainer.innerHTML = '';
+      const items = selectedRec.keywords || [];
+      if (items.length > 0) {
+        items.forEach(kw => {
+          const span = document.createElement('span');
+          span.className = 'tag-item';
+          span.textContent = kw;
+          keywordsContainer.appendChild(span);
+        });
+      } else {
+        keywordsContainer.innerHTML = '<span style="font-size:10px; color:var(--text-dim)">None</span>';
+      }
+    }
+    
+    // Render Bookmarks
+    const bookmarksList = getEl('recordingBookmarksList');
+    if (bookmarksList) {
+      bookmarksList.innerHTML = '';
+      const bms = selectedRec.bookmarks || [];
+      if (bms.length > 0) {
+        bms.forEach(bm => {
+          const div = document.createElement('div');
+          div.style = "display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:4px 8px; background:rgba(255,255,255,0.02); border-radius:4px; cursor:pointer;";
+          div.innerHTML = `<span style="color:var(--accent-neon); font-family:monospace;">${formatTime(bm.timestamp)}</span>
+                           <span style="color:#eee; flex-grow:1; margin-left:10px; text-align:left;">${bm.label}</span>`;
+          div.onclick = () => {
+            if (player) player.currentTime = bm.timestamp;
+          };
+          bookmarksList.appendChild(div);
+        });
+      } else {
+        bookmarksList.innerHTML = '<span style="font-size:10px; color:var(--text-dim)">No bookmarks added.</span>';
+      }
+    }
+    
+    // Switch to Transcript Tab by default
+    getEl('tabTranscriptBtn')?.click();
+    
+  } catch (err) {
+    console.error("Error selecting recording:", err);
+  }
+}
+
+function drawWaveform(canvasId, duration) {
+  const canvas = getEl(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  
+  const numBars = 75;
+  const barWidth = (w / numBars) - 2;
+  ctx.fillStyle = 'rgba(0, 229, 255, 0.4)';
+  
+  let seed = duration || 12345;
+  const random = () => {
+    const x = Math.sin(seed++) * 10000;
+    return x - Math.floor(x);
+  };
+  
+  for (let i = 0; i < numBars; i++) {
+    const amp = 0.15 + random() * 0.7;
+    const barHeight = h * amp;
+    const x = i * (w / numBars);
+    const y = (h - barHeight) / 2;
+    ctx.fillRect(x, y, barWidth, barHeight);
+  }
+  
+  canvas.onclick = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const pct = clickX / rect.width;
+    const player = getEl('recordingAudioPlayer');
+    if (player && player.duration) {
+      player.currentTime = player.duration * pct;
+    }
+  };
+}
+
+function renderTranscript(words) {
+  const wrap = getEl('transcriptTextWrap');
+  if (!wrap) return;
+  
+  wrap.innerHTML = '';
+  
+  if (!words || words.length === 0) {
+    const text = selectedRec ? (selectedRec.transcript || 'No transcript text available.') : '';
+    wrap.textContent = text;
+    return;
+  }
+  
+  words.forEach(w => {
+    const span = document.createElement('span');
+    span.className = 'word-span';
+    span.setAttribute('data-start', w.start);
+    span.setAttribute('data-end', w.end);
+    span.textContent = w.word + ' ';
+    span.onclick = () => {
+      const player = getEl('recordingAudioPlayer');
+      if (player) {
+        player.currentTime = w.start;
+        if (player.paused) {
+          player.play();
+          const playBtn = getEl('playerPlayBtn');
+          if (playBtn) playBtn.textContent = '⏸';
+        }
+      }
+    };
+    wrap.appendChild(span);
+  });
+}
+
+function syncTranscriptPlayback() {
+  const player = getEl('recordingAudioPlayer');
+  const currentTimeEl = getEl('playerCurrentTime');
+  const timeline = getEl('playerTimeline');
+  
+  if (!player) return;
+  
+  const cur = player.currentTime;
+  if (currentTimeEl) currentTimeEl.textContent = formatTime(cur);
+  if (timeline && player.duration) {
+    timeline.value = (cur / player.duration) * 100;
+  }
+  
+  // Highlight words
+  const spans = document.querySelectorAll('.word-span');
+  let activeSpan = null;
+  
+  spans.forEach(span => {
+    const start = parseFloat(span.getAttribute('data-start'));
+    const end = parseFloat(span.getAttribute('data-end'));
+    
+    const isActive = (cur >= start && cur <= end);
+    span.classList.toggle('active-word', isActive);
+    if (isActive) {
+      activeSpan = span;
+    }
+  });
+  
+  // Smoothly scroll active word into view
+  if (activeSpan) {
+    const container = getEl('tabTranscriptContent');
+    if (container) {
+      const cHeight = container.clientHeight;
+      const sTop = activeSpan.offsetTop;
+      const sHeight = activeSpan.clientHeight;
+      
+      if (sTop < container.scrollTop || sTop + sHeight > container.scrollTop + cHeight) {
+        container.scrollTo({
+          top: sTop - cHeight / 2,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }
+}
+
+function explainRecording(rec) {
+  const chatInput = getEl('chatInput');
+  if (chatInput) {
+    chatInput.value = `Explain what was discussed in the recording from ${rec.timestamp}.`;
+    handleNavSwitch('chat');
+    const sendBtn = getEl('sendBtn');
+    if (sendBtn) {
+      setTimeout(() => {
+        sendBtn.click();
+      }, 300);
+    }
+  }
+}
+
+function formatTime(seconds) {
+  if (isNaN(seconds) || seconds === null) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}

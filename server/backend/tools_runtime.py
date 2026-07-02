@@ -156,6 +156,40 @@ class ToolRuntime:
                 output = await self._check_file_exists(data.get("path"))
             elif name == "list_directory":
                 output = await self._list_directory(data.get("path"))
+            elif name == "analyze_code":
+                output = await self._analyze_code(data.get("path"))
+            elif name == "long_term_memory":
+                output = await self._long_term_memory(
+                    data.get("category"), data.get("action"), data.get("key"), data.get("value")
+                )
+            elif name == "vision_analyze":
+                output = await self._vision_analyze(data.get("image_path"), data.get("action"))
+            elif name == "voice_speak":
+                output = await self._voice_speak(data.get("text"))
+            elif name == "git_summary":
+                output = await self._git_summary(data.get("path"))
+            elif name == "switch_to_window":
+                output = await self._switch_to_window(data.get("title_query"))
+            elif name == "read_active_window":
+                output = await self._read_active_window()
+            elif name == "read_clipboard":
+                output = await self._read_clipboard()
+            elif name == "write_clipboard":
+                output = await self._write_clipboard(data.get("text"))
+            elif name == "rename_file":
+                output = await self._rename_file(data.get("old_path"), data.get("new_path"))
+            elif name == "move_file":
+                output = await self._move_file(data.get("source"), data.get("destination"))
+            elif name == "delete_file":
+                output = await self._delete_file(data.get("path"))
+            elif name == "launch_vscode":
+                output = await self._launch_vscode(data.get("path"))
+            elif name == "launch_browser":
+                output = await self._launch_browser(data.get("url"))
+            elif name == "launch_terminal":
+                output = await self._launch_terminal(data.get("command"))
+            elif name == "weather":
+                output = await self._weather(data.get("city"))
             else:
                 raise ValueError(f"Unknown tool: {name}")
                 
@@ -837,6 +871,206 @@ class ToolRuntime:
             return f"Contents of {target_path}, Sir:\nFolders: {', '.join(dirs) or 'None'}\nFiles: {', '.join(files) or 'None'}"
         except Exception as e:
             return f"Error listing directory: {e}"
+
+    async def _analyze_code(self, path: Optional[str]) -> str:
+        try:
+            from tools.code_analyzer import CodebaseAnalyzer
+            target_path = path or os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            analyzer = CodebaseAnalyzer(target_path)
+            res = analyzer.analyze()
+            if res.get("status") == "ok":
+                return f"Code Analysis Health Score: {res.get('health_score')}/100\nSummary: {res.get('summary')}\nDetails: {res.get('data')}"
+            return f"Code Analysis failed: {res.get('message')}"
+        except Exception as e:
+            return f"Error running code analysis: {e}"
+
+    async def _long_term_memory(self, category: str, action: str, key: Optional[str], value: Optional[str]) -> str:
+        try:
+            from core.memory.long_term_memory import LongTermMemory
+            ltm = LongTermMemory()
+            act = action.strip().lower()
+            if act == "store":
+                if not key or not value:
+                    return "Error: key and value are required to store memory, Sir."
+                success = ltm.store(category, key, value)
+                return f"Memory stored successfully: {key} -> {value}, Sir." if success else "Failed to store memory."
+            elif act == "retrieve":
+                if not key:
+                    return "Error: key is required to retrieve memory, Sir."
+                val = ltm.retrieve(category, key)
+                return f"Memory for {key} under {category}: {val}" if val else f"No memory found for {key} under {category}, Sir."
+            elif act == "update":
+                if not key or not value:
+                    return "Error: key and value are required to update memory, Sir."
+                success = ltm.update(category, key, value)
+                return f"Memory updated successfully: {key} -> {value}, Sir." if success else "Failed to update memory."
+            elif act == "forget":
+                if not key:
+                    return "Error: key is required to forget memory, Sir."
+                success = ltm.forget(category, key)
+                return f"Memory for {key} forgotten, Sir." if success else "Failed to delete memory."
+            elif act == "search":
+                if not key:
+                    return "Error: query key is required to search memories, Sir."
+                results = ltm.search(category, key)
+                return f"Search results for query '{key}': {results}"
+            elif act == "summarize":
+                return ltm.summarize(category)
+            else:
+                return f"Unknown long term memory action: {action}"
+        except Exception as e:
+            return f"Error managing long term memory: {e}"
+
+    async def _vision_analyze(self, image_path: Optional[str], action: str) -> str:
+        try:
+            from core.vision.vision_engine import VisionEngine
+            from tools.system_control import take_screenshot, SCREENSHOT_PATH
+            target_path = image_path
+            if not target_path or not os.path.exists(target_path):
+                # Auto capture screenshot first
+                await asyncio.to_thread(take_screenshot)
+                target_path = SCREENSHOT_PATH
+            
+            engine = VisionEngine()
+            analysis = engine.analyze_screenshot(target_path)
+            act = action.strip().lower()
+            if act == "screenshot_analysis":
+                return analysis.get("summary", "Analysis complete.")
+            elif act == "ui_explanation":
+                return engine.explain_ui_screenshot(analysis)
+            elif act == "ocr":
+                return f"OCR Text Extracted, Sir:\n{analysis.get('ocr_text', 'No text detected')}"
+            elif act == "error_debugging":
+                errors = analysis.get("detected_errors", [])
+                if errors:
+                    return f"Error Detected on Screen, Sir:\n" + "\n".join([f"- {e}" for e in errors])
+                return "No obvious error text detected on screen, Sir."
+            else:
+                return f"Unknown vision action: {action}"
+        except Exception as e:
+            return f"Error running vision analysis: {e}"
+
+    async def _voice_speak(self, text: str) -> str:
+        try:
+            from tools.voice_tts import speak_text_async
+            try:
+                await speak_text_async(text)
+                return f"Spoken out loud: '{text}'"
+            except Exception:
+                from tools.tts_speaker import TTSSpeaker
+                speaker = TTSSpeaker()
+                speaker.speak(text)
+                return f"Spoken out loud (fallback): '{text}'"
+        except Exception as e:
+            return f"Error simulating speech: {e}"
+
+    async def _git_summary(self, path: Optional[str]) -> str:
+        try:
+            target = path or os.getcwd()
+            res = subprocess.run(["git", "status", "-s"], capture_output=True, text=True, cwd=target, timeout=5)
+            if res.returncode != 0:
+                return f"Git is not initialized in {target} or failed: {res.stderr or res.stdout}"
+            changes = res.stdout.strip()
+            if not changes:
+                return "Clean working directory. No changes, Sir."
+            return f"Git changes in {target}, Sir:\n{changes}"
+        except Exception as e:
+            return f"Error running git summary: {e}"
+
+    async def _switch_to_window(self, title_query: str) -> str:
+        try:
+            from tools.desktop_automation import switch_to_window
+            success = switch_to_window(title_query)
+            return f"Successfully switched to window matching '{title_query}', Sir." if success else f"Could not find or switch to window matching '{title_query}', Sir."
+        except Exception as e:
+            return f"Error switching window: {e}"
+
+    async def _read_active_window(self) -> str:
+        try:
+            from tools.desktop_automation import get_active_window_title
+            title = get_active_window_title()
+            return f"Active window title: '{title}', Sir."
+        except Exception as e:
+            return f"Error reading active window: {e}"
+
+    async def _read_clipboard(self) -> str:
+        try:
+            from tools.desktop_automation import read_clipboard
+            text = read_clipboard()
+            return f"Clipboard text, Sir: '{text}'" if text else "Clipboard is empty or contains non-text data, Sir."
+        except Exception as e:
+            return f"Error reading clipboard: {e}"
+
+    async def _write_clipboard(self, text: str) -> str:
+        try:
+            from tools.desktop_automation import write_clipboard
+            success = write_clipboard(text)
+            return f"Successfully wrote '{text[:50]}...' to clipboard, Sir." if success else "Failed to write text to clipboard."
+        except Exception as e:
+            return f"Error writing to clipboard: {e}"
+
+    async def _rename_file(self, old_path: str, new_path: str) -> str:
+        try:
+            from tools.desktop_automation import rename_file
+            res = rename_file(old_path, new_path)
+            return res.get("message", "File rename complete.")
+        except Exception as e:
+            return f"Error renaming file: {e}"
+
+    async def _move_file(self, source: str, destination: str) -> str:
+        try:
+            from tools.desktop_automation import move_file
+            res = move_file(source, destination)
+            return res.get("message", "File move complete.")
+        except Exception as e:
+            return f"Error moving file: {e}"
+
+    async def _delete_file(self, path: str) -> str:
+        try:
+            from tools.desktop_automation import delete_file_gated
+            res = await delete_file_gated(path)
+            return res.get("message", "File deletion complete.")
+        except Exception as e:
+            return f"Error deleting file: {e}"
+
+    async def _launch_vscode(self, path: Optional[str]) -> str:
+        try:
+            cmd = ["code"]
+            if path:
+                cmd.append(os.path.abspath(path))
+            subprocess.Popen(cmd, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            return f"Successfully launched Visual Studio Code{' on ' + path if path else ''}, Sir."
+        except Exception as e:
+            return f"Error launching VS Code: {e}"
+
+    async def _launch_browser(self, url: Optional[str]) -> str:
+        try:
+            target = url or "https://www.google.com"
+            import webbrowser
+            webbrowser.open(target)
+            return f"Successfully launched default browser opening '{target}', Sir."
+        except Exception as e:
+            return f"Error launching browser: {e}"
+
+    async def _launch_terminal(self, command: Optional[str]) -> str:
+        try:
+            cmd = ["cmd.exe"]
+            if command:
+                cmd.extend(["/k", command])
+            subprocess.Popen(cmd, creationflags=subprocess.CREATE_NEW_CONSOLE)
+            return f"Successfully launched cmd terminal{' running ' + command if command else ''}, Sir."
+        except Exception as e:
+            return f"Error launching terminal: {e}"
+
+    async def _weather(self, city: str) -> str:
+        try:
+            import random
+            temp = random.randint(15, 28)
+            acid_rain = random.choice([True, False])
+            rain_str = "Acid rain levels: Nominal. Visibility: clear." if not acid_rain else "⚠️ Alert: Light Acid Rain detected. Shielding advised."
+            return f"Local weather forecast for {city.upper()} // VOID Core Environment:\n- Temperature: {temp}°C\n- Humidity: 68%\n- {rain_str}"
+        except Exception as e:
+            return f"Error checking weather: {e}"
 
     def stats(self) -> Dict[str, Any]:
         """System stats for /stats endpoint."""

@@ -1,0 +1,620 @@
+{
+  "05b37d76": {
+    "id": "05b37d76",
+    "description": "Goal: Open VS Code and scan project",
+    "tool_name": null,
+    "payload": {},
+    "status": "Planning",
+    "progress": 0,
+    "retry_count": 0,
+    "max_retries": 3,
+    "execution_time": 0.0,
+    "logs": [],
+    "error_reason": null,
+    "subtasks": [
+      {
+        "id": "a7a846ba",
+        "description": "Open Visual Studio Code",
+        "tool_name": "open_app",
+        "payload": {
+          "app": "vscode"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "766fcf5b",
+        "description": "Register VOID Project Path",
+        "tool_name": "register_project",
+        "payload": {
+          "path": "C:\\Users\\HP\\OneDrive\\Desktop\\void\\VOID"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "9999875e",
+        "description": "Scan current codebase structure",
+        "tool_name": "agent_scan",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "b5865113",
+        "description": "Summarize project architecture",
+        "tool_name": "agent_explain",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "92630abd",
+        "description": "Identify highest-priority TODO action items",
+        "tool_name": "get_action_items",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "1f900e7e",
+        "description": "Run test suite",
+        "tool_name": "agent_run_tests",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      }
+    ]
+  },
+  "2011035b": {
+    "id": "2011035b",
+    "description": "Goal: Open VS Code and scan project",
+    "tool_name": null,
+    "payload": {},
+    "status": "Planning",
+    "progress": 0,
+    "retry_count": 0,
+    "max_retries": 3,
+    "execution_time": 0.0,
+    "logs": [],
+    "error_reason": null,
+    "subtasks": [
+      {
+        "id": "00503357",
+        "description": "Open Visual Studio Code",
+        "tool_name": "open_app",
+        "payload": {
+          "app": "vscode"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "ede0e927",
+        "description": "Register VOID Project Path",
+        "tool_name": "register_project",
+        "payload": {
+          "path": "C:\\Users\\HP\\OneDrive\\Desktop\\void\\VOID"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "c5b93392",
+        "description": "Scan current codebase structure",
+        "tool_name": "agent_scan",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "01900186",
+        "description": "Summarize project architecture",
+        "tool_name": "agent_explain",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "5c4c15d0",
+        "description": "Identify highest-priority TODO action items",
+        "tool_name": "get_action_items",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "a5a77c71",
+        "description": "Run test suite",
+        "tool_name": "agent_run_tests",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      }
+    ]
+  },
+  "c753f6ea": {
+    "id": "c753f6ea",
+    "description": "Goal: Open VS Code and scan project",
+    "tool_name": null,
+    "payload": {},
+    "status": "Planning",
+    "progress": 0,
+    "retry_count": 0,
+    "max_retries": 3,
+    "execution_time": 0.0,
+    "logs": [],
+    "error_reason": null,
+    "subtasks": [
+      {
+        "id": "64af42a8",
+        "description": "Open Visual Studio Code",
+        "tool_name": "open_app",
+        "payload": {
+          "app": "vscode"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "694918b7",
+        "description": "Register VOID Project Path",
+        "tool_name": "register_project",
+        "payload": {
+          "path": "C:\\Users\\HP\\OneDrive\\Desktop\\void\\VOID"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "38713f1f",
+        "description": "Scan current codebase structure",
+        "tool_name": "agent_scan",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "02d99c62",
+        "description": "Summarize project architecture",
+        "tool_name": "agent_explain",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "c0e53280",
+        "description": "Identify highest-priority TODO action items",
+        "tool_name": "get_action_items",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "b9a0c727",
+        "description": "Run test suite",
+        "tool_name": "agent_run_tests",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      }
+    ]
+  },
+  "fae4f41d": {
+    "id": "fae4f41d",
+    "description": "Goal: Open VS Code and scan project",
+    "tool_name": null,
+    "payload": {},
+    "status": "Planning",
+    "progress": 0,
+    "retry_count": 0,
+    "max_retries": 3,
+    "execution_time": 0.0,
+    "logs": [],
+    "error_reason": null,
+    "subtasks": [
+      {
+        "id": "42444487",
+        "description": "Open Visual Studio Code",
+        "tool_name": "open_app",
+        "payload": {
+          "app": "vscode"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "b1d36f82",
+        "description": "Register VOID Project Path",
+        "tool_name": "register_project",
+        "payload": {
+          "path": "C:\\Users\\HP\\OneDrive\\Desktop\\void\\VOID"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "d555a0b6",
+        "description": "Scan current codebase structure",
+        "tool_name": "agent_scan",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "b2709cda",
+        "description": "Summarize project architecture",
+        "tool_name": "agent_explain",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "aa9ed134",
+        "description": "Identify highest-priority TODO action items",
+        "tool_name": "get_action_items",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "80018b2b",
+        "description": "Run test suite",
+        "tool_name": "agent_run_tests",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      }
+    ]
+  },
+  "df1435e0": {
+    "id": "df1435e0",
+    "description": "Goal: Open VS Code and scan project",
+    "tool_name": null,
+    "payload": {},
+    "status": "Planning",
+    "progress": 0,
+    "retry_count": 0,
+    "max_retries": 3,
+    "execution_time": 0.0,
+    "logs": [],
+    "error_reason": null,
+    "subtasks": [
+      {
+        "id": "9ffc46f0",
+        "description": "Open Visual Studio Code",
+        "tool_name": "open_app",
+        "payload": {
+          "app": "vscode"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "229144c1",
+        "description": "Register VOID Project Path",
+        "tool_name": "register_project",
+        "payload": {
+          "path": "C:\\Users\\HP\\OneDrive\\Desktop\\void\\VOID"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "5c18253a",
+        "description": "Scan current codebase structure",
+        "tool_name": "agent_scan",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "1c264232",
+        "description": "Summarize project architecture",
+        "tool_name": "agent_explain",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "b19e383d",
+        "description": "Identify highest-priority TODO action items",
+        "tool_name": "get_action_items",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "9e45ea53",
+        "description": "Run test suite",
+        "tool_name": "agent_run_tests",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      }
+    ]
+  },
+  "b7e644cb": {
+    "id": "b7e644cb",
+    "description": "Goal: Open VS Code and scan project",
+    "tool_name": null,
+    "payload": {},
+    "status": "Planning",
+    "progress": 0,
+    "retry_count": 0,
+    "max_retries": 3,
+    "execution_time": 0.0,
+    "logs": [],
+    "error_reason": null,
+    "subtasks": [
+      {
+        "id": "6ebda073",
+        "description": "Open Visual Studio Code",
+        "tool_name": "open_app",
+        "payload": {
+          "app": "vscode"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "47418ea1",
+        "description": "Register VOID Project Path",
+        "tool_name": "register_project",
+        "payload": {
+          "path": "C:\\Users\\HP\\OneDrive\\Desktop\\void\\VOID"
+        },
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "554177d7",
+        "description": "Scan current codebase structure",
+        "tool_name": "agent_scan",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "e9e7f64a",
+        "description": "Summarize project architecture",
+        "tool_name": "agent_explain",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "b48d4c6a",
+        "description": "Identify highest-priority TODO action items",
+        "tool_name": "get_action_items",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      },
+      {
+        "id": "7e331559",
+        "description": "Run test suite",
+        "tool_name": "agent_run_tests",
+        "payload": {},
+        "status": "Planning",
+        "progress": 0,
+        "retry_count": 0,
+        "max_retries": 3,
+        "execution_time": 0.0,
+        "logs": [],
+        "error_reason": null,
+        "subtasks": []
+      }
+    ]
+  }
+}

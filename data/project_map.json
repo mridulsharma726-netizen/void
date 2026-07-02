@@ -335,7 +335,7 @@
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 51290,
+      "size_bytes": 51283,
       "suffix": ".json"
     },
     {
@@ -360,7 +360,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 6204,
+      "size_bytes": 6721,
       "suffix": ".log"
     },
     {
@@ -370,7 +370,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 10274,
+      "size_bytes": 10883,
       "suffix": ".log"
     },
     {
