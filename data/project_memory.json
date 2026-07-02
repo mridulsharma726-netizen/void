@@ -149,19 +149,19 @@
       "size": 170
     },
     "app/ui/app.js": {
-      "hash": "36a6341087767cc89f1d333ab1cf645409f3bf9792372d6d8514a641e61f63e1",
-      "mtime": 1782407687.868572,
-      "size": 135112
+      "hash": "7b0802832bf73bd885462bc7393e715e0c6083d19971bef2f8afae3570cdd522",
+      "mtime": 1782648074.5237226,
+      "size": 170450
     },
     "app/ui/index.html": {
-      "hash": "9e121322ae5c1f2430df37e7b24cd21e93644f46bf1dd91577f38bf423c6f996",
-      "mtime": 1782407671.668125,
-      "size": 86169
+      "hash": "7b0a9977e6654bd6a70e69de9151cd18a2e537aa3e9705a093ea43212f4ae823",
+      "mtime": 1782647976.018626,
+      "size": 109932
     },
     "app/ui/style.css": {
-      "hash": "dd18455c17bc4067f0de32b4ca699b7837d8f53f7b9328f50ae95cda671c970f",
-      "mtime": 1781448820.8323174,
-      "size": 50875
+      "hash": "79d70fc5e27b1592c99d1a52d82ba308816efa5f664ca11aac87d195ca5024c5",
+      "mtime": 1782648092.331611,
+      "size": 59854
     },
     "core/brain.py": {
       "hash": "ab9905331b0c6d2ae05f04c3baa53fc363ec62e72c1c6c1b9cfeb2b9a16cd3d7",
@@ -249,9 +249,9 @@
       "size": 37
     },
     "data/project_map.json": {
-      "hash": "3d484aad92e475e3345d7d2d49f7f146067063818187656d0c766e6f15d77e20",
-      "mtime": 1782422743.2684836,
-      "size": 30648
+      "hash": "9551668bf600a549a0bcff98533bd2057f7347f462f2fb17b3af81b6c11c99bd",
+      "mtime": 1783029723.7343233,
+      "size": 32145
     },
     "desktop/main.js": {
       "hash": "893f0374a7fe50f56c48e10b49d14220feaea126e998b5046c64f5347dd57532",
@@ -269,9 +269,9 @@
       "size": 620
     },
     "logs/brain.log": {
-      "hash": "67a6a714bab5c44f96c024ba73abc365946a9c856b05fdae905ec0b45edea0dd",
-      "mtime": 1782422544.030752,
-      "size": 10883
+      "hash": "6ef4cc06ad64d481e48abeb7fa2dcc723ce15976a6d9ed2dbd5b7ca471011f8d",
+      "mtime": 1783029694.2179248,
+      "size": 11492
     },
     "logs/desktop_control.log": {
       "hash": "4b0f326d7fbcf0741ea37bfa62c961f29d2a174e6f7ded0026eeb270672e6501",
@@ -534,9 +534,9 @@
       "size": 3593
     },
     "server/main.py": {
-      "hash": "a4fe78e119055d5369638b63e8a86157cf1aa5fd7ef91b499d1b07a936342fbd",
-      "mtime": 1782422125.205016,
-      "size": 139424
+      "hash": "f52f93dd774dc7b7ee7070a9613dec0ada0d7a7e19cede0a17417c6573401b5c",
+      "mtime": 1782647879.9456387,
+      "size": 168354
     },
     "server/backend/academic_engine.py": {
       "hash": "4a2ba3520ab83ff207636fcb23c9b0cedc8472612ca4fcb7d41f94cec6af0e1e",
@@ -594,9 +594,9 @@
       "size": 8305
     },
     "server/backend/memory_sqlite.py": {
-      "hash": "68aa1bf1a619da484a8459e88f0dfa4edbff1140b281027a32a47259edfd4d9a",
-      "mtime": 1781445733.2559166,
-      "size": 45488
+      "hash": "5539fa309357836d905b6438b97c9c0c405c663eb0f79413e51e6e610036b83a",
+      "mtime": 1782647912.6274512,
+      "size": 60365
     },
     "server/backend/owner_profile.py": {
       "hash": "10789f4915d5fe7eeb55251f2568274b5986d022a2c3028fde93fff4ed32c4bd",
@@ -629,9 +629,9 @@
       "size": 8115
     },
     "server/backend/tools_runtime.py": {
-      "hash": "42275f283efeeb6ff5247709863bdf6db9982cd869dff8b624342c6e971061ed",
-      "mtime": 1781082535.5687573,
-      "size": 40969
+      "hash": "cbda291febf9272711e5d1d6f418240147534562ec2faa81d16f12f5e092cdb8",
+      "mtime": 1782423299.5604057,
+      "size": 52890
     },
     "server/backend/tool_manager.py": {
       "hash": "11404b20d21bc1b23b1a23cc14a66b7018c981c9da58b7c2831f1734a95c711d",
@@ -639,9 +639,9 @@
       "size": 5403
     },
     "server/backend/tool_schemas.py": {
-      "hash": "02eefbe9d63e7d056d3189b09f723f0fc1ffcc6988437befe219b289a74fd6ba",
-      "mtime": 1781432198.6679618,
-      "size": 12159
+      "hash": "ca5a928cb07b1457f1235b5aae2ff02c0fb6f773f665cde61f555599a2f28c0f",
+      "mtime": 1782423261.0025964,
+      "size": 15520
     },
     "server/backend/validator.py": {
       "hash": "055ea3e82323defa37b1cec1d00f37984273eaf41cdfdd9de456e91b5f737144",
@@ -879,9 +879,9 @@
       "size": 10433
     },
     "tools/wake_word.py": {
-      "hash": "47733cb3ef98966ed683c7230659320b6a3e231b4b6b9f44c353e9e103817569",
-      "mtime": 1781554474.237915,
-      "size": 7928
+      "hash": "fa98f75a48b71779488821c23a0ba4fbf33adf846cce534f12484277d9d1c619",
+      "mtime": 1782647009.739451,
+      "size": 10018
     },
     "tools/web_search.py": {
       "hash": "89786207222cd7b2c8848eecedd28a3948ff50d2cd2d681a199548f54825d07e",
@@ -939,9 +939,9 @@
       "size": 19
     },
     "data/project_memory.json": {
-      "hash": "9039d62ff047743516fbee53c738bd4dec46e9cb62fbc4fb5319dd2dc9052dc1",
-      "mtime": 1782422761.9636364,
-      "size": 51283
+      "hash": "e5d174c59d874dd76df50e4e021303471342e3af181a0b5902f2ff0e52a98015",
+      "mtime": 1783029723.8116,
+      "size": 53737
     },
     "logs/agent_terminal.log": {
       "hash": "b2bb6e79e80fcd43646a89a811a2446a3c053358687b2d0b467cb15439467662",
@@ -1164,9 +1164,9 @@
       "size": 32494
     },
     "logs/agent_swarm.log": {
-      "hash": "4777c6cf4c127b10d42917db7fe8a8dc79d51f6a1fbace373baa80f7dec9a1a9",
-      "mtime": 1782422543.8352888,
-      "size": 6721
+      "hash": "8d6ddb1ba322b92b6b1de8f32e13b2c2122e32ee6f1a42dc9b2799d47801b0e9",
+      "mtime": 1783029694.1631756,
+      "size": 7238
     },
     "logs/terminal.log": {
       "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -1392,6 +1392,71 @@
       "hash": "d0df3f423095248ed9c7920e973c098dccf9e27640c04f2a0645db45229fc657",
       "mtime": 1781556939.8724763,
       "size": 20144
+    },
+    "test_phase2_autonomous.py": {
+      "hash": "655677390c504373a1dc224abec3888f01f93b7d919887c41cee4c92d0105157",
+      "mtime": 1782423373.0949357,
+      "size": 6410
+    },
+    "core/autonomous_agent/self_verifier.py": {
+      "hash": "01f8e6b1e509f98f5dbcf5b8134e0b159c62267a9c0e75656b294951f8bb20a7",
+      "mtime": 1782423116.4862728,
+      "size": 5653
+    },
+    "core/autonomous_agent/task_planner.py": {
+      "hash": "6f374e9a01c1b2162ad50292503b682d9a2d1f07424317030684dcf94e961787",
+      "mtime": 1782423069.3369899,
+      "size": 8818
+    },
+    "core/memory/long_term_memory.py": {
+      "hash": "f17b1f2d8482545fc6deae3c9467f8e7b2444f45af1fe33b19ca9004e41b3257",
+      "mtime": 1782423098.4866674,
+      "size": 4644
+    },
+    "core/tools/tool_orchestrator.py": {
+      "hash": "d29c8eb99f106d13aaa5b3732c46b120f0cc11d3f1309e3a1cc47e402afdfe02",
+      "mtime": 1782423111.5712464,
+      "size": 2295
+    },
+    "core/vision/vision_engine.py": {
+      "hash": "71825a64c99a6df72a8156d74d713d1b4a61559184a1fc870cee56de5ee3aafe",
+      "mtime": 1782423087.4852195,
+      "size": 4279
+    },
+    "memory/data/active_tasks.json": {
+      "hash": "5ce2589810c75a3709c991c05149e4fe07f2a355d9fb634ae57d318297475afd",
+      "mtime": 1783029701.142193,
+      "size": 19204
+    },
+    "server/backend/audio_memory_service.py": {
+      "hash": "c84c3371dba1072c19b18932e347cc7f7927bb59cf9adf3a5fc26d51dd1861a0",
+      "mtime": 1782647851.386912,
+      "size": 40034
+    },
+    "server/backend/metrics_service.py": {
+      "hash": "d222cf8bd8cdc1ce8b20d8afed7b5cc7990d889977bc1442f8467ba849ba45cf",
+      "mtime": 1782647751.9034507,
+      "size": 10150
+    },
+    "server/backend/ollama_manager.py": {
+      "hash": "c89bc3a30adbc0326c9cdbc0a6f8904b6ccfec683279aed21350103e7f1dc45d",
+      "mtime": 1782645861.9850638,
+      "size": 8316
+    },
+    "tests/test_phase3_audio.py": {
+      "hash": "4e21d8a5ef8966e041f3d6d3b4d07b78833ac4fed490eec114b94fc56703b27e",
+      "mtime": 1782647940.642535,
+      "size": 9077
+    },
+    "tools/code_analyzer.py": {
+      "hash": "e49c44757963158f1e08110bc5868d7a87e733d90407a3e8f7b87dc4eba1c9b0",
+      "mtime": 1782423082.0492527,
+      "size": 12285
+    },
+    "tools/desktop_automation.py": {
+      "hash": "8d219437a2a3f55b850dca6de6cbf6e8b409c48e8886048f6315ac9d6e8507cf",
+      "mtime": 1782423524.56171,
+      "size": 8156
     }
   }
 }

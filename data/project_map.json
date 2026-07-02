@@ -104,6 +104,11 @@
       "suffix": ".py"
     },
     {
+      "path": "test_phase2_autonomous.py",
+      "size_bytes": 6410,
+      "suffix": ".py"
+    },
+    {
       "path": "test_project_intelligence_upgrade.py",
       "size_bytes": 8458,
       "suffix": ".py"
@@ -200,17 +205,17 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 135112,
+      "size_bytes": 170450,
       "suffix": ".js"
     },
     {
       "path": "app/ui/index.html",
-      "size_bytes": 86169,
+      "size_bytes": 109932,
       "suffix": ".html"
     },
     {
       "path": "app/ui/style.css",
-      "size_bytes": 50875,
+      "size_bytes": 59854,
       "suffix": ".css"
     },
     {
@@ -299,6 +304,16 @@
       "suffix": ".py"
     },
     {
+      "path": "core/autonomous_agent/self_verifier.py",
+      "size_bytes": 5653,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/autonomous_agent/task_planner.py",
+      "size_bytes": 8818,
+      "suffix": ".py"
+    },
+    {
       "path": "core/autonomous_agent/terminal_engine.py",
       "size_bytes": 2835,
       "suffix": ".py"
@@ -314,8 +329,23 @@
       "suffix": ".py"
     },
     {
+      "path": "core/memory/long_term_memory.py",
+      "size_bytes": 4644,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/tools/tool_orchestrator.py",
+      "size_bytes": 2295,
+      "suffix": ".py"
+    },
+    {
       "path": "core/vision/screen_ocr.py",
       "size_bytes": 3281,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/vision/vision_engine.py",
+      "size_bytes": 4279,
       "suffix": ".py"
     },
     {
@@ -330,12 +360,12 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 30648,
+      "size_bytes": 32145,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 51283,
+      "size_bytes": 53736,
       "suffix": ".json"
     },
     {
@@ -360,7 +390,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 6721,
+      "size_bytes": 7238,
       "suffix": ".log"
     },
     {
@@ -370,7 +400,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 10883,
+      "size_bytes": 11492,
       "suffix": ".log"
     },
     {
@@ -446,6 +476,11 @@
     {
       "path": "memory/academic_documents/os/rag_index_cache.json",
       "size_bytes": 71,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/active_tasks.json",
+      "size_bytes": 19204,
       "suffix": ".json"
     },
     {
@@ -900,7 +935,7 @@
     },
     {
       "path": "server/main.py",
-      "size_bytes": 139424,
+      "size_bytes": 168354,
       "suffix": ".py"
     },
     {
@@ -921,6 +956,11 @@
     {
       "path": "server/backend/academic_syllabus.py",
       "size_bytes": 6778,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/audio_memory_service.py",
+      "size_bytes": 40034,
       "suffix": ".py"
     },
     {
@@ -980,7 +1020,17 @@
     },
     {
       "path": "server/backend/memory_sqlite.py",
-      "size_bytes": 45488,
+      "size_bytes": 60365,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/metrics_service.py",
+      "size_bytes": 10150,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/backend/ollama_manager.py",
+      "size_bytes": 8316,
       "suffix": ".py"
     },
     {
@@ -1020,7 +1070,7 @@
     },
     {
       "path": "server/backend/tools_runtime.py",
-      "size_bytes": 40969,
+      "size_bytes": 52890,
       "suffix": ".py"
     },
     {
@@ -1030,7 +1080,7 @@
     },
     {
       "path": "server/backend/tool_schemas.py",
-      "size_bytes": 12159,
+      "size_bytes": 15520,
       "suffix": ".py"
     },
     {
@@ -1079,6 +1129,11 @@
       "suffix": ".py"
     },
     {
+      "path": "tests/test_phase3_audio.py",
+      "size_bytes": 9077,
+      "suffix": ".py"
+    },
+    {
       "path": "tools/academic_progress.py",
       "size_bytes": 28458,
       "suffix": ".py"
@@ -1119,6 +1174,11 @@
       "suffix": ".py"
     },
     {
+      "path": "tools/code_analyzer.py",
+      "size_bytes": 12285,
+      "suffix": ".py"
+    },
+    {
       "path": "tools/code_tools.py",
       "size_bytes": 24380,
       "suffix": ".py"
@@ -1131,6 +1191,11 @@
     {
       "path": "tools/dep_manager.py",
       "size_bytes": 1971,
+      "suffix": ".py"
+    },
+    {
+      "path": "tools/desktop_automation.py",
+      "size_bytes": 8156,
       "suffix": ".py"
     },
     {
@@ -1325,7 +1390,7 @@
     },
     {
       "path": "tools/wake_word.py",
-      "size_bytes": 7928,
+      "size_bytes": 10018,
       "suffix": ".py"
     },
     {
