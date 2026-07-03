@@ -18,7 +18,11 @@ from backend.schemas import ChatRequest, TextRequest
 from backend.llm_client import OllamaClient
 from backend.validator import ResponseValidator
 
+from tools.system_stats import SystemStats
+
 logger = logging.getLogger("void.routes.chat")
+
+stats_collector = SystemStats()
 
 router = APIRouter()
 

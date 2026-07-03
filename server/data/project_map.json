@@ -1,0 +1,229 @@
+{
+  "root": "C:/Users/HP/OneDrive/Desktop/void/VOID/server",
+  "frameworks": [],
+  "entry_points": [
+    "main.py"
+  ],
+  "files": [
+    {
+      "path": "dependencies.py",
+      "size_bytes": 5667,
+      "suffix": ".py"
+    },
+    {
+      "path": "main.py",
+      "size_bytes": 86805,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/academic_engine.py",
+      "size_bytes": 8873,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/academic_quiz_generator.py",
+      "size_bytes": 6578,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/academic_rag.py",
+      "size_bytes": 11842,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/academic_syllabus.py",
+      "size_bytes": 6778,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/audio_memory_service.py",
+      "size_bytes": 40034,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/builder_agent.py",
+      "size_bytes": 29106,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/decision_engine.py",
+      "size_bytes": 7265,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/deep_research.py",
+      "size_bytes": 23681,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/diagnostics.py",
+      "size_bytes": 14286,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/emotion_engine.py",
+      "size_bytes": 7236,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/engineering_mode.py",
+      "size_bytes": 16846,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/fs_tools.py",
+      "size_bytes": 15541,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/intent_router.py",
+      "size_bytes": 40939,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/knowledge_fusion.py",
+      "size_bytes": 11799,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/llm_client.py",
+      "size_bytes": 29382,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/memory_manager.py",
+      "size_bytes": 8305,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/memory_sqlite.py",
+      "size_bytes": 60365,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/metrics_service.py",
+      "size_bytes": 10150,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/ollama_manager.py",
+      "size_bytes": 8316,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/owner_profile.py",
+      "size_bytes": 5036,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/pipeline.py",
+      "size_bytes": 1552,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/project_analyzer.py",
+      "size_bytes": 5736,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/repair_system.py",
+      "size_bytes": 25469,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/safety_guard.py",
+      "size_bytes": 11270,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/schemas.py",
+      "size_bytes": 1680,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/screen_monitor.py",
+      "size_bytes": 8115,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/tools_runtime.py",
+      "size_bytes": 52890,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/tool_manager.py",
+      "size_bytes": 5403,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/tool_schemas.py",
+      "size_bytes": 15520,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/validator.py",
+      "size_bytes": 3059,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/__init__.py",
+      "size_bytes": 41,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/providers/anthropic_compatible.py",
+      "size_bytes": 5838,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/providers/base.py",
+      "size_bytes": 1194,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/providers/gemini_compatible.py",
+      "size_bytes": 5483,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/providers/kimi_cloud.py",
+      "size_bytes": 5090,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/providers/ollama_local.py",
+      "size_bytes": 9183,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/providers/openai_compatible.py",
+      "size_bytes": 5175,
+      "suffix": ".py"
+    },
+    {
+      "path": "backend/providers/router.py",
+      "size_bytes": 20144,
+      "suffix": ".py"
+    },
+    {
+      "path": "data/project_map.json",
+      "size_bytes": 4724,
+      "suffix": ".json"
+    },
+    {
+      "path": "data/project_memory.json",
+      "size_bytes": 7823,
+      "suffix": ".json"
+    },
+    {
+      "path": "routes/admin.py",
+      "size_bytes": 5048,
+      "suffix": ".py"
+    },
+    {
+      "path": "routes/chat.py",
+      "size_bytes": 78708,
+      "suffix": ".py"
+    }
+  ]
+}

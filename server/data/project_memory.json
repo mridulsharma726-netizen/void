@@ -1,0 +1,229 @@
+{
+  "architecture_summary": "I do not have enough project data to determine that.",
+  "technology_stack": [],
+  "apis": {},
+  "db_layouts": {},
+  "file_relationships": {},
+  "file_states": {
+    "dependencies.py": {
+      "hash": "2828f9211aee132aa801d125cfd4f24a769d4419a49e3fa9de8bcbdef2072615",
+      "mtime": 1783106555.083717,
+      "size": 5667
+    },
+    "main.py": {
+      "hash": "da52b314ef4cf150cf773b635ce2ba692d85f9ca000d8e31417297860ab1925e",
+      "mtime": 1783106875.0983102,
+      "size": 86805
+    },
+    "backend/academic_engine.py": {
+      "hash": "4a2ba3520ab83ff207636fcb23c9b0cedc8472612ca4fcb7d41f94cec6af0e1e",
+      "mtime": 1780428657.59235,
+      "size": 8873
+    },
+    "backend/academic_quiz_generator.py": {
+      "hash": "7534da3d8825668e40bdffac0adaae3946a3b321d594dea61a46cf20a4336078",
+      "mtime": 1780428647.4338627,
+      "size": 6578
+    },
+    "backend/academic_rag.py": {
+      "hash": "7ad5a1004eb2def9fdf9952940c8274ab3c08c712d71b02d2c9408b6d769a1bc",
+      "mtime": 1780837296.1647046,
+      "size": 11842
+    },
+    "backend/academic_syllabus.py": {
+      "hash": "76ca55a0018ad1cde225a9b83ad344e34b72bac45ee9e3b4f0326472e5f1aca7",
+      "mtime": 1780428641.1975741,
+      "size": 6778
+    },
+    "backend/audio_memory_service.py": {
+      "hash": "c84c3371dba1072c19b18932e347cc7f7927bb59cf9adf3a5fc26d51dd1861a0",
+      "mtime": 1782647851.386912,
+      "size": 40034
+    },
+    "backend/builder_agent.py": {
+      "hash": "d4890cac2ebcbd087604b782bf63d5124b7dcc9565425355a01c0f8d8ea75ee5",
+      "mtime": 1781445597.5340693,
+      "size": 29106
+    },
+    "backend/decision_engine.py": {
+      "hash": "e92f2118c09c4726d68ce369fdc73acd80dc0e380f41f7e175d8c0c94ada500c",
+      "mtime": 1779909324.783929,
+      "size": 7265
+    },
+    "backend/deep_research.py": {
+      "hash": "5091442f2680f9ef476fa08bafa362e2c875d4948573a785876156536f4988b0",
+      "mtime": 1780840901.9816363,
+      "size": 23681
+    },
+    "backend/diagnostics.py": {
+      "hash": "279891260a7bdc1d6aba6180a2937e42e0179b9dd8682e61b3d4494002828a90",
+      "mtime": 1781554496.2081537,
+      "size": 14286
+    },
+    "backend/emotion_engine.py": {
+      "hash": "3c74e7cd023e40a425095a08e4168ce708440aa7dc63cf57f5ee886c108931e8",
+      "mtime": 1780426988.9997509,
+      "size": 7236
+    },
+    "backend/engineering_mode.py": {
+      "hash": "ba3d1e69e8870e542e6937bddd79c3e9e0a24a2abd6c0e1bcd2e301814574148",
+      "mtime": 1781445440.9822268,
+      "size": 16846
+    },
+    "backend/fs_tools.py": {
+      "hash": "c57615bad821182bc0146505bbdad427b66f1b14696382b478ce3e17cced648b",
+      "mtime": 1781445497.5631688,
+      "size": 15541
+    },
+    "backend/intent_router.py": {
+      "hash": "518372b6c4367a8017fed79ef47d18d3454ae69ea0a6b4ca072297ba8a2bf5e9",
+      "mtime": 1783032622.478579,
+      "size": 40939
+    },
+    "backend/knowledge_fusion.py": {
+      "hash": "e9c56964233078e07dc824566a93c7b0c79e2e7469d04efdc1d38de0cbb8576c",
+      "mtime": 1781445381.448685,
+      "size": 11799
+    },
+    "backend/llm_client.py": {
+      "hash": "c76e1467d2350c7c88cf4a5d8dec0c8ec9c0508100c2af4993f3ecd924a6d390",
+      "mtime": 1782422041.194734,
+      "size": 29382
+    },
+    "backend/memory_manager.py": {
+      "hash": "f0b41f4547807052a6f18baf99b702ff337ba9410e0b88a961beceb6ab0b9f22",
+      "mtime": 1780822793.190615,
+      "size": 8305
+    },
+    "backend/memory_sqlite.py": {
+      "hash": "5539fa309357836d905b6438b97c9c0c405c663eb0f79413e51e6e610036b83a",
+      "mtime": 1782647912.6274512,
+      "size": 60365
+    },
+    "backend/metrics_service.py": {
+      "hash": "d222cf8bd8cdc1ce8b20d8afed7b5cc7990d889977bc1442f8467ba849ba45cf",
+      "mtime": 1782647751.9034507,
+      "size": 10150
+    },
+    "backend/ollama_manager.py": {
+      "hash": "c89bc3a30adbc0326c9cdbc0a6f8904b6ccfec683279aed21350103e7f1dc45d",
+      "mtime": 1782645861.9850638,
+      "size": 8316
+    },
+    "backend/owner_profile.py": {
+      "hash": "10789f4915d5fe7eeb55251f2568274b5986d022a2c3028fde93fff4ed32c4bd",
+      "mtime": 1781555303.6157062,
+      "size": 5036
+    },
+    "backend/pipeline.py": {
+      "hash": "d63743e3b7297450d5e45eed718021a1d73cc2edcf5317a930510137f46c1aec",
+      "mtime": 1777556631.1278362,
+      "size": 1552
+    },
+    "backend/project_analyzer.py": {
+      "hash": "e967a43f478366e9f42776b388143cefe080b408cb09123669f7e5c38b8870b1",
+      "mtime": 1781436418.1520517,
+      "size": 5736
+    },
+    "backend/repair_system.py": {
+      "hash": "d1fe4ade06fffcded47d9b48c16753623c3cf4059301f953216174f6e0fc85cd",
+      "mtime": 1780166926.7241502,
+      "size": 25469
+    },
+    "backend/safety_guard.py": {
+      "hash": "2f59fdc9f94caa4922c9de11921f8389fac886cd0851453475e7cf774dbd9747",
+      "mtime": 1780427584.6685002,
+      "size": 11270
+    },
+    "backend/schemas.py": {
+      "hash": "d4078f3c08804e169944a8a7a0b5ab0db7b0f5dc50b0e67ed94032947d1e63e8",
+      "mtime": 1782421849.2902596,
+      "size": 1680
+    },
+    "backend/screen_monitor.py": {
+      "hash": "46c59c094c6224c10389de45e6d8b7bc17318def3730940ac9e241044101f8b0",
+      "mtime": 1781087390.858868,
+      "size": 8115
+    },
+    "backend/tools_runtime.py": {
+      "hash": "cbda291febf9272711e5d1d6f418240147534562ec2faa81d16f12f5e092cdb8",
+      "mtime": 1782423299.5604057,
+      "size": 52890
+    },
+    "backend/tool_manager.py": {
+      "hash": "11404b20d21bc1b23b1a23cc14a66b7018c981c9da58b7c2831f1734a95c711d",
+      "mtime": 1781429384.9723647,
+      "size": 5403
+    },
+    "backend/tool_schemas.py": {
+      "hash": "ca5a928cb07b1457f1235b5aae2ff02c0fb6f773f665cde61f555599a2f28c0f",
+      "mtime": 1782423261.0025964,
+      "size": 15520
+    },
+    "backend/validator.py": {
+      "hash": "055ea3e82323defa37b1cec1d00f37984273eaf41cdfdd9de456e91b5f737144",
+      "mtime": 1780166943.4067843,
+      "size": 3059
+    },
+    "backend/__init__.py": {
+      "hash": "ed0bf3d2b0ca4293cdeee83b0f6911f490032ffe43f8a972b50257e5d1e12953",
+      "mtime": 1775578229.481107,
+      "size": 41
+    },
+    "backend/providers/anthropic_compatible.py": {
+      "hash": "fb44f958aa04dff1ba9d6dcfee2ae6f41c8ae6b5f42bcbb8820b12feb0f27abf",
+      "mtime": 1781451268.279815,
+      "size": 5838
+    },
+    "backend/providers/base.py": {
+      "hash": "81174a906de89efef84cbe6c3c52565edb14e3f80e9459e7f7918395008e8a09",
+      "mtime": 1781436396.647881,
+      "size": 1194
+    },
+    "backend/providers/gemini_compatible.py": {
+      "hash": "2c3f394fcec16caa076b67617099576588a67e38f0da5b8867231d5969ab9245",
+      "mtime": 1781451264.7274716,
+      "size": 5483
+    },
+    "backend/providers/kimi_cloud.py": {
+      "hash": "0dee9b73497a8e685f2c6e38c422594ceb36d8e249eb5b8f82b58bcb2e6b65be",
+      "mtime": 1781436405.5571313,
+      "size": 5090
+    },
+    "backend/providers/ollama_local.py": {
+      "hash": "562462ab126a5306ddffdcd5403a4179a2bc178991e1b92c3e8d641460acd974",
+      "mtime": 1781451276.4709554,
+      "size": 9183
+    },
+    "backend/providers/openai_compatible.py": {
+      "hash": "6130633e1f5a06dd7b503a209a16f1002c86805964b7b4a2ad07d608a0ac0d6f",
+      "mtime": 1781451260.6851847,
+      "size": 5175
+    },
+    "backend/providers/router.py": {
+      "hash": "d0df3f423095248ed9c7920e973c098dccf9e27640c04f2a0645db45229fc657",
+      "mtime": 1781556939.8724763,
+      "size": 20144
+    },
+    "routes/admin.py": {
+      "hash": "facbb3dad1afb6af6dd848e39eec8a24f9002fcb8ed6e7c52ef0423bf9f0d07a",
+      "mtime": 1783106562.898479,
+      "size": 5048
+    },
+    "routes/chat.py": {
+      "hash": "aec0e354cf414780465a4701649b537d874ef23dfc143787762f773fc51f98f7",
+      "mtime": 1783106967.483131,
+      "size": 78708
+    },
+    "data/project_map.json": {
+      "hash": "f2d4e1ba1bdbb0933b64f36a64c7a6579e14810dbf1fa3a7a47632caadac1b11",
+      "mtime": 1783107038.1952887,
+      "size": 4941
+    },
+    "data/project_memory.json": {
+      "hash": "e86abfdde9574d4c51c5a0ab130146b72c1b1fa368df8c312d6ae9fdc0148a46",
+      "mtime": 1783107038.2449431,
+      "size": 8002
+    }
+  }
+}

@@ -390,7 +390,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 9306,
+      "size_bytes": 9823,
       "suffix": ".log"
     },
     {
@@ -400,7 +400,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 13928,
+      "size_bytes": 14537,
       "suffix": ".log"
     },
     {
@@ -480,7 +480,7 @@
     },
     {
       "path": "memory/data/active_tasks.json",
-      "size_bytes": 27433,
+      "size_bytes": 30176,
       "suffix": ".json"
     },
     {
@@ -1140,7 +1140,7 @@
     },
     {
       "path": "server/routes/chat.py",
-      "size_bytes": 78601,
+      "size_bytes": 78708,
       "suffix": ".py"
     },
     {
