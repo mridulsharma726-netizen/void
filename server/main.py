@@ -405,8 +405,10 @@ app = FastAPI(title="VOID Backend", lifespan=lifespan)
 # Register sub-routers
 from routes.admin import router as admin_router
 from routes.chat import router as chat_router, WorkflowRequest
+from routes.memory import router as memory_router
 app.include_router(admin_router)
 app.include_router(chat_router)
+app.include_router(memory_router)
 
 class WebSocketBypassCORSMiddleware(CORSMiddleware):
     async def __call__(self, scope, receive, send):
@@ -1133,25 +1135,13 @@ async def set_voice_personality(req: PersonalityRequest):
         raise HTTPException(status_code=400, detail=res.get("message"))
     return res
 
-class ProfileRequest(BaseModel):
-    key: str
-    value: str
+# ProfileRequest moved to routes/memory.py
 
-@app.post("/memory/profile")
-async def update_profile_value(req: ProfileRequest):
-    from backend.memory_sqlite import set_profile_value
-    ok = set_profile_value(req.key, req.value)
-    if not ok:
-        raise HTTPException(status_code=500, detail="Failed to update profile value.")
-    return {"status": "ok", "message": f"Updated profile key '{req.key}'."}
 
-@app.get("/memory/profile/{key}")
-async def get_profile_value_endpoint(key: str):
-    from backend.memory_sqlite import get_profile_value
-    val = get_profile_value(key)
-    if val is None:
-        raise HTTPException(status_code=404, detail=f"Profile key '{key}' not found.")
-    return {"status": "ok", "key": key, "value": val}
+# [Extracted Memory Route Block]
+
+
+# [Extracted Memory Route Block]
 
 class SocialPostRequest(BaseModel):
     platform: str
@@ -1681,50 +1671,14 @@ async def get_project_details_endpoint(project_id: str):
 
 
 # === MEMORY API ===
-@app.get("/memory/list")
-async def list_memories():
-    from backend.memory_sqlite import get_all_facts
-    try:
-        facts = get_all_facts()
-        return {"status": "ok", "facts": facts}
-    except Exception as e:
-        logger.error(f"Failed to load memories: {e}")
-        return {"status": "error", "facts": []}
 
-class AddMemoryRequest(BaseModel):
-    fact: str
-    importance: int = 5
+# [Extracted Memory Route Block]
 
-@app.post("/memory/add")
-async def add_memory_endpoint(req: AddMemoryRequest):
-    from backend.memory_sqlite import add_fact
-    try:
-        ok = add_fact(req.fact, req.importance)
-        if ok:
-            return {"status": "ok", "message": "Fact added to memory banks."}
-        else:
-            raise HTTPException(status_code=500, detail="Failed to add fact.")
-    except Exception as e:
-        logger.error(f"Failed to add memory: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# AddMemoryRequest and DeleteMemoryRequest moved to routes/memory.py
 
-class DeleteMemoryRequest(BaseModel):
-    fact: str
 
-@app.post("/memory/delete")
-async def delete_memory_endpoint(req: DeleteMemoryRequest):
-    from backend.memory_sqlite import remove_fact
-    try:
-        ok = remove_fact(req.fact)
-        if ok:
-            return {"status": "ok", "message": "Fact removed from memory banks."}
-        else:
-            raise HTTPException(status_code=500, detail="Fact not found or could not be deleted.")
-    except Exception as e:
-        logger.error(f"Failed to delete memory: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# [Extracted Memory Route Block]
 
-# === MEETINGS API ===
 @app.get("/meetings/list")
 async def list_meetings():
     from backend.memory_sqlite import get_recent_meetings

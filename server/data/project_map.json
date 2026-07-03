@@ -207,12 +207,12 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 4724,
+      "size_bytes": 4941,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 7823,
+      "size_bytes": 8237,
       "suffix": ".json"
     },
     {
@@ -222,7 +222,7 @@
     },
     {
       "path": "routes/chat.py",
-      "size_bytes": 78708,
+      "size_bytes": 78789,
       "suffix": ".py"
     }
   ]
