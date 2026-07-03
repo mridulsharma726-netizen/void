@@ -6,6 +6,16 @@ Provides detect_intent_and_params() function for the workflow engine.
 Bridges to the existing server/backend/intent_router.py IntentRouter class.
 
 Used by: workflows/workflow_engine.py
+
+# ===========================================================================
+# INTENT ROUTER CORE RELATIONSHIP NOTE:
+# - This file (core/intent_router.py) is a bridge wrapper (detect_intent_and_params)
+#   specifically designed for the workflows engine (workflows/workflow_engine.py).
+# - It dynamically delegates to the primary IntentRouter class (server/backend/intent_router.py)
+#   to avoid duplicating rule regexes and parameter mappings.
+# - If server/backend/intent_router.py is not in import scope, it falls back
+#   to a local, lightweight regex matching pattern list.
+# ===========================================================================
 """
 
 import re

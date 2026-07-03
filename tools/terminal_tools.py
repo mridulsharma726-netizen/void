@@ -138,9 +138,60 @@ def _is_command_allowed(cmd: str) -> bool:
         if blocked in cmd_lower:
             logger.warning(f"[TERMINAL] Blocked destructive pattern '{blocked}' in: {cmd}")
             return False
-    
+            
+    # Check pip restriction
+    if cmd_lower.startswith("pip"):
+        allowed_pip = ["pip install -r requirements.txt", "pip install --upgrade -r requirements.txt", "pip --version", "pip -v", "pip --help"]
+        normalized_cmd = " ".join(cmd_lower.split())
+        if any(normalized_cmd == p or normalized_cmd.startswith(p + " ") for p in allowed_pip):
+            return True
+        logger.warning(f"[TERMINAL] Blocked pip command: {cmd}")
+        return False
+        
+    # Check python restriction
+    if cmd_lower.startswith("python"):
+        # Block inline code (-c, --code)
+        if "-c" in cmd_lower or "--code" in cmd_lower:
+            logger.warning(f"[TERMINAL] Blocked python command with inline code execution: {cmd}")
+            return False
+            
+        # Allowed python command lines (regex patterns)
+        import re
+        allowed_patterns = [
+            r"^python\s+-m\s+pytest(?:\s+.*)?$",
+            r"^python\s+server/backend/diagnostics\.py(?:\s+.*)?$",
+            r"^python\s+server/main\.py(?:\s+.*)?$",
+            r"^python\s+launcher\.py(?:\s+.*)?$",
+            r"^python\s+setup\.py(?:\s+.*)?$",
+            r"^python\s+create_shortcut\.py(?:\s+.*)?$",
+            r"^python\s+(?:server/|tools/|workflows/|tests/)?test_[\w_\-]+\.py(?:\s+.*)?$",
+            r"^python\s+--version$",
+            r"^python\s+-v$",
+            r"^python\s+--help$"
+        ]
+        normalized_cmd = " ".join(cmd_lower.split())
+        if any(re.match(pattern, normalized_cmd) for pattern in allowed_patterns):
+            return True
+            
+        # Allow running temp files if they exist and are in the system temp directory
+        import tempfile
+        temp_dir = tempfile.gettempdir().lower()
+        args = cmd_lower.split()
+        if len(args) >= 2:
+            import os
+            script_path = args[1].strip('"\'')
+            if script_path.endswith(".py") and os.path.exists(script_path):
+                real_script_path = os.path.abspath(script_path).lower()
+                if real_script_path.startswith(os.path.abspath(temp_dir).lower()):
+                    return True
+            
+        logger.warning(f"[TERMINAL] Blocked python command: {cmd}")
+        return False
+
     # Check if starts with an allowed command
     for allowed in ALLOWED_COMMANDS:
+        if allowed in ["python", "pip"]:
+            continue
         if cmd_lower.startswith(allowed):
             return True
     

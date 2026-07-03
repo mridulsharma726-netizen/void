@@ -422,8 +422,30 @@ class SecureTokenAuthMiddleware:
     async def __call__(self, scope, receive, send):
         logger.info(f"ASGI SCOPE TYPE: {scope.get('type')}, PATH: {scope.get('path')}")
         if scope["type"] == "websocket":
-            headers_dict = {k.decode('latin-1'): v.decode('latin-1') for k, v in scope.get('headers', [])}
-            logger.info(f"WEBSOCKET HEADERS: {headers_dict}")
+            query_string = scope.get("query_string", b"").decode("latin-1")
+            import urllib.parse
+            query_params = urllib.parse.parse_qs(query_string)
+            token = query_params.get("token", [None])[0]
+            
+            if not token:
+                headers = {k.decode('latin-1').lower(): v.decode('latin-1') for k, v in scope.get('headers', [])}
+                auth_header = headers.get("sec-websocket-protocol") or headers.get("authorization")
+                if auth_header:
+                    if auth_header.startswith("Bearer "):
+                        token = auth_header.split(" ")[1]
+                    else:
+                        token = auth_header
+            
+            if token != API_TOKEN:
+                logger.warning(f"WebSocket connection denied: invalid token {token}")
+                event = await receive()
+                if event["type"] == "websocket.connect":
+                    await send({"type": "websocket.close", "code": 4001})
+                return
+            
+            await self.app(scope, receive, send)
+            return
+
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return

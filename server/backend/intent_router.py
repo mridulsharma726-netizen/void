@@ -7,6 +7,16 @@ from backend.schemas import IntentResult
 
 logger = logging.getLogger("void.intent_router")
 
+# ===========================================================================
+# INTENT ROUTER CORE RELATIONSHIP NOTE:
+# - This file (server/backend/intent_router.py) is the primary IntentRouter class.
+#   It classifies intents via rule regexes or LLM fallback for /chat requests.
+# - core/intent_router.py acts as a synchronous bridge wrapper (detect_intent_and_params)
+#   specifically designed for the workflows engine (workflows/workflow_engine.py).
+# - Do NOT duplicate classification rules or patterns here. Both modules are active
+#   and coordinated.
+# ===========================================================================
+
 class IntentRouter:
     """Hybrid intent router: rules first → LLM fallback.
     

@@ -82,13 +82,18 @@ async function startBackend() {
 
   log('info', `Starting backend with ${pythonExe}`);
   
-  backendProc = spawn(pythonExe, [
+  const uvicornArgs = [
     '-m', 'uvicorn', 
     'server.main:app', 
     '--host', BACKEND_HOST, 
-    '--port', BACKEND_PORT,
-    '--reload'  // Dev mode
-  ], {
+    '--port', BACKEND_PORT
+  ];
+  if (process.env.VOID_DEV_MODE === 'true' || process.env.NODE_ENV !== 'production') {
+    uvicornArgs.push('--reload');
+    log('info', 'Uvicorn reload enabled (development mode)');
+  }
+
+  backendProc = spawn(pythonExe, uvicornArgs, {
     cwd: ROOT_DIR,
     stdio: 'pipe',
     shell: true  // Windows compatibility
