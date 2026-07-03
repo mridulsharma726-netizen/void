@@ -249,8 +249,8 @@
       "size": 37
     },
     "data/project_map.json": {
-      "hash": "f8bfdac1f2d1990c436c107ed7be265ed2d762f79589683446b7d8a64d723d83",
-      "mtime": 1783102730.3948257,
+      "hash": "40acacee886948e6b9921a22640d4e4b3560c65e017e61fe72397900c4ef9b66",
+      "mtime": 1783102821.640282,
       "size": 32147
     },
     "desktop/main.js": {
@@ -269,9 +269,9 @@
       "size": 620
     },
     "logs/brain.log": {
-      "hash": "d6148306126090adb9f74cee58d5f7df489dd8dff47b652a193b1e77097f0f9d",
-      "mtime": 1783102698.3580697,
-      "size": 12101
+      "hash": "be22936b7049e0a1f1720738283f1dc494664bad3393d72e5b78d62b072eb13a",
+      "mtime": 1783102790.8628273,
+      "size": 12710
     },
     "logs/desktop_control.log": {
       "hash": "4b0f326d7fbcf0741ea37bfa62c961f29d2a174e6f7ded0026eeb270672e6501",
@@ -844,9 +844,9 @@
       "size": 12271
     },
     "tools/terminal_tools.py": {
-      "hash": "9f964a720b263bd03c1f785c1a453087c54325343908c4438e13f7e7117c0240",
-      "mtime": 1783032474.2029626,
-      "size": 19045
+      "hash": "5cd1c9ced67b6e2e3af53834222f4d57151b1df06290f65eba8606ca59e2e955",
+      "mtime": 1783102764.7379127,
+      "size": 19083
     },
     "tools/tts_speaker.py": {
       "hash": "dff37f2c308ae79f51c74002f6577484d155220052092eff08e03e9a5d61bc8e",
@@ -939,9 +939,9 @@
       "size": 19
     },
     "data/project_memory.json": {
-      "hash": "6a9a7e57ecd117fcfcc1cc3079dc9ab03455d94dc16819a32fd0976f0f6cf823",
-      "mtime": 1783102730.4654198,
-      "size": 53739
+      "hash": "6febf0a306466d1a0d58b02f699d43e463227adb395b6fe771c0e4b8a8085261",
+      "mtime": 1783102821.7135353,
+      "size": 53737
     },
     "logs/agent_terminal.log": {
       "hash": "b2bb6e79e80fcd43646a89a811a2446a3c053358687b2d0b467cb15439467662",
@@ -1164,9 +1164,9 @@
       "size": 32494
     },
     "logs/agent_swarm.log": {
-      "hash": "4181a1f9b7dad58356d70e7782ac19a31a4b1f1cff22ade1fdee2a28b9a3752e",
-      "mtime": 1783102698.3015814,
-      "size": 7755
+      "hash": "f112157cc0e0b63e05374039f17ff7240950db2d2a83c8c18e21447ce0ca94a3",
+      "mtime": 1783102790.8148215,
+      "size": 8272
     },
     "logs/terminal.log": {
       "hash": "c6204465b83b70b39c6c4c74e59c1f9ef05ed612ce358fd4870de5e17c6eb85d",
@@ -1424,9 +1424,9 @@
       "size": 4279
     },
     "memory/data/active_tasks.json": {
-      "hash": "dc0114a178aab42ba65009d09cb1b82ff6675b42a44be8b85119d36f25da0dcd",
-      "mtime": 1783102707.981929,
-      "size": 21947
+      "hash": "e3274f8bb5011a38f8a2e8a2cb61f820fdbde4388e657546e807d1c796bb5f28",
+      "mtime": 1783102797.4152086,
+      "size": 24690
     },
     "server/backend/audio_memory_service.py": {
       "hash": "c84c3371dba1072c19b18932e347cc7f7927bb59cf9adf3a5fc26d51dd1861a0",
