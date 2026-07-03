@@ -141,7 +141,7 @@ def _is_command_allowed(cmd: str) -> bool:
             
     # Check pip restriction
     if cmd_lower.startswith("pip"):
-        allowed_pip = ["pip install -r requirements.txt", "pip install --upgrade -r requirements.txt", "pip --version", "pip -v", "pip --help"]
+        allowed_pip = ["pip install -r requirements.txt", "pip install --upgrade -r requirements.txt", "pip --version", "pip -v", "pip --help", "pip list", "pip show", "pip freeze"]
         normalized_cmd = " ".join(cmd_lower.split())
         if any(normalized_cmd == p or normalized_cmd.startswith(p + " ") for p in allowed_pip):
             return True
