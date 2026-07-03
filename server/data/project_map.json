@@ -12,7 +12,7 @@
     },
     {
       "path": "main.py",
-      "size_bytes": 56647,
+      "size_bytes": 40210,
       "suffix": ".py"
     },
     {
@@ -207,12 +207,12 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 5249,
+      "size_bytes": 5349,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 8766,
+      "size_bytes": 8938,
       "suffix": ".json"
     },
     {
@@ -238,6 +238,11 @@
     {
       "path": "routes/projects.py",
       "size_bytes": 19427,
+      "suffix": ".py"
+    },
+    {
+      "path": "routes/voice.py",
+      "size_bytes": 18142,
       "suffix": ".py"
     }
   ]
