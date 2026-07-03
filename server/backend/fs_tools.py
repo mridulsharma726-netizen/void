@@ -106,6 +106,7 @@ async def request_approval(
     approval_event = {
         "type": "approval_request",
         "id": request_id,
+        "request_id": request_id,
         "operation": operation,
         "path": path,
         "details": details,

@@ -45,23 +45,24 @@ class AgentFileEngine:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
-    def write_file(self, path: str, content: str) -> Dict[str, Any]:
+    def write_file(self, path: str, content: str, bypass_safety: bool = False) -> Dict[str, Any]:
         """Write content to file, creating backup and diff if file already exists."""
         try:
             abs_path = self._resolve_path(path)
             
-            # Check safety
-            check = self.safety.check_file_action("write", str(abs_path))
-            if not check["allowed"]:
-                return {"status": "error", "message": check["reason"]}
-            if check["requires_approval"]:
-                return {
-                    "status": "pending_confirmation",
-                    "action": "write",
-                    "path": path,
-                    "content": content,
-                    "message": check["reason"]
-                }
+            if not bypass_safety:
+                # Check safety
+                check = self.safety.check_file_action("write", str(abs_path))
+                if not check["allowed"]:
+                    return {"status": "error", "message": check["reason"]}
+                if check["requires_approval"]:
+                    return {
+                        "status": "pending_confirmation",
+                        "action": "write",
+                        "path": path,
+                        "content": content,
+                        "message": check["reason"]
+                    }
 
             original_content = ""
             backup_path = None
@@ -93,23 +94,24 @@ class AgentFileEngine:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
-    def create_file(self, path: str, content: str = "") -> Dict[str, Any]:
+    def create_file(self, path: str, content: str = "", bypass_safety: bool = False) -> Dict[str, Any]:
         """Create a new file with optional content."""
         try:
             abs_path = self._resolve_path(path)
             
-            # Check safety
-            check = self.safety.check_file_action("create", str(abs_path))
-            if not check["allowed"]:
-                return {"status": "error", "message": check["reason"]}
-            if check["requires_approval"]:
-                return {
-                    "status": "pending_confirmation",
-                    "action": "create",
-                    "path": path,
-                    "content": content,
-                    "message": check["reason"]
-                }
+            if not bypass_safety:
+                # Check safety
+                check = self.safety.check_file_action("create", str(abs_path))
+                if not check["allowed"]:
+                    return {"status": "error", "message": check["reason"]}
+                if check["requires_approval"]:
+                    return {
+                        "status": "pending_confirmation",
+                        "action": "create",
+                        "path": path,
+                        "content": content,
+                        "message": check["reason"]
+                    }
 
             if abs_path.exists():
                 return {"status": "error", "message": "File already exists"}
@@ -126,22 +128,23 @@ class AgentFileEngine:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
-    def delete_file(self, path: str) -> Dict[str, Any]:
+    def delete_file(self, path: str, bypass_safety: bool = False) -> Dict[str, Any]:
         """Delete a file safely."""
         try:
             abs_path = self._resolve_path(path)
             
-            # Check safety
-            check = self.safety.check_file_action("delete", str(abs_path))
-            if not check["allowed"]:
-                return {"status": "error", "message": check["reason"]}
-            if check["requires_approval"]:
-                return {
-                    "status": "pending_confirmation",
-                    "action": "delete",
-                    "path": path,
-                    "message": check["reason"]
-                }
+            if not bypass_safety:
+                # Check safety
+                check = self.safety.check_file_action("delete", str(abs_path))
+                if not check["allowed"]:
+                    return {"status": "error", "message": check["reason"]}
+                if check["requires_approval"]:
+                    return {
+                        "status": "pending_confirmation",
+                        "action": "delete",
+                        "path": path,
+                        "message": check["reason"]
+                    }
 
             if not abs_path.exists():
                 return {"status": "error", "message": "File not found"}
@@ -160,27 +163,28 @@ class AgentFileEngine:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
-    def rename_file(self, old_path: str, new_path: str) -> Dict[str, Any]:
+    def rename_file(self, old_path: str, new_path: str, bypass_safety: bool = False) -> Dict[str, Any]:
         """Rename/move a file."""
         try:
             abs_old = self._resolve_path(old_path)
             abs_new = self._resolve_path(new_path)
 
-            # Check safety on both locations
-            check_old = self.safety.check_file_action("delete", str(abs_old))
-            check_new = self.safety.check_file_action("create", str(abs_new))
-            
-            if not check_old["allowed"] or not check_new["allowed"]:
-                return {"status": "error", "message": "Blocked by Safety System"}
-            
-            if check_old["requires_approval"] or check_new["requires_approval"]:
-                return {
-                    "status": "pending_confirmation",
-                    "action": "rename",
-                    "old_path": old_path,
-                    "new_path": new_path,
-                    "message": "Renaming requires user confirmation."
-                }
+            if not bypass_safety:
+                # Check safety on both locations
+                check_old = self.safety.check_file_action("delete", str(abs_old))
+                check_new = self.safety.check_file_action("create", str(abs_new))
+                
+                if not check_old["allowed"] or not check_new["allowed"]:
+                    return {"status": "error", "message": "Blocked by Safety System"}
+                
+                if check_old["requires_approval"] or check_new["requires_approval"]:
+                    return {
+                        "status": "pending_confirmation",
+                        "action": "rename",
+                        "old_path": old_path,
+                        "new_path": new_path,
+                        "message": "Renaming requires user confirmation."
+                    }
 
             if not abs_old.exists():
                 return {"status": "error", "message": f"Source file {old_path} not found"}

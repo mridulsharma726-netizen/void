@@ -30,23 +30,24 @@ class AgentTerminalEngine:
         except Exception:
             pass
 
-    async def execute_command(self, command: str) -> Dict[str, Any]:
+    async def execute_command(self, command: str, bypass_safety: bool = False) -> Dict[str, Any]:
         """
         Run a terminal command asynchronously, verifying permissions first.
         """
-        # 1. Check safety system
-        check = self.safety.check_command_action(command)
-        if not check["allowed"]:
-            self._log_command(command, f"BLOCKED: {check['reason']}")
-            return {"status": "error", "message": check["reason"]}
-            
-        if check["requires_approval"]:
-            return {
-                "status": "pending_confirmation",
-                "action": "execute",
-                "command": command,
-                "message": check["reason"]
-            }
+        if not bypass_safety:
+            # 1. Check safety system
+            check = self.safety.check_command_action(command)
+            if not check["allowed"]:
+                self._log_command(command, f"BLOCKED: {check['reason']}")
+                return {"status": "error", "message": check["reason"]}
+                
+            if check["requires_approval"]:
+                return {
+                    "status": "pending_confirmation",
+                    "action": "execute",
+                    "command": command,
+                    "message": check["reason"]
+                }
 
         # 2. Run command
         try:

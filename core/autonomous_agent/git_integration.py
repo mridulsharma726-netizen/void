@@ -36,8 +36,27 @@ class AgentGitIntegration:
         """Add files to staging."""
         return self._run_git(["add"] + paths)
 
-    def commit(self, message: str) -> str:
-        """Commit changes."""
+    async def commit(self, message: str) -> str:
+        """Commit changes with user approval gate and formatting conventions."""
+        from backend.fs_tools import request_approval
+        
+        prefix = "[agent] "
+        trailer = "\n\nCommitted-By: void-agent"
+        
+        clean_msg = message
+        if not clean_msg.startswith(prefix):
+            clean_msg = prefix + clean_msg
+        if not clean_msg.endswith(trailer):
+            clean_msg = clean_msg + trailer
+            
+        approved = await request_approval(
+            operation="git_commit",
+            path="[git repository]",
+            details=f"The autonomous agent is attempting to commit the applied changes.\nCommit message:\n{clean_msg}"
+        )
+        if not approved:
+            raise PermissionError("Git commit rejected by user.")
+            
         # Config user email/name if not configured
         user_email = self._run_git(["config", "user.email"])
         if not user_email or "Error" in user_email:
@@ -46,7 +65,7 @@ class AgentGitIntegration:
         if not user_name or "Error" in user_name:
             self._run_git(["config", "user.name", "VOID Autonomous Agent"])
             
-        return self._run_git(["commit", "-m", message])
+        return self._run_git(["commit", "-m", clean_msg])
 
     def checkout(self, branch_name: str) -> str:
         """Checkout a branch."""

@@ -109,6 +109,11 @@
       "suffix": ".py"
     },
     {
+      "path": "test_phase3_agent_robustness.py",
+      "size_bytes": 7201,
+      "suffix": ".py"
+    },
+    {
       "path": "test_project_intelligence_upgrade.py",
       "size_bytes": 8458,
       "suffix": ".py"
@@ -255,7 +260,7 @@
     },
     {
       "path": "core/autonomous_agent/agent.py",
-      "size_bytes": 16449,
+      "size_bytes": 22209,
       "suffix": ".py"
     },
     {
@@ -270,12 +275,12 @@
     },
     {
       "path": "core/autonomous_agent/file_engine.py",
-      "size_bytes": 9916,
+      "size_bytes": 10368,
       "suffix": ".py"
     },
     {
       "path": "core/autonomous_agent/git_integration.py",
-      "size_bytes": 2921,
+      "size_bytes": 3695,
       "suffix": ".py"
     },
     {
@@ -315,7 +320,7 @@
     },
     {
       "path": "core/autonomous_agent/terminal_engine.py",
-      "size_bytes": 2835,
+      "size_bytes": 2946,
       "suffix": ".py"
     },
     {
@@ -360,7 +365,7 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 33242,
+      "size_bytes": 33360,
       "suffix": ".json"
     },
     {
@@ -390,7 +395,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 13442,
+      "size_bytes": 14993,
       "suffix": ".log"
     },
     {
@@ -400,7 +405,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 18800,
+      "size_bytes": 20627,
       "suffix": ".log"
     },
     {
@@ -420,7 +425,7 @@
     },
     {
       "path": "logs/terminal_history.log",
-      "size_bytes": 0,
+      "size_bytes": 159,
       "suffix": ".log"
     },
     {
@@ -480,7 +485,7 @@
     },
     {
       "path": "memory/data/active_tasks.json",
-      "size_bytes": 49377,
+      "size_bytes": 54863,
       "suffix": ".json"
     },
     {
@@ -1000,7 +1005,7 @@
     },
     {
       "path": "server/backend/fs_tools.py",
-      "size_bytes": 15541,
+      "size_bytes": 15575,
       "suffix": ".py"
     },
     {
@@ -1160,7 +1165,7 @@
     },
     {
       "path": "server/routes/chat.py",
-      "size_bytes": 78789,
+      "size_bytes": 79761,
       "suffix": ".py"
     },
     {
@@ -1185,7 +1190,7 @@
     },
     {
       "path": "tests/test_security_hardening.py",
-      "size_bytes": 2560,
+      "size_bytes": 2566,
       "suffix": ".py"
     },
     {

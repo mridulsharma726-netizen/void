@@ -1540,6 +1540,24 @@ Guidelines:
                         "severity": "high"
                     }
                 }
+            except Exception as e:
+                logger.error(f"LLM chat failed: {e}")
+                from tools.error_interpreter import translate_exception
+                translated = translate_exception(e)
+                final_reply = f"⚠️ Ollama request failed, Sir. Reason: {e}"
+                log_chat_request(intent_name, "LLM_REQUIRED", "None", "Failure", start_time)
+                return {
+                    "reply": final_reply,
+                    "meta": {
+                        "intent": intent_name,
+                        "action": action_name,
+                        "status": "error",
+                        "error": type(e).__name__,
+                        "error_title": translated.get("title", "Service Error"),
+                        "error_action": translated.get("action", "Please check if Ollama is running and responsive."),
+                        "severity": "high"
+                    }
+                }
         
         # Single memory write (no duplicates) for deep research, academic, etc. fall-throughs
         memory.remember_turn("user", text)
