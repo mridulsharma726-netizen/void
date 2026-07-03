@@ -365,7 +365,7 @@
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 53738,
+      "size_bytes": 53739,
       "suffix": ".json"
     },
     {
@@ -390,7 +390,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 8272,
+      "size_bytes": 8789,
       "suffix": ".log"
     },
     {
@@ -400,7 +400,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 12710,
+      "size_bytes": 13319,
       "suffix": ".log"
     },
     {
@@ -934,8 +934,13 @@
       "suffix": ".py"
     },
     {
+      "path": "server/dependencies.py",
+      "size_bytes": 5667,
+      "suffix": ".py"
+    },
+    {
       "path": "server/main.py",
-      "size_bytes": 169316,
+      "size_bytes": 96738,
       "suffix": ".py"
     },
     {
@@ -1126,6 +1131,16 @@
     {
       "path": "server/backend/providers/router.py",
       "size_bytes": 20144,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/routes/admin.py",
+      "size_bytes": 5048,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/routes/chat.py",
+      "size_bytes": 69763,
       "suffix": ".py"
     },
     {

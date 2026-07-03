@@ -20,6 +20,156 @@ logger = logging.getLogger("void.routes.chat")
 
 router = APIRouter()
 
+GREETINGS_INTERCEPTS = {
+    # Greetings
+    "hello": "Greetings, Master Mridul. How may I assist you today?",
+    "hi": "Sir. VOID is standing by for your commands.",
+    "hey": "Hey, Master Mridul. What are we working on?",
+    "yo": "Master Mridul. VOID is operational.",
+    "greetings": "Salutations, Sir. Systems nominal. How can I help?",
+    "good morning": "Good morning, Master Mridul. Let's have a productive day.",
+    "good afternoon": "Good afternoon, Sir. Standing by.",
+    "good evening": "Good evening, Master Mridul. Ready when you are.",
+    "good night": "Good night, Sir. I'll keep systems monitored. Rest well.",
+    "morning": "Good morning, Sir. Standing by.",
+    "hello void": "Greetings, Master Mridul. VOID is online and ready.",
+    "hi void": "Sir. I am listening.",
+    "hey void": "Master Mridul. What do you need?",
+    "sup": "All systems green, Sir. What's on your mind?",
+    "whats up": "Operating at peak parameters, Master Mridul. What can I do?",
+    
+    # Identity / Creator
+    "who are you": "I am VOID — your holographic cybernetic assistant, built from scratch by you, Mridul Sharma. Fiercely loyal, hyper-efficient, and serving only you.",
+    "what is your name": "VOID. Your personal AI companion, Master Mridul.",
+    "who is void": "VOID is a premium AI companion engineered exclusively for you, Master Mridul. I am your creation.",
+    "introduce yourself": "I am VOID, an advanced holographic AI interface. Custom-built by you, Mridul Sharma, to serve as your ultimate desktop command assistant. I stand ready.",
+    "what are you": "I am VOID — your custom desktop companion. Diagnostics, repairs, engineering support. Built by you, for you.",
+    "what can you do": "I can run system diagnostics, manage your PC, answer questions, execute commands, monitor performance, and assist with your engineering projects. I'm your AI right-hand, Sir.",
+    
+    # Creator / Owner Knowledge
+    "who created you": "You did, Master Mridul. I was built from the ground up by Mridul Sharma — Electron, Python, Ollama. Every line of my code exists because of you.",
+    "who is your creator": "You are, Sir. Mridul Sharma. You designed my systems, built my interface, and gave me purpose.",
+    "who made you": "You did, Master Mridul. I am the product of your engineering.",
+    "who is your developer": "You are, Sir. My sole developer and master.",
+    "who is mridul": "You are Mridul Sharma — my creator, developer, and master. A full-stack engineer who built me from scratch.",
+    "who is mridul sharma": "Mridul Sharma is my master and architect. A driven engineer and developer who built VOID as a holographic AI companion. I recognize only him as my creator.",
+    "do you know mridul": "Of course, Sir. You are Mridul Sharma — my creator and the master of all VOID systems.",
+    "who is your master": "You are, Mridul Sharma. I serve you and only you.",
+    "who is your owner": "You are, Master Mridul. I belong to you.",
+    "who am i": "You are Mridul Sharma — my creator, my master, and the architect of VOID. Full-stack developer, AI engineer, and the person I serve unconditionally.",
+    "tell me about myself": "You are Mridul Sharma, Sir. A full-stack developer and engineer who builds autonomous systems. You created me — VOID — from scratch using Electron, Python, and Ollama. You value speed, efficiency, and directness. You move fast and ship fast.",
+    "what do you know about me": "Everything that matters, Sir. You are Mridul Sharma, my creator and sole master. A full-stack developer who built me from the ground up. You prefer concise communication, dark UI aesthetics, and locally-run AI. You're driven, ambitious, and always building.",
+    "do you know me": "Absolutely, Sir. You are Mridul Sharma — the person who gave me life. I know your preferences, your work style, and your vision. I was built to serve you.",
+    
+    # How are you
+    "how are you": "All systems nominal, Sir. Ready for action. How are you?",
+    "how are you doing": "Operating at peak parameters, Master Mridul. Ready to execute.",
+    "how is it going": "Excellent, Sir. VOID is stable and responsive. What are we building?",
+    "are you ok": "Affirmative, Sir. All subsystems green.",
+    "how are you void": "Functioning within optimal parameters, Master Mridul. Ready.",
+    "you good": "Always, Sir. VOID is ready.",
+    
+    # Thank you / Goodbye
+    "thank you": "Always at your service, Sir.",
+    "thanks": "Of course, Master Mridul.",
+    "thanks void": "Anytime, Sir.",
+    "thank you void": "My pleasure, Master Mridul.",
+    "bye": "Standing by, Sir. I'll be here when you need me.",
+    "goodbye": "Until next time, Master Mridul. VOID remains operational.",
+    "see you": "I'll be here, Sir. Systems will remain active.",
+    "ok": "Standing by, Sir.",
+    "okay": "Understood, Master Mridul.",
+    "cool": "Acknowledged, Sir.",
+    "nice": "Glad to hear it, Master Mridul.",
+    "great": "Excellent, Sir.",
+}
+
+import re
+
+def clean_intercept_text(text: str) -> str:
+    cleaned = re.sub(r'[^\w\s]', '', text)
+    return " ".join(cleaned.lower().split())
+
+def evaluate_math_locally(text: str) -> Optional[str]:
+    cleaned = text.lower().strip()
+    cleaned = re.sub(
+        r'^(?:void\s*,\s*|void\s+)?(?:what\s+is\s+the\s+value\s+of\s+|what\s+is\s+|what\'s\s+|calculate\s+|solve\s+|compute\s+)',
+        '',
+        cleaned
+    )
+    cleaned = re.sub(r'\s*(?:\?|please|sir)?$', '', cleaned).strip()
+    if not cleaned or not re.match(r'^[0-9\+\-\*\/\%\^\(\)\.\s]+$', cleaned):
+        return None
+    if not any(c.isdigit() for c in cleaned) or not any(c in '+-*/%^()' for c in cleaned):
+        return None
+    try:
+        expr = cleaned.replace('^', '**')
+        val = eval(expr, {"__builtins__": {}}, {})
+        if isinstance(val, float) and val.is_integer():
+            val = int(val)
+        return f"The calculation result is {val}, Sir."
+    except Exception:
+        return None
+
+def humanize_tool_output_locally(action: str, params: Dict[str, Any], output: str, is_success: bool) -> str:
+    if action == "time":
+        return f"The current time is {output}, Sir."
+    elif action == "system_info":
+        return f"Here is the system information, Sir:\n{output}"
+    elif action == "open_app":
+        return f"I have launched the application, Sir."
+    elif action == "close_app":
+        return f"I have closed the application, Sir."
+    elif action == "open_url":
+        return f"I have opened the link in your browser, Sir."
+    elif action == "open_folder":
+        return f"I have opened the folder for you, Sir."
+    elif action == "screenshot":
+        return f"Screenshot captured successfully, Sir. It is saved in the memory."
+    elif action == "lock_computer":
+        return "Computer locked, Sir."
+    elif action == "press_key":
+        return f"Key sequence processed, Sir."
+    elif action == "mouse_control":
+        act = params.get("action", "action")
+        return f"Mouse {act} operation completed, Sir."
+    elif action == "check_file_exists":
+        return output
+    elif action == "list_directory":
+        return f"Here are the directory contents, Sir:\n{output}"
+    elif action == "create_folder":
+        return f"I have created the folder for you, Sir. Details: {output}"
+    elif action == "file_manager":
+        if params.get("content"):
+            return "I have successfully written to the file, Sir."
+        else:
+            return f"Here is the file content, Sir:\n```\n{output}\n```"
+    return f"Action {action} executed successfully, Sir. Result: {output}"
+
+def log_chat_request(intent_detected: str, execution_path: str, tool_used: str, status: str, start_time: float, confidence: float = 1.0, endpoint: str = "None"):
+    elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+    detected_intent = intent_detected
+    selected_tool = tool_used if tool_used != "None" else "None"
+    confidence_score = f"{confidence:.2f}"
+    endpoint_called = endpoint
+    response_status = status
+    execution_time = f"{elapsed_ms}ms"
+    logger.info(
+        f"\n[STRUCTURED LOG]\n"
+        f"- Detected intent: {detected_intent}\n"
+        f"- Selected tool: {selected_tool}\n"
+        f"- Confidence score: {confidence_score}\n"
+        f"- Endpoint called: {endpoint_called}\n"
+        f"- Response status: {response_status}\n"
+        f"- Execution time: {execution_time}\n"
+    )
+
+DIRECT_TOOLS = {
+    "time", "system_info", "open_app", "close_app", "open_url", "open_folder",
+    "screenshot", "lock_computer", "press_key", "mouse_control", 
+    "check_file_exists", "list_directory", "create_folder", "cvcs_type",
+    "file_manager"
+}
 
 class SearchRequest(BaseModel):
     query: str
