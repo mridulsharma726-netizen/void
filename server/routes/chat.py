@@ -12,9 +12,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel
 
 from server.dependencies import (
-    VoidSingletons, APP_START, STATS, API_TOKEN, PermissionManager, DATA_DIR, is_ollama_ready, ensure_ollama
+    VoidSingletons, APP_START, STATS, API_TOKEN, PermissionManager, DATA_DIR, is_ollama_ready, ensure_ollama, _get_memory
 )
 from backend.schemas import ChatRequest, TextRequest
+from backend.llm_client import OllamaClient
+from backend.validator import ResponseValidator
 
 logger = logging.getLogger("void.routes.chat")
 
