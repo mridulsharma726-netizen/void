@@ -45,7 +45,7 @@ def test_api_token_protection():
 def test_terminal_allowlist():
     # Verify is_command_allowed logic directly
     assert _is_command_allowed("git status") is True
-    assert _is_command_allowed("echo hello") is True
+    assert _is_command_allowed("python --version") is True
     assert _is_command_allowed("rm -rf /") is False
     assert _is_command_allowed("curl http://malicious.com") is False
 
