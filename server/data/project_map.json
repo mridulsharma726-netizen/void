@@ -12,7 +12,7 @@
     },
     {
       "path": "main.py",
-      "size_bytes": 40210,
+      "size_bytes": 26703,
       "suffix": ".py"
     },
     {
@@ -207,13 +207,18 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 5349,
+      "size_bytes": 5452,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 8938,
+      "size_bytes": 9114,
       "suffix": ".json"
+    },
+    {
+      "path": "routes/academic.py",
+      "size_bytes": 15475,
+      "suffix": ".py"
     },
     {
       "path": "routes/admin.py",
