@@ -402,6 +402,10 @@ async def lifespan(app: FastAPI):
 # === APP ===
 app = FastAPI(title="VOID Backend", lifespan=lifespan)
 
+# Register sub-routers
+from routes.admin import router as admin_router
+app.include_router(admin_router)
+
 class WebSocketBypassCORSMiddleware(CORSMiddleware):
     async def __call__(self, scope, receive, send):
         logger.info(f"CORS SCOPE TYPE: {scope.get('type')}, PATH: {scope.get('path')}")
@@ -543,15 +547,7 @@ class PermissionManager:
             )
         return True
 
-# === ENDPOINTS ===
-@app.get("/health")
-async def health():
-    """Lightweight health check — no heavy tool scanning."""
-    return {
-        "status": "ok",
-        "backend": "running",
-        "uptime": int(time.time() - APP_START)
-    }
+# === ENDPOINTS (Extracted to routes/) ===
 
 # =============================================================================
 # REAL-TIME INTELLIGENCE ENDPOINTS
@@ -944,21 +940,7 @@ async def ws_approval(websocket: WebSocket):
     except Exception as e:
         logger.error(f"[WS/approval] Error: {e}")
 
-MOTD = "Stay focused. Build fast. Keep it local."
-stats_collector = SystemStats()
-
-@app.get("/stats")
-async def stats():
-    """Real-time system stats."""
-    try:
-        data = stats_collector.get_all_stats()
-        data["messages"] = STATS["messages"]
-        data["uptime"] = int(time.time() - APP_START)
-        data["motd"] = MOTD
-        return data
-    except Exception as e:
-        logger.error(f"Stats failed: {e}")
-        return {"error": str(e), "cpu_usage": 0, "ram_usage": 0, "motd": MOTD}
+# /stats extracted to routes/admin.py
 
 class LLMConfigRequest(BaseModel):
     routing_mode: Optional[str] = None
@@ -1206,16 +1188,7 @@ async def reject_engineering_changes():
         return {"status": "ok", "message": "Proposal rejected and cleared"}
     return {"status": "error", "message": "No pending proposal to reject"}
 
-@app.get("/time")
-async def get_time():
-    return {"reply": time.strftime("%I:%M %p"), "meta": {"timestamp": time.time()}}
-
-@app.get("/system-info")
-async def system_info():
-    return {
-        "reply": f"System: {platform.system()} {platform.release()}",
-        "meta": {"platform": platform.platform()}
-    }
+# /time and /system-info extracted to routes/admin.py
 
 @app.get("/search")
 async def search(query: str = ""):
@@ -1837,14 +1810,7 @@ async def toggle_pin_recording(id: int):
         logger.error(f"Error pinning recording {id}: {e}")
         return {"status": "error", "message": str(e)}
 
-@app.get("/api/metrics")
-async def get_unified_metrics():
-    try:
-        from backend.metrics_service import metrics_collector
-        return metrics_collector.collect_all()
-    except Exception as e:
-        logger.error(f"Error getting unified metrics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# /api/metrics extracted to routes/admin.py
 
 @app.post("/api/recordings/start")
 async def start_recording_api(req: dict = None):
@@ -2059,10 +2025,7 @@ async def global_search(q: str):
     return {"status": "ok", "results": results}
 
 
-@app.get("/tools/health")
-async def tools_health():
-    """Full tool health."""
-    return await check_all_tools()
+# /tools/health extracted to routes/admin.py
 
 
 @app.get("/api/tasks")
@@ -2096,29 +2059,7 @@ async def get_all_tools_metadata():
     orchestrator = ToolOrchestrator()
     return {"status": "ok", "tools": orchestrator.list_all_tools()}
 
-@app.get("/repair")
-async def repair(dep=Depends(PermissionManager.check_admin)):
-    """Run system repair."""
-    try:
-        diag = DiagnosticsEngine()
-        mem = MemoryManager(DATA_DIR)
-        rs = RepairSystem(diag, mem)
-        report = await rs.run()
-        return {"reply": f"Repair complete: {report.get('fixed_count', 0)} issues fixed.", "meta": report}
-    except Exception as e:
-        logger.error(f"Repair failed: {e}")
-        return {"reply": "Repair failed. Check logs.", "meta": {"error": str(e)}}
-
-@app.get("/diagnostics")
-async def diagnostics(dep=Depends(PermissionManager.check_admin)):
-    """Run full diagnostics."""
-    try:
-        diag = DiagnosticsEngine()
-        report = await diag.run()
-        return {"reply": f"Diagnostics complete. Status: {report.get('status', 'Unknown')}", "meta": report}
-    except Exception as e:
-        logger.error(f"Diagnostics failed: {e}")
-        return {"reply": "Diagnostics failed.", "meta": {"error": str(e)}}
+# /repair and /diagnostics extracted to routes/admin.py
 
 @app.get("/research/status")
 async def get_research_status():
@@ -2320,38 +2261,7 @@ async def get_automation_status():
         logger.error(f"Failed to get automation status: {e}")
         return {"scheduled_tasks": [], "active_workflows": []}
 
-# === SYSTEM HEALTH API ===
-@app.get("/system/health-details")
-async def get_system_health_details():
-    ollama_ok = await is_ollama_ready()
-    db_ok = False
-    try:
-        from backend.memory_sqlite import get_all_facts
-        get_all_facts()
-        db_ok = True
-    except:
-        pass
-    voice_ok = False
-    try:
-        global _voice_thread
-        if _voice_thread and _voice_thread.is_alive():
-            voice_ok = True
-    except:
-        pass
-    tool_ok = False
-    try:
-        tools_res = await check_all_tools()
-        if tools_res.get("status") and tools_res.get("status").upper() == "OK":
-            tool_ok = True
-    except:
-        pass
-    return {
-        "backend": "healthy",
-        "ollama": "healthy" if ollama_ok else "failed",
-        "database": "healthy" if db_ok else "failed",
-        "voice": "healthy" if voice_ok else "failed",
-        "tools": "healthy" if tool_ok else "failed"
-    }
+# /system/health-details extracted to routes/admin.py
 
 # Pydantic schemas for Academic Dashboard
 class SelectSubjectRequest(BaseModel):
@@ -3785,43 +3695,7 @@ async def execute_explicit_workflow(req: WorkflowRequest):
     except Exception as e:
         return {"reply": f"Workflow failed: {str(e)}", "meta": {"status": "error"}}
 
-@app.post("/restart")
-async def restart_server():
-    import sys
-    import os
-    import time
-    import threading
-    
-    def do_restart():
-        time.sleep(0.5)
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-        
-    threading.Thread(target=do_restart, daemon=True).start()
-    return {"status": "ok", "message": "Restarting server..."}
-
-@app.get("/system/ping-services")
-async def ping_services():
-    import httpx
-    ollama_ok = False
-    try:
-        async with httpx.AsyncClient(timeout=1.5) as client:
-            res = await client.get("http://127.0.0.1:11434")
-            ollama_ok = (res.status_code == 200 or "Ollama" in res.text)
-    except Exception:
-        pass
-        
-    search_ok = False
-    try:
-        async with httpx.AsyncClient(timeout=1.5) as client:
-            res = await client.get("https://www.google.com")
-            search_ok = (res.status_code == 200)
-    except Exception:
-        pass
-        
-    return {
-        "ollama": "connected" if ollama_ok else "offline",
-        "google": "connected" if search_ok else "offline"
-    }
+# /restart and /system/ping-services extracted to routes/admin.py
 
 @app.get("/gamification/xp")
 async def get_gamification_xp():
