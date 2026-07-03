@@ -11,9 +11,9 @@
       "size": 5667
     },
     "main.py": {
-      "hash": "050bf014cb74502300052f8fc57be1fe444797bb9776832574d65659ce558a3e",
-      "mtime": 1783107232.9989645,
-      "size": 84823
+      "hash": "523ecba0e2b0d83d80318d7986eb6c8130ad3126e0f7d2f556cb14e81ddebef6",
+      "mtime": 1783107377.7636213,
+      "size": 67162
     },
     "backend/academic_engine.py": {
       "hash": "4a2ba3520ab83ff207636fcb23c9b0cedc8472612ca4fcb7d41f94cec6af0e1e",
@@ -216,19 +216,24 @@
       "size": 78789
     },
     "data/project_map.json": {
-      "hash": "e888bf218fb77dd74131047c441211fb6d06d32d1457f1d78e2394cd08f4cc62",
-      "mtime": 1783107301.3083394,
-      "size": 5041
+      "hash": "5c21babaa358673faf477e974d2638f2d715508dd81befd8e7e3e86d2a7a3f3b",
+      "mtime": 1783107446.9682262,
+      "size": 5144
     },
     "data/project_memory.json": {
-      "hash": "411ea21f121f88936680a9fc9d81be7d61db9a6fa4ef97599cfd79febebe2a78",
-      "mtime": 1783107301.3603344,
-      "size": 8410
+      "hash": "4ee8918968bff47bcc25132946bbb3967d52da8389b9ea3e2be7c187da958a9c",
+      "mtime": 1783107447.0172632,
+      "size": 8587
     },
     "routes/memory.py": {
       "hash": "32fd64771cc91a7ce9f8f25e55226c0789c19a3fa8ccd10c24632b99623ee876",
       "mtime": 1783107230.571323,
       "size": 2646
+    },
+    "routes/projects.py": {
+      "hash": "de923afbec6e9906b2765e996fb40cb2df3604dc70fa47d265c04797580efb0b",
+      "mtime": 1783107372.6680536,
+      "size": 19427
     }
   }
 }
