@@ -37,7 +37,7 @@
     },
     {
       "path": "backend/audio_memory_service.py",
-      "size_bytes": 40034,
+      "size_bytes": 40323,
       "suffix": ".py"
     },
     {
@@ -52,7 +52,7 @@
     },
     {
       "path": "backend/deep_research.py",
-      "size_bytes": 27998,
+      "size_bytes": 28005,
       "suffix": ".py"
     },
     {
@@ -97,12 +97,12 @@
     },
     {
       "path": "backend/memory_sqlite.py",
-      "size_bytes": 60432,
+      "size_bytes": 62445,
       "suffix": ".py"
     },
     {
       "path": "backend/metrics_service.py",
-      "size_bytes": 10143,
+      "size_bytes": 10673,
       "suffix": ".py"
     },
     {
@@ -147,7 +147,7 @@
     },
     {
       "path": "backend/tools_runtime.py",
-      "size_bytes": 52890,
+      "size_bytes": 52997,
       "suffix": ".py"
     },
     {
@@ -232,7 +232,7 @@
     },
     {
       "path": "routes/chat.py",
-      "size_bytes": 79761,
+      "size_bytes": 80639,
       "suffix": ".py"
     },
     {

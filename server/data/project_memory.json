@@ -36,9 +36,9 @@
       "size": 6778
     },
     "backend/audio_memory_service.py": {
-      "hash": "c84c3371dba1072c19b18932e347cc7f7927bb59cf9adf3a5fc26d51dd1861a0",
-      "mtime": 1782647851.386912,
-      "size": 40034
+      "hash": "26a855f8a9b24a10a5e1452c5f506eee7110c180733d924a1ff73697b4b740c7",
+      "mtime": 1783191019.040185,
+      "size": 40323
     },
     "backend/builder_agent.py": {
       "hash": "d4890cac2ebcbd087604b782bf63d5124b7dcc9565425355a01c0f8d8ea75ee5",
@@ -51,9 +51,9 @@
       "size": 7265
     },
     "backend/deep_research.py": {
-      "hash": "66b46797de7709becf0d0a5577ad05fdc122780c756638d67354e760ff1b5595",
-      "mtime": 1783183144.4784803,
-      "size": 27998
+      "hash": "b1a74b3abbf86244ca3431839bb0896e79d07ec8712e2b6f93f83c6014f53374",
+      "mtime": 1783191144.8089504,
+      "size": 28005
     },
     "backend/diagnostics.py": {
       "hash": "279891260a7bdc1d6aba6180a2937e42e0179b9dd8682e61b3d4494002828a90",
@@ -96,14 +96,14 @@
       "size": 8305
     },
     "backend/memory_sqlite.py": {
-      "hash": "61ecc489690f751cee8eb25471526319f1594be41ba5731028d57bf0d4fc28ca",
-      "mtime": 1783152776.829249,
-      "size": 60432
+      "hash": "0b087e55bfaa8c716c60926790fbe5f575d170efc15cbebb6467ca56717cace0",
+      "mtime": 1783190731.1714573,
+      "size": 62445
     },
     "backend/metrics_service.py": {
-      "hash": "7c62b3890003dbbe9e3e40acec53fc72a03fcc86d05d106bcf05a7343836be4d",
-      "mtime": 1783183053.8248355,
-      "size": 10143
+      "hash": "88142471683b3d6d89f1aff607edf102f0c3e62cbfaba04502c62dd818be2941",
+      "mtime": 1783190832.8634808,
+      "size": 10673
     },
     "backend/ollama_manager.py": {
       "hash": "c89bc3a30adbc0326c9cdbc0a6f8904b6ccfec683279aed21350103e7f1dc45d",
@@ -146,9 +146,9 @@
       "size": 8115
     },
     "backend/tools_runtime.py": {
-      "hash": "cbda291febf9272711e5d1d6f418240147534562ec2faa81d16f12f5e092cdb8",
-      "mtime": 1782423299.5604057,
-      "size": 52890
+      "hash": "32bb03ca6ab30390e4bb923858796111fc6db27972e0fa594fd4443372f3bcb8",
+      "mtime": 1783191399.3933518,
+      "size": 52997
     },
     "backend/tool_manager.py": {
       "hash": "11404b20d21bc1b23b1a23cc14a66b7018c981c9da58b7c2831f1734a95c711d",
@@ -211,19 +211,19 @@
       "size": 8837
     },
     "routes/chat.py": {
-      "hash": "1255d13bd11c4a7f4430831dc393ac284306300a5381b5327faf08064c3c248b",
-      "mtime": 1783109135.3460639,
-      "size": 79761
+      "hash": "7b495e39d7429de47d1b7d060f59374a1b2ef51921ef40a0429867e7ee154f4c",
+      "mtime": 1783191293.5807636,
+      "size": 80639
     },
     "data/project_map.json": {
-      "hash": "4a4cc761f28452fa9c7cac71b1e2ad149396b2bc693fe9a49722e6bb48bbb747",
-      "mtime": 1783183366.682781,
+      "hash": "9a6158432d669eada29a4d2ff5a941998f900a2c1621dfde1f30ba2ab1c461d8",
+      "mtime": 1783191842.2093282,
       "size": 5453
     },
     "data/project_memory.json": {
-      "hash": "7dff6573297418d7af1ef6314951bc7ab5e9c07f2fb520855119c69e202512cc",
-      "mtime": 1783183366.7312167,
-      "size": 9114
+      "hash": "948934276f23b7221a12a41b37558d26595331f51b0d8984da99a273ce1d9c58",
+      "mtime": 1783191842.2325487,
+      "size": 9115
     },
     "routes/memory.py": {
       "hash": "32fd64771cc91a7ce9f8f25e55226c0789c19a3fa8ccd10c24632b99623ee876",
