@@ -81,17 +81,44 @@ class OllamaProvider(BaseProvider):
         except:
             return False
 
+    def _truncate_to_context_limit(self, history: List[Dict[str, str]], prompt: str, system_prompt: Optional[str], num_ctx: int) -> tuple[List[Dict[str, str]], str]:
+        # Leave 512 tokens for output generation
+        max_tokens = num_ctx - 512
+        if max_tokens < 512:
+            max_tokens = 512
+            
+        def est_tokens(text: str) -> int:
+            return len(text) // 4
+            
+        sys_tokens = est_tokens(system_prompt) if system_prompt else 0
+        prompt_tokens = est_tokens(prompt)
+        
+        # If the latest user prompt alone exceeds max_tokens, truncate it
+        if prompt_tokens > max_tokens - 100:
+            allowed_chars = (max_tokens - 100) * 4
+            prompt = prompt[:allowed_chars] + "\n\n[Prompt truncated to fit context limits, Sir...]"
+            prompt_tokens = est_tokens(prompt)
+            
+        pruned_history = list(history)
+        while pruned_history and (sys_tokens + prompt_tokens + sum(est_tokens(m["content"]) for m in pruned_history) > max_tokens):
+            pruned_history.pop(0)
+            
+        return pruned_history, prompt
+
     async def chat(self, history: List[Dict[str, str]], prompt: str, system_prompt: Optional[str] = None) -> str:
         if not self.model_detected:
             self._detect_model()
             
+        options = self._get_dynamic_options(prompt)
+        num_ctx = options.get("num_ctx", 4096)
+        
+        history, prompt = self._truncate_to_context_limit(history, prompt, system_prompt, num_ctx)
+        
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.extend(history)
         messages.append({"role": "user", "content": prompt})
-        
-        options = self._get_dynamic_options(prompt)
         
         try:
             resp = await asyncio.to_thread(lambda: requests.post(
@@ -106,21 +133,30 @@ class OllamaProvider(BaseProvider):
             ))
             resp.raise_for_status()
             return resp.json().get("message", {}).get("content", "").strip()
+        except requests.exceptions.Timeout as te:
+            logger.error(f"[Ollama] Chat timed out: {te}")
+            raise asyncio.TimeoutError("The local AI model timed out. The request may be too complex, Sir.")
+        except requests.exceptions.ConnectionError as ce:
+            logger.error(f"[Ollama] Connection failed. Service may be down: {ce}")
+            raise RuntimeError("The local AI service (Ollama) is currently unreachable. Please make sure it is running, Sir.")
         except Exception as e:
             logger.error(f"[Ollama] Chat failed: {e}", exc_info=True)
-            raise e
+            raise RuntimeError(f"The local AI service encountered an error, Sir. Details: {str(e)}")
 
     async def chat_stream(self, history: List[Dict[str, str]], prompt: str, system_prompt: Optional[str] = None) -> AsyncGenerator[str, None]:
         if not self.model_detected:
             self._detect_model()
             
+        options = self._get_dynamic_options(prompt)
+        num_ctx = options.get("num_ctx", 4096)
+        
+        history, prompt = self._truncate_to_context_limit(history, prompt, system_prompt, num_ctx)
+        
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.extend(history)
         messages.append({"role": "user", "content": prompt})
-        
-        options = self._get_dynamic_options(prompt)
         
         try:
             resp = await asyncio.to_thread(lambda: requests.post(
@@ -146,13 +182,25 @@ class OllamaProvider(BaseProvider):
                 token = data.get("message", {}).get("content", "")
                 if token:
                     yield token
+        except requests.exceptions.Timeout as te:
+            logger.error(f"[Ollama] Chat stream timed out: {te}")
+            yield "⚠️ [Timeout Error: The local AI model timed out, Sir.]"
+        except requests.exceptions.ConnectionError as ce:
+            logger.error(f"[Ollama] Chat stream connection failed: {ce}")
+            yield "⚠️ [Connection Error: The local AI service (Ollama) is currently unreachable, Sir.]"
         except Exception as e:
             logger.error(f"[Ollama] Chat stream failed: {e}", exc_info=True)
-            raise e
+            yield f"⚠️ [Error: The local AI service encountered an issue, Sir. Details: {str(e)}]"
 
     def generate(self, prompt: str, system_prompt: Optional[str] = None, format: Optional[str] = None, timeout: Optional[float] = None) -> str:
         if not self.model_detected:
             self._detect_model()
+            
+        num_ctx = 4096
+        max_tokens = num_ctx - 512
+        if len(prompt) // 4 > max_tokens:
+            prompt = prompt[:max_tokens * 4] + "\n\n[Prompt truncated to fit context limits, Sir...]"
+            
         payload = {
             "model": self.model,
             "prompt": prompt,
@@ -169,9 +217,15 @@ class OllamaProvider(BaseProvider):
             resp = requests.post(url, json=payload, timeout=timeout_val)
             resp.raise_for_status()
             return resp.json().get("response", "").strip()
+        except requests.exceptions.Timeout as te:
+            logger.error(f"[Ollama] Generate timed out: {te}")
+            raise asyncio.TimeoutError("The local AI model timed out. The request may be too complex, Sir.")
+        except requests.exceptions.ConnectionError as ce:
+            logger.error(f"[Ollama] Connection failed: {ce}")
+            raise RuntimeError("The local AI service (Ollama) is currently unreachable. Please make sure it is running, Sir.")
         except Exception as e:
             logger.error(f"[Ollama] Generate failed: {e}", exc_info=True)
-            raise e
+            raise RuntimeError(f"The local AI service encountered an error: {str(e)}")
 
     def discover_and_categorize_models(self) -> Dict[str, List[str]]:
         """Query Ollama /api/tags and dynamically group models into capability categories."""

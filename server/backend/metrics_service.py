@@ -9,7 +9,7 @@ from typing import Dict, Any
 logger = logging.getLogger("void.metrics")
 
 ROOT_DIR = Path(__file__).parent.parent.parent
-DB_PATH = ROOT_DIR / "memory" / "data" / "void_memory.db"
+DB_PATH = ROOT_DIR / "memory" / "data" / "memory.db"
 
 class SystemMetricsCollector:
     """
@@ -185,7 +185,7 @@ class SystemMetricsCollector:
         try:
             from server.backend.screen_monitor import get_monitor_instance
             monitor = get_monitor_instance()
-            if monitor and monitor._monitor_thread and monitor._monitor_thread.is_alive():
+            if monitor and monitor.monitor_thread and monitor.monitor_thread.is_alive():
                 monitor_running = True
         except Exception:
             pass

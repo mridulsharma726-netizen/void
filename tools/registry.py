@@ -134,6 +134,26 @@ class ToolRegistry:
         self.register("send_whatsapp", self._tool_send_whatsapp, "Send a WhatsApp message to a contact")
         self.register("read_whatsapp", self._tool_read_whatsapp, "Read unread WhatsApp messages")
 
+        # Communication Workflows (Email, Discord, Telegram, Slack)
+        self.register("send_email", self._tool_send_email, "Send an email message to a recipient")
+        self.register("read_email", self._tool_read_email, "Read unread emails from the inbox")
+        self.register("send_discord", self._tool_send_discord, "Send a Discord message to a channel")
+        self.register("read_discord", self._tool_read_discord, "Read unread messages in a Discord channel")
+        self.register("send_telegram", self._tool_send_telegram, "Send a Telegram message to a contact")
+        self.register("read_telegram", self._tool_read_telegram, "Read unread Telegram messages")
+        self.register("send_slack", self._tool_send_slack, "Send a Slack message to a channel")
+        self.register("read_slack", self._tool_read_slack, "Read unread Slack messages in a channel")
+        self.register("wait", self._tool_wait, "Wait/pause execution for a specified number of seconds")
+
+        # Real-time Information Tools (Weather, News, Web Search, Stocks, Time)
+        self.register("get_weather", self._tool_get_weather, "Get current weather conditions and forecast")
+        self.register("get_news", self._tool_get_news, "Get latest news headlines by topic")
+        self.register("web_search", self._tool_web_search, "Perform a general web search")
+        self.register("get_stock", self._tool_get_stock, "Look up current price and quote for a stock")
+        self.register("get_time", self._tool_get_time, "Get current local time and date for a timezone or city")
+        self.register("open_file", self._tool_open_file, "Read content of a file within active workspace")
+        self.register("list_directory", self._tool_list_directory, "List contents of a directory within active workspace")
+
         # PC/Operator Tools
         self.register("open_folder", self._tool_open_folder, "Open a system folder")
         self.register("run_command", self._tool_run_command, "Run a secure shell command")
@@ -694,6 +714,87 @@ class ToolRegistry:
         """Read unread WhatsApp messages."""
         from tools.whatsapp_control import read_whatsapp_unread
         return read_whatsapp_unread()
+
+    def _tool_send_email(self, to: str = "", body: str = "", **kwargs) -> Dict[str, Any]:
+        """Send an email message."""
+        from tools.email_control import send_email_message
+        return send_email_message(to, body)
+
+    def _tool_read_email(self, sender: str = None, **kwargs) -> Dict[str, Any]:
+        """Read unread emails."""
+        from tools.email_control import read_email_inbox
+        return read_email_inbox(sender)
+
+    def _tool_send_discord(self, channel: str = "", message: str = "", **kwargs) -> Dict[str, Any]:
+        """Send a Discord message."""
+        from tools.discord_control import send_discord_message
+        return send_discord_message(channel, message)
+
+    def _tool_read_discord(self, channel: str = "", **kwargs) -> Dict[str, Any]:
+        """Read Discord messages."""
+        from tools.discord_control import read_discord_channel
+        return read_discord_channel(channel)
+
+    def _tool_send_telegram(self, contact: str = "", message: str = "", **kwargs) -> Dict[str, Any]:
+        """Send a Telegram message."""
+        from tools.telegram_control import send_telegram_message
+        return send_telegram_message(contact, message)
+
+    def _tool_read_telegram(self, contact: str = None, **kwargs) -> Dict[str, Any]:
+        """Read Telegram messages."""
+        from tools.telegram_control import read_telegram_messages
+        return read_telegram_messages(contact)
+
+    def _tool_send_slack(self, channel: str = "", message: str = "", **kwargs) -> Dict[str, Any]:
+        """Send a Slack message."""
+        from tools.slack_control import send_slack_message
+        return send_slack_message(channel, message)
+
+    def _tool_read_slack(self, channel: str = "", **kwargs) -> Dict[str, Any]:
+        """Read Slack messages."""
+        from tools.slack_control import read_slack_channel
+        return read_slack_channel(channel)
+
+    def _tool_wait(self, seconds: int = 2, **kwargs) -> Dict[str, Any]:
+        """Wait/pause execution."""
+        import time
+        time.sleep(seconds)
+        return {"status": "ok", "message": f"Successfully waited {seconds} seconds."}
+
+    def _tool_get_weather(self, location: str = "Delhi", **kwargs) -> Dict[str, Any]:
+        """Get current weather conditions and forecast."""
+        from tools.weather_control import get_weather_report
+        return get_weather_report(location)
+
+    def _tool_get_news(self, topic: str = None, **kwargs) -> Dict[str, Any]:
+        """Get latest news headlines by topic."""
+        from tools.news_control import get_recent_news
+        return get_recent_news(topic)
+
+    def _tool_web_search(self, query: str = "", **kwargs) -> Dict[str, Any]:
+        """Perform a general web search."""
+        from tools.websearch_control import perform_web_search
+        return perform_web_search(query)
+
+    def _tool_get_stock(self, ticker: str = "", **kwargs) -> Dict[str, Any]:
+        """Look up current price and quote for a stock."""
+        from tools.stocks_control import get_stock_quote
+        return get_stock_quote(ticker)
+
+    def _tool_get_time(self, location: str = None, **kwargs) -> Dict[str, Any]:
+        """Get current local time and date for a timezone or city."""
+        from tools.time_control import get_timezone_time
+        return get_timezone_time(location)
+
+    def _tool_open_file(self, path: str = "", **kwargs) -> Dict[str, Any]:
+        """Read content of a file within active workspace."""
+        from tools.filesystem_control import read_file
+        return read_file(path)
+
+    def _tool_list_directory(self, path: str = ".", **kwargs) -> Dict[str, Any]:
+        """List contents of a directory within active workspace."""
+        from tools.filesystem_control import list_directory
+        return list_directory(path)
 
     def _tool_open_folder(self, path: str = "", **kwargs) -> Dict[str, Any]:
         """Open a system folder."""

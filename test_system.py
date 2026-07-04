@@ -64,7 +64,7 @@ def test_imports():
     for name, status in results:
         print(f"  {name}: {status}")
     
-    return all("OK" in s for _, s in results)
+    assert all("OK" in s for _, s in results)
 
 
 def test_system_stats():
@@ -80,10 +80,9 @@ def test_system_stats():
         print(f"  storage: {stats.get('storage_used_gb')}/{stats.get('storage_total_gb')} GB")
         print(f"  battery: {stats.get('battery_percent')}")
         
-        return True
     except Exception as e:
         print(f"  FAIL: {e}")
-        return False
+        assert False, f"Exception raised: {e}"
 
 
 def test_memory_system():
@@ -106,10 +105,9 @@ def test_memory_system():
         memory.clear()
         print("  clear_memory: OK")
         
-        return True
     except Exception as e:
         print(f"  FAIL: {e}")
-        return False
+        assert False, f"Exception raised: {e}"
 
 
 def test_command_interpreter():
@@ -142,20 +140,21 @@ def test_command_interpreter():
             print(f"  classify('{cmd}'): {status} (got intent={result.intent}, action={result.action})")
             
         loop.close()
-        return all_ok
+        assert all_ok, "Some command classification failed"
     except Exception as e:
         print(f"  FAIL: {e}")
-        return False
+        assert False, f"Exception raised: {e}"
 
 
 def test_fastapi_app():
     """Test FastAPI app"""
     print("\n=== TEST 5: FastAPI App ===")
     try:
-        from server.main import app
+        from server.main import app, API_TOKEN
         from fastapi.testclient import TestClient
         
         client = TestClient(app)
+        client.headers.update({"Authorization": f"Bearer {API_TOKEN}"})
         
         # Test health endpoint
         r = client.get("/health")
@@ -196,10 +195,9 @@ def test_fastapi_app():
         print(f"  /api/voice/wake-word/fix-ducking: {r.status_code} - {r.json()}")
         assert r.status_code == 200 or r.status_code == 500  # Safe in environments without full registry write permission
         
-        return True
     except Exception as e:
         print(f"  FAIL: {e}")
-        return False
+        assert False, f"Exception raised: {e}"
 
 
 def test_conversation_routing():
@@ -222,16 +220,20 @@ def test_conversation_routing():
             ("cpu status", "command"),
         ]
         
+        all_ok = True
         for prompt, expected in tests:
             result = loop.run_until_complete(router.classify(prompt))
-            status = "OK" if result.intent == expected else "FAIL"
+            is_ok = result.intent == expected
+            if not is_ok:
+                all_ok = False
+            status = "OK" if is_ok else "FAIL"
             print(f"  classify('{prompt}'): {status} (got {result.intent})")
         
         loop.close()
-        return True
+        assert all_ok, "Some routing failed"
     except Exception as e:
         print(f"  FAIL: {e}")
-        return False
+        assert False, f"Exception raised: {e}"
 
 
 def run_all_tests():
@@ -242,12 +244,19 @@ def run_all_tests():
     
     results = []
     
-    results.append(("Imports", test_imports()))
-    results.append(("System Stats", test_system_stats()))
-    results.append(("Memory System", test_memory_system()))
-    results.append(("Command Interpreter", test_command_interpreter()))
-    results.append(("FastAPI App", test_fastapi_app()))
-    results.append(("Conversation Routing", test_conversation_routing()))
+    for name, func in [
+        ("Imports", test_imports),
+        ("System Stats", test_system_stats),
+        ("Memory System", test_memory_system),
+        ("Command Interpreter", test_command_interpreter),
+        ("FastAPI App", test_fastapi_app),
+        ("Conversation Routing", test_conversation_routing)
+    ]:
+        try:
+            func()
+            results.append((name, True))
+        except Exception:
+            results.append((name, False))
     
     print("\n" + "=" * 50)
     print("SUMMARY")

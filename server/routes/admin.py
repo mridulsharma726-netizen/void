@@ -55,6 +55,108 @@ async def system_info():
         "meta": {"platform": platform.platform()}
     }
 
+@router.get("/api/dashboard/recent-activity")
+async def recent_activity():
+    import sqlite3
+    from datetime import datetime
+    from backend.memory_sqlite import DB_FILE
+    
+    activities = []
+    
+    def format_time(ts_str):
+        try:
+            if "t" in ts_str.lower():
+                dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+            else:
+                dt = datetime.strptime(ts_str.split(".")[0], "%Y-%m-%d %H:%M:%S")
+            return dt.strftime("%I:%M %p"), dt
+        except Exception:
+            return "Just now", datetime.now()
+            
+    conn = sqlite3.connect(str(DB_FILE))
+    cursor = conn.cursor()
+    try:
+        # 1. Chat queries
+        try:
+            cursor.execute("SELECT content, timestamp FROM history WHERE role = 'user' ORDER BY id DESC LIMIT 5")
+            for row in cursor.fetchall():
+                time_str, dt = format_time(row[1])
+                snippet = row[0][:40] + "..." if len(row[0]) > 40 else row[0]
+                activities.append({
+                    "time": time_str,
+                    "event": f"Chat query: \"{snippet}\"",
+                    "status": "success",
+                    "timestamp": dt
+                })
+        except Exception as e:
+            logger.error(f"Failed to query chat history for activity: {e}")
+            
+        # 2. Meetings
+        try:
+            cursor.execute("SELECT title, date_time FROM meetings ORDER BY date_time DESC LIMIT 5")
+            for row in cursor.fetchall():
+                time_str, dt = format_time(row[1])
+                activities.append({
+                    "time": time_str,
+                    "event": f"Meeting logged: {row[0]}",
+                    "status": "success",
+                    "timestamp": dt
+                })
+        except Exception as e:
+            logger.error(f"Failed to query meetings for activity: {e}")
+            
+        # 3. Project Scans
+        try:
+            cursor.execute("SELECT summary, timestamp FROM project_scan_history ORDER BY id DESC LIMIT 5")
+            for row in cursor.fetchall():
+                time_str, dt = format_time(row[1])
+                activities.append({
+                    "time": time_str,
+                    "event": f"Project scan: {row[0]}",
+                    "status": "success",
+                    "timestamp": dt
+                })
+        except Exception as e:
+            logger.error(f"Failed to query project scans for activity: {e}")
+            
+        # 4. Audio recordings
+        try:
+            cursor.execute("SELECT timestamp, duration, mode FROM audio_recordings ORDER BY id DESC LIMIT 5")
+            for row in cursor.fetchall():
+                time_str, dt = format_time(row[0])
+                duration_min = int(row[1] // 60)
+                duration_sec = int(row[1] % 60)
+                dur_str = f"{duration_min}m {duration_sec}s" if duration_min > 0 else f"{duration_sec}s"
+                activities.append({
+                    "time": time_str,
+                    "event": f"Audio recorded ({row[2]}): {dur_str}",
+                    "status": "success",
+                    "timestamp": dt
+                })
+        except Exception as e:
+            logger.error(f"Failed to query audio recordings for activity: {e}")
+            
+    finally:
+        conn.close()
+        
+    activities.sort(key=lambda x: x["timestamp"], reverse=True)
+    
+    result = []
+    for act in activities[:5]:
+        result.append({
+            "time": act["time"],
+            "event": act["event"],
+            "status": act["status"]
+        })
+        
+    if not result:
+        result = [
+            {"time": "Just now", "event": "VOID dashboard initialized", "status": "success"}
+        ]
+        
+    return result
+
+
 @router.get("/tools/health")
 async def tools_health():
     """Full tool health."""

@@ -29,8 +29,19 @@ class ToolOrchestrator:
             input_model, output_model, timeout = spec
             
             # Retrieve schema dictionaries
-            input_schema = input_model.schema() if hasattr(input_model, "schema") else {}
-            output_schema = output_model.schema() if hasattr(output_model, "schema") else {}
+            if hasattr(input_model, "model_json_schema"):
+                input_schema = input_model.model_json_schema()
+            elif hasattr(input_model, "schema"):
+                input_schema = input_model.schema()
+            else:
+                input_schema = {}
+
+            if hasattr(output_model, "model_json_schema"):
+                output_schema = output_model.model_json_schema()
+            elif hasattr(output_model, "schema"):
+                output_schema = output_model.schema()
+            else:
+                output_schema = {}
             
             perm = self.permissions.get(name, "low")
             

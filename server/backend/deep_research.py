@@ -147,30 +147,61 @@ class SourceCollector:
         }
 
     async def collect_sources(self, topic: str, progress_callback) -> List[Dict[str, Any]]:
-        # Define 6 targeted query vectors to aggregate 20+ diverse sources
-        queries = [
-            (topic, "Official Websites"),
-            (f"{topic} latest news updates articles", "News"),
-            (f"{topic} academic research papers journals", "Academic Papers"),
-            (f"{topic} market share industry report analysis trends", "Industry Reports"),
-            (f"{topic} site:reddit.com OR site:news.ycombinator.com OR forum discussion", "Forums & Discussions"),
-            (f"{topic} government regulation policy site:gov OR official sources", "Government Sources")
-        ]
+        # Query decomposition: split complex research requests into 3 targeted sub-queries
+        prompt = f"""
+You are VOID's Research Planner. Break the main topic/question: "{topic}" into 3 distinct search queries.
+Each query should target a specific angle of the topic (e.g. background/fundamentals, latest developments, technical details, or challenges).
+Output ONLY the search queries, one per line. Do NOT write any introduction, numbering, explanations, or markdown formatting.
+"""
+        sub_queries = []
+        try:
+            llm = OllamaClient()
+            resp = await llm.chat([], prompt)
+            lines = [line.strip().strip('"\'') for line in resp.strip().split('\n') if line.strip()]
+            for line in lines:
+                clean = re.sub(r'^(?:\d+[\.\)]|[\-\*])\s*', '', line).strip()
+                if clean:
+                    sub_queries.append(clean)
+        except Exception as e:
+            logger.error(f"Failed to decompose query using LLM: {e}")
+            
+        if not sub_queries:
+            sub_queries = [
+                topic,
+                f"{topic} technical specifications development",
+                f"{topic} latest news updates"
+            ]
+            
+        sub_queries = sub_queries[:3]  # Limit to max 3 sub-queries
+        
+        categories = ["Official Info", "Recent Developments", "Technical Details"]
+        queries = []
+        for idx, q_str in enumerate(sub_queries):
+            cat = categories[idx] if idx < len(categories) else "General"
+            queries.append((q_str, cat))
         
         unique_sources = {}
         loop = asyncio.get_running_loop()
         
+        # User agents rotating list to bypass rate limits
+        user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0"
+        ]
+        
         for idx, (query_str, category) in enumerate(queries):
             await progress_callback(
-                f"Gathering sources ({idx+1}/6): Searching {category} for '{topic}'...",
+                f"Gathering sources ({idx+1}/{len(queries)}): Searching {category} for '{query_str}'...",
                 speak_msg=f"Searching {category}." if idx % 2 == 0 else None
             )
             
             try:
                 url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote_plus(query_str)}"
+                headers = {"User-Agent": user_agents[idx % len(user_agents)]}
                 
                 # Fetch ddg results synchronously in threadpool to keep event loop free
-                response = await loop.run_in_executor(None, lambda: requests.get(url, headers=self.headers, timeout=8.0))
+                response = await loop.run_in_executor(None, lambda: requests.get(url, headers=headers, timeout=8.0))
                 if response.status_code in [200, 202]:
                     html = response.text
                     
@@ -208,7 +239,7 @@ class SourceCollector:
                                     "snippet": snippet,
                                     "category": category
                                 }
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1.0) # Respect rate limits
             except Exception as e:
                 logger.error(f"Error collecting {category} sources: {e}")
                 
@@ -273,36 +304,87 @@ class EvidenceAnalyzer:
         self.citation_mgr = citation_mgr
 
     async def analyze_evidence(self, topic: str, progress_callback) -> List[Dict[str, Any]]:
-        # Filter high value sources to crawl deeply (skip forums/reddit for deep crawls to save time)
-        crawl_candidates = []
+        # Segment memory sources by category/sub-query
+        categories_map = {}
         for src in self.memory.sources:
+            cat = src.get("category", "General")
+            if cat not in categories_map:
+                categories_map[cat] = []
+            # Skip forum/social sites for deep crawls to ensure quality/speed
             url = src["url"].lower()
             if not any(plat in url for plat in ["reddit.com", "twitter.com", "x.com", "facebook.com", "instagram.com", "youtube.com"]):
-                crawl_candidates.append(src)
+                categories_map[cat].append(src)
                 
-        # Crawl top 3 candidates deeply
-        deep_read_targets = crawl_candidates[:3]
+        # Gather targets: up to 2 candidates from each category, with overall cap of 5 total pages
+        deep_read_targets = []
+        crawled_urls = set()
+        
+        # Round-robin selection
+        has_more = True
+        round_idx = 0
+        while has_more and len(deep_read_targets) < 5:
+            has_more = False
+            for cat, sources in categories_map.items():
+                if round_idx < len(sources):
+                    src = sources[round_idx]
+                    if src["url"] not in crawled_urls:
+                        crawled_urls.add(src["url"])
+                        deep_read_targets.append(src)
+                        has_more = True
+                        if len(deep_read_targets) >= 5:
+                            break
+            round_idx += 1
+            
         deep_evidence = []
         loop = asyncio.get_running_loop()
         
         for idx, src in enumerate(deep_read_targets):
             await progress_callback(
-                f"Analyzing page: {src['title'][:40]}...",
-                speak_msg=f"Comparing source {idx+1}." if idx == 0 else None
+                f"Scraping page ({idx+1}/{len(deep_read_targets)}): {src['title'][:40]}...",
+                speak_msg=f"Scraping source {idx+1}." if idx == 0 else None
             )
             try:
-                # Read page using read_page helper in executor
-                result = await loop.run_in_executor(None, lambda: read_page(src["url"], max_paragraphs=8))
-                if result.get("status") == "ok" and result.get("text"):
-                    snippet = result["text"][:1200]  # Grab a highly dense context block
+                def fetch_page_content():
+                    try:
+                        headers = {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                        }
+                        # Strict 6.0s timeout (2.5s connect, 3.5s read)
+                        resp = requests.get(src["url"], headers=headers, timeout=(2.5, 3.5))
+                        if resp.status_code == 200:
+                            html = resp.text
+                            title_match = re.search(r'<title[^>]*>([^<]+)</title>', html, re.IGNORECASE)
+                            title = title_match.group(1).strip() if title_match else src["title"]
+                            html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
+                            html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
+                            paragraphs = re.findall(r'<p[^>]*>([^<]+)</p>', html, re.IGNORECASE)
+                            
+                            clean_paragraphs = []
+                            for p in paragraphs[:10]:
+                                text = re.sub(r'<[^>]+>', '', p)
+                                text = text.replace('&nbsp;', ' ').replace('&amp;', '&').strip()
+                                text = ' '.join(text.split())
+                                if len(text) > 20:
+                                    clean_paragraphs.append(text)
+                            return {
+                                "status": "ok",
+                                "text": "\n\n".join(clean_paragraphs)[:5000],
+                                "title": title
+                            }
+                    except Exception as exc:
+                        return {"status": "error", "message": str(exc)}
+                    return {"status": "error", "message": "Failed response"}
+                    
+                result = await loop.run_in_executor(None, fetch_page_content)
+                if result and result.get("status") == "ok" and result.get("text"):
+                    snippet = result["text"][:1200]
                     deep_evidence.append({
                         "url": src["url"],
-                        "title": src["title"],
+                        "title": result.get("title") or src["title"],
                         "content": snippet,
                         "category": src["category"]
                     })
-                    # Update reference details in citation manager
-                    self.citation_mgr.add_reference(src["url"], src["title"], snippet)
+                    self.citation_mgr.add_reference(src["url"], result.get("title") or src["title"], snippet)
             except Exception as e:
                 logger.error(f"Error crawling webpage {src['url']}: {e}")
                 

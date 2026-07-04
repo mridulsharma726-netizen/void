@@ -24,6 +24,10 @@ if not WORKSPACE_ROOT:
     from pathlib import Path
     WORKSPACE_ROOT = Path(__file__).parent.parent
 
+import sys
+if str(WORKSPACE_ROOT / "server") not in sys.path:
+    sys.path.insert(0, str(WORKSPACE_ROOT / "server"))
+
 DB_FILE = WORKSPACE_ROOT / "memory" / "data" / "memory.db"
 
 def init_workflow_db():
@@ -144,7 +148,7 @@ class WorkflowEngine:
             step_success = False
             while step["retries"] <= self.MAX_RETRIES and not step_success:
                 try:
-                    from core.intent_router import detect_intent_and_params
+                    from backend.intent_router import detect_intent_and_params
                     intent_data = detect_intent_and_params(step["text"])
                     intent = intent_data.get("intent")
                     params = intent_data.get("parameters", {}) or {}

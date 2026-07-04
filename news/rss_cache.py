@@ -16,7 +16,7 @@ import hashlib
 import logging
 import sqlite3
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -111,7 +111,7 @@ class RSSCache:
             return False
 
         url_hash = self._url_hash(url)
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         with self._lock:
             with self._connect() as conn:

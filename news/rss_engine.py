@@ -26,7 +26,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("void.news.rss_engine")
@@ -247,7 +247,7 @@ class RSSEngine:
             self._fetch_counts[feed_meta["name"]] = inserted
             all_articles.extend(articles)
 
-        self._last_fetch = datetime.utcnow().isoformat()
+        self._last_fetch = datetime.now(timezone.utc).isoformat()
         total = len(all_articles)
         logger.info(f"[RSS] Fetch complete — {total} articles processed")
         return all_articles

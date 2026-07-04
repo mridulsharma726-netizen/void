@@ -77,13 +77,13 @@ _TIMEOUT_PER_ATTEMPT = 10  # seconds
 def _attempt_search(query: str, max_results: int) -> List[Dict[str, Any]]:
     """Single search attempt using duckduckgo_search library."""
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
     except ImportError:
         logger.error(
-            "[DDG] duckduckgo-search is not installed. "
-            "Run: pip install duckduckgo-search"
+            "[DDG] ddgs is not installed. "
+            "Run: pip install ddgs"
         )
-        raise RuntimeError("duckduckgo-search not installed")
+        raise RuntimeError("ddgs not installed")
 
     results: List[Dict[str, Any]] = []
     with DDGS() as ddgs:

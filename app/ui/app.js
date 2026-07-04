@@ -2264,16 +2264,25 @@ async function selectProject(projectId) {
     btn.classList.toggle('active', btn.getAttribute('data-id') === projectId);
   });
 
-  const projects = await api('/projects/list');
-  const proj = projects.find(p => p.project_id === projectId);
-  if (proj) {
+  const proj = await api('/projects/details/' + projectId);
+  if (proj && !proj.error) {
     setText('activeProjName', proj.name);
     setText('activeProjPath', proj.path);
     
     const badgesBox = getEl('projTechBadges');
     if (badgesBox) {
       badgesBox.innerHTML = '';
-      const techs = proj.tech_stack ? proj.tech_stack.split(',') : ['Python', 'Electron', 'SQLite'];
+      let techs = [];
+      if (proj.technologies) {
+        try {
+          techs = JSON.parse(proj.technologies);
+        } catch (e) {
+          techs = proj.technologies.split(',');
+        }
+      }
+      if (!techs || techs.length === 0) {
+        techs = ['Python', 'Electron', 'SQLite'];
+      }
       techs.forEach(t => {
         const badge = document.createElement('span');
         badge.className = 'badge';
@@ -2284,18 +2293,38 @@ async function selectProject(projectId) {
 
     const summaryBox = getEl('projSummaryText');
     if (summaryBox) {
-      summaryBox.textContent = proj.summary || 'Architecture details mapped. Run SCAN to sync modules.';
+      summaryBox.textContent = proj.architecture || proj.purpose || 'Architecture details mapped. Run SCAN to sync modules.';
     }
 
     const todoBox = getEl('projTodoList');
     if (todoBox) {
       todoBox.innerHTML = '';
-      const todos = proj.todos ? JSON.parse(proj.todos) : [
-        {"task": "Optimize UI responsiveness grid layouts", "done": false},
-        {"task": "Expose DB endpoints for automation pipelines", "done": true},
-        {"task": "Refactor Orbitron/Rajdhani style variables", "done": false}
-      ];
-      todos.forEach(item => {
+      
+      let wip = [];
+      let planned = [];
+      let done = [];
+      try {
+        wip = JSON.parse(proj.features_progress || '[]');
+      } catch (e) {}
+      try {
+        planned = JSON.parse(proj.features_planned || '[]');
+      } catch (e) {}
+      try {
+        done = JSON.parse(proj.features_completed || '[]');
+      } catch (e) {}
+
+      const allTasks = [];
+      wip.forEach(t => allTasks.push({ task: t, done: false }));
+      planned.forEach(t => allTasks.push({ task: t, done: false }));
+      done.forEach(t => allTasks.push({ task: t, done: true }));
+
+      if (allTasks.length === 0) {
+        allTasks.push({"task": "Optimize UI responsiveness grid layouts", "done": false});
+        allTasks.push({"task": "Expose DB endpoints for automation pipelines", "done": true});
+        allTasks.push({"task": "Refactor Orbitron/Rajdhani style variables", "done": false});
+      }
+
+      allTasks.forEach(item => {
         const li = document.createElement('li');
         li.innerHTML = `<input type="checkbox" ${item.done ? 'checked' : ''} disabled> <span style="margin-left: 8px;">${item.task}</span>`;
         todoBox.appendChild(li);
@@ -2557,6 +2586,28 @@ async function loadDashboardView() {
   } catch (err) {
     console.error(err);
   }
+
+  try {
+    const timeline = getEl('dashboardActivityTimeline');
+    if (timeline) {
+      const activities = await api('/api/dashboard/recent-activity');
+      if (activities && Array.isArray(activities)) {
+        timeline.innerHTML = '';
+        activities.forEach(act => {
+          const item = document.createElement('div');
+          item.className = 'activity-item';
+          item.innerHTML = `
+            <span class="activity-time">${act.time}</span>
+            <span class="activity-event">${act.event}</span>
+            <span class="activity-status success">✓</span>
+          `;
+          timeline.appendChild(item);
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load recent activity:', err);
+  }
 }
 
 // === SIDEBAR NAV VIEW SWITCHING ===
@@ -2591,6 +2642,9 @@ function handleNavSwitch(view) {
       break;
     case 'settings':
       loadSettingsView();
+      break;
+    case 'editor':
+      initEditorWorkspace();
       break;
     case 'voice':
       initVoiceWorkspace();
@@ -4952,4 +5006,211 @@ function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
+// === WORKSPACE EDITOR LOGIC ===
+let editorInstance = null;
+
+async function initEditorWorkspace() {
+  const pathDisplay = getEl('workspacePathDisplay');
+  const treeContainer = getEl('workspaceFileTree');
+  const refreshBtn = getEl('refreshWorkspaceBtn');
+
+  // Initialize CodeMirror if available and not already initialized
+  const codearea = document.getElementById('editorCodearea');
+  const fallbackPre = document.getElementById('editorFallbackCode');
+  
+  if (typeof CodeMirror !== 'undefined' && !editorInstance && codearea) {
+    try {
+      editorInstance = CodeMirror.fromTextArea(codearea, {
+        lineNumbers: true,
+        theme: 'dracula',
+        readOnly: true,
+        viewportMargin: Infinity
+      });
+      // Initially hide the editor container until a file is loaded
+      const wrapper = editorInstance.getWrapperElement();
+      if (wrapper) wrapper.style.display = 'none';
+    } catch (e) {
+      console.warn("Failed to initialize CodeMirror, falling back to raw pre text:", e);
+    }
+  }
+
+  // Bind refresh button click handler
+  if (refreshBtn) {
+    refreshBtn.onclick = () => loadWorkspaceFileTree(".");
+  }
+
+  // Load workspace root and files
+  try {
+    const res = await api('/api/workspace/get');
+    if (res && res.status === 'ok') {
+      if (pathDisplay) {
+        const pathStr = res.path;
+        pathDisplay.innerText = `Root: ${pathStr}`;
+        pathDisplay.title = pathStr;
+      }
+      // Load file tree
+      await loadWorkspaceFileTree(".");
+    } else {
+      if (treeContainer) treeContainer.innerHTML = `<div style="color: var(--text-dim);">Workspace connection error, Sir.</div>`;
+    }
+  } catch (e) {
+    console.error("Error initializing editor workspace:", e);
+  }
+}
+
+async function loadWorkspaceFileTree(subpath) {
+  const treeContainer = getEl('workspaceFileTree');
+  if (!treeContainer) return;
+
+  treeContainer.innerHTML = `<div style="color: var(--text-dim); font-size: 11px;">Loading files...</div>`;
+
+  try {
+    const res = await api('/api/workspace/files/list', {
+      method: 'POST',
+      body: JSON.stringify({ path: subpath })
+    });
+
+    if (res && res.status === 'ok') {
+      treeContainer.innerHTML = '';
+      
+      const items = res.files || [];
+      items.sort((a, b) => {
+        if (a.is_dir && !b.is_dir) return -1;
+        if (!a.is_dir && b.is_dir) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      if (items.length === 0) {
+        treeContainer.innerHTML = `<div style="color: var(--text-dim); padding-left: 5px;">Workspace is empty.</div>`;
+        return;
+      }
+
+      const listEl = document.createElement('ul');
+      listEl.style.listStyle = 'none';
+      listEl.style.padding = '0';
+      listEl.style.margin = '0';
+
+      items.forEach(item => {
+        const itemEl = document.createElement('li');
+        itemEl.style.padding = '4px 6px';
+        itemEl.style.cursor = 'pointer';
+        itemEl.style.borderRadius = '4px';
+        itemEl.style.display = 'flex';
+        itemEl.style.alignItems = 'center';
+        itemEl.style.gap = '6px';
+        itemEl.style.transition = 'background 0.2s';
+        
+        itemEl.onmouseenter = () => itemEl.style.background = 'rgba(255,255,255,0.05)';
+        itemEl.onmouseleave = () => itemEl.style.background = 'transparent';
+
+        const icon = document.createElement('span');
+        icon.innerText = item.is_dir ? '📁' : '📄';
+        icon.style.fontSize = '12px';
+
+        const name = document.createElement('span');
+        name.innerText = item.name;
+        name.style.color = item.is_dir ? 'var(--accent)' : 'var(--text)';
+
+        itemEl.appendChild(icon);
+        itemEl.appendChild(name);
+
+        const relPath = subpath === '.' ? item.name : `${subpath}/${item.name}`;
+
+        if (item.is_dir) {
+          itemEl.onclick = (e) => {
+            e.stopPropagation();
+            loadWorkspaceFileTree(relPath);
+          };
+        } else {
+          itemEl.onclick = (e) => {
+            e.stopPropagation();
+            openWorkspaceFile(relPath);
+          };
+        }
+
+        listEl.appendChild(itemEl);
+      });
+
+      if (subpath !== '.') {
+        const backEl = document.createElement('li');
+        backEl.style.padding = '4px 6px';
+        backEl.style.cursor = 'pointer';
+        backEl.style.borderRadius = '4px';
+        backEl.style.color = 'var(--text-dim)';
+        backEl.innerText = '🔙 .. [Up a level]';
+        
+        backEl.onmouseenter = () => backEl.style.background = 'rgba(255,255,255,0.05)';
+        backEl.onmouseleave = () => backEl.style.background = 'transparent';
+        
+        backEl.onclick = () => {
+          const parts = subpath.split('/');
+          parts.pop();
+          const parentPath = parts.length === 0 ? '.' : parts.join('/');
+          loadWorkspaceFileTree(parentPath || '.');
+        };
+        treeContainer.appendChild(backEl);
+      }
+
+      treeContainer.appendChild(listEl);
+    } else {
+      treeContainer.innerHTML = `<div style="color: var(--text-dim); padding-left: 5px;">Failed to load files: ${res.message || 'unknown'}</div>`;
+    }
+  } catch (e) {
+    console.error("Error loading file tree:", e);
+    treeContainer.innerHTML = `<div style="color: var(--text-dim); padding-left: 5px;">Error loading tree.</div>`;
+  }
+}
+
+async function openWorkspaceFile(filePath) {
+  const activeFileDisplay = getEl('editorActiveFilePath');
+  const fallbackPre = getEl('editorFallbackCode');
+
+  if (activeFileDisplay) {
+    activeFileDisplay.innerText = filePath;
+  }
+
+  try {
+    const res = await api('/api/workspace/files/read', {
+      method: 'POST',
+      body: JSON.stringify({ path: filePath })
+    });
+
+    if (res && res.status === 'ok') {
+      const content = res.content || '';
+      
+      let mode = 'javascript';
+      const ext = filePath.split('.').pop().toLowerCase();
+      if (ext === 'py') mode = 'python';
+      else if (ext === 'xml' || ext === 'html') mode = 'xml';
+      else if (ext === 'css') mode = 'css';
+
+      if (editorInstance) {
+        if (fallbackPre) fallbackPre.style.display = 'none';
+        
+        const wrapper = editorInstance.getWrapperElement();
+        if (wrapper) wrapper.style.display = 'block';
+        
+        editorInstance.setOption('mode', mode);
+        editorInstance.setValue(content);
+        setTimeout(() => editorInstance.refresh(), 100);
+      } else {
+        if (fallbackPre) {
+          fallbackPre.style.display = 'block';
+          fallbackPre.textContent = content;
+        }
+      }
+    } else {
+      const errMsg = `Error: ${res.message || 'failed to read file contents'}`;
+      if (editorInstance) {
+        editorInstance.setValue(errMsg);
+      } else if (fallbackPre) {
+        fallbackPre.textContent = errMsg;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading file content:", e);
+    if (fallbackPre) fallbackPre.textContent = `Error: ${e.message}`;
+  }
 }

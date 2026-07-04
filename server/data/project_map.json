@@ -52,7 +52,7 @@
     },
     {
       "path": "backend/deep_research.py",
-      "size_bytes": 23681,
+      "size_bytes": 27998,
       "suffix": ".py"
     },
     {
@@ -72,12 +72,12 @@
     },
     {
       "path": "backend/fs_tools.py",
-      "size_bytes": 15541,
+      "size_bytes": 15575,
       "suffix": ".py"
     },
     {
       "path": "backend/intent_router.py",
-      "size_bytes": 40939,
+      "size_bytes": 48060,
       "suffix": ".py"
     },
     {
@@ -97,12 +97,12 @@
     },
     {
       "path": "backend/memory_sqlite.py",
-      "size_bytes": 60365,
+      "size_bytes": 60432,
       "suffix": ".py"
     },
     {
       "path": "backend/metrics_service.py",
-      "size_bytes": 10150,
+      "size_bytes": 10143,
       "suffix": ".py"
     },
     {
@@ -192,7 +192,7 @@
     },
     {
       "path": "backend/providers/ollama_local.py",
-      "size_bytes": 9183,
+      "size_bytes": 12463,
       "suffix": ".py"
     },
     {
@@ -202,17 +202,17 @@
     },
     {
       "path": "backend/providers/router.py",
-      "size_bytes": 20144,
+      "size_bytes": 23073,
       "suffix": ".py"
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 5452,
+      "size_bytes": 5453,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 9114,
+      "size_bytes": 9115,
       "suffix": ".json"
     },
     {
@@ -222,7 +222,7 @@
     },
     {
       "path": "routes/admin.py",
-      "size_bytes": 5048,
+      "size_bytes": 8837,
       "suffix": ".py"
     },
     {
@@ -232,7 +232,7 @@
     },
     {
       "path": "routes/chat.py",
-      "size_bytes": 78789,
+      "size_bytes": 79761,
       "suffix": ".py"
     },
     {
@@ -242,12 +242,12 @@
     },
     {
       "path": "routes/projects.py",
-      "size_bytes": 19427,
+      "size_bytes": 21126,
       "suffix": ".py"
     },
     {
       "path": "routes/voice.py",
-      "size_bytes": 18142,
+      "size_bytes": 18201,
       "suffix": ".py"
     }
   ]

@@ -82,10 +82,14 @@ class TestAgenticWorkflow(unittest.TestCase):
         
         # Mock git repo to return True and mock create_backup_branch
         self.agent.git.is_git_repo = MagicMock(return_value=True)
+        self.agent.git.status = MagicMock(return_value="")
         self.agent.git.create_backup_branch = MagicMock(return_value="void-backup-test")
         
         # Mock file_engine write
         self.agent.file_engine.write_file = MagicMock(return_value={"status": "ok"})
+        
+        # Mock safety check to bypass confirmation gate during test
+        self.agent.safety.check_file_action = MagicMock(return_value={"allowed": True, "requires_approval": False})
         
         loop = asyncio.new_event_loop()
         try:

@@ -141,6 +141,7 @@ async def toggle_wake_word(req: dict = None):
             
         if target:
             from tools.voice_listener import set_command_callback, set_activation_phrase
+            from server.main import process_voice_command
             set_activation_phrase("Yes?")
             set_command_callback(process_voice_command)
             _voice_thread = start_voice_loop_thread()

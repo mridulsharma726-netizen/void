@@ -21,6 +21,6 @@ GPUtil==1.4.0
 py-cpuinfo==9.0.0
 
 # --- Real-Time Intelligence Upgrade ---
-duckduckgo-search>=6.0.0    # DDG search provider (no API key required)
+ddgs>=9.14.0                 # DDG search provider (no API key required)
 feedparser>=6.0.11           # RSS/Atom feed parser
 beautifulsoup4>=4.12.3       # HTML cleaning for web page content extraction

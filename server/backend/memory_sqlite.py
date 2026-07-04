@@ -15,7 +15,7 @@ import math
 import sqlite3
 import logging
 import requests
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -717,7 +717,7 @@ def query_semantic_facts(query: str, limit: int = 5) -> List[str]:
         cursor.execute("SELECT fact, importance, embedding, timestamp FROM facts")
         rows = cursor.fetchall()
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         for fact, importance, embedding_json, timestamp_str in rows:
             if not embedding_json:
@@ -729,8 +729,8 @@ def query_semantic_facts(query: str, limit: int = 5) -> List[str]:
             
             # 2. Recency Decay calculation (exponential decay over time)
             try:
-                # Convert timestamps to float age
-                dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                # Convert timestamps to float age, marking dt as UTC
+                dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
                 age_seconds = max(1.0, (now - dt).total_seconds())
             except Exception:
                 age_seconds = 1.0

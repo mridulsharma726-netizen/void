@@ -19,6 +19,9 @@ router = APIRouter()
 class EngineeringProposeRequest(BaseModel):
     goal: str
 
+class WorkspaceSetRequest(BaseModel):
+    path: str
+
 class ProjectScanRequest(BaseModel):
     path: str
 
@@ -57,6 +60,50 @@ class BuildExecuteRequest(BaseModel):
 class ApprovalResponse(BaseModel):
     request_id: str
     approved: bool
+
+
+@router.get("/api/workspace/get")
+async def api_workspace_get():
+    """Retrieve active workspace path."""
+    try:
+        from tools.filesystem_control import get_active_workspace
+        return {"status": "ok", "path": str(get_active_workspace())}
+    except Exception as e:
+        logger.error(f"[/api/workspace/get] Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.post("/api/workspace/set")
+async def api_workspace_set(req: WorkspaceSetRequest):
+    """Set active workspace path."""
+    try:
+        from tools.filesystem_control import set_active_workspace
+        return set_active_workspace(req.path)
+    except Exception as e:
+        logger.error(f"[/api/workspace/set] Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.post("/api/workspace/files/list")
+async def api_workspace_files_list(req: FSListRequest):
+    """List directory contents within active workspace root."""
+    try:
+        from tools.filesystem_control import list_directory
+        return list_directory(req.path)
+    except Exception as e:
+        logger.error(f"[/api/workspace/files/list] Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.post("/api/workspace/files/read")
+async def api_workspace_files_read(req: FSReadRequest):
+    """Read file content within active workspace root."""
+    try:
+        from tools.filesystem_control import read_file
+        return read_file(req.path)
+    except Exception as e:
+        logger.error(f"[/api/workspace/files/read] Error: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 @router.post("/api/fs/read")

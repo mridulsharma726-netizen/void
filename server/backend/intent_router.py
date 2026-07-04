@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import re
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Any
 
 from backend.schemas import IntentResult
 
@@ -89,6 +89,34 @@ class IntentRouter:
             PREFIX + r"(?:read|check|show|get)\s+(?:my\s+)?(?:unread\s+)?(?:messages|chats|whatsapp)(?:\s+(?:on|in|from)\s+whatsapp)?" + SUFFIX,
             PREFIX + r"(?:read|check|show|get)\s+(?:my\s+)?(?:whatsapp)\s+(?:unread\s+)?(?:messages|chats)" + SUFFIX,
             PREFIX + r"(?:open\s+)?whatsapp\s+(?:and\s+)?(?:read|check|show|get)\s+(?:my\s+)?(?:unread\s+)?(?:messages|chats)" + SUFFIX
+        ],
+        "send_email": [
+            PREFIX + r"(?:send|draft)\s+(?:an?\s+)?email\s+(?:to\s+)?([a-zA-Z0-9@\._\-]+)\s+(?:saying|with|text)\s+(.+)" + SUFFIX,
+            PREFIX + r"(?:send|draft)\s+(?:an?\s+)?email\s+(?:to\s+)?([a-zA-Z0-9@\._\-]+)" + SUFFIX
+        ],
+        "read_email": [
+            PREFIX + r"(?:read|check|show|get)\s+(?:my\s+)?(?:unread\s+)?(?:emails|inbox)(?:\s+from\s+([a-zA-Z0-9@\._\-]+))?" + SUFFIX
+        ],
+        "send_discord": [
+            PREFIX + r"(?:send|post)\s+(?:a\s+)?discord\s+(?:message|post)\s+(?:to\s+)?(?:channel\s+)?([a-zA-Z0-9\-_#]+)\s+(?:saying|with|text)\s+(.+)" + SUFFIX
+        ],
+        "read_discord": [
+            PREFIX + r"(?:read|check|show|get)\s+(?:my\s+)?discord\s+(?:messages|channel)(?:\s+(?:for|from|in))?\s+([a-zA-Z0-9\-_#]+)" + SUFFIX
+        ],
+        "send_telegram": [
+            PREFIX + r"(?:send|type)\s+(?:a\s+)?telegram\s+(?:message)?\s+(?:to\s+)?([a-zA-Z0-9\-_]+)\s+(?:saying|with|text)\s+(.+)" + SUFFIX
+        ],
+        "read_telegram": [
+            PREFIX + r"(?:read|check|show|get)\s+(?:my\s+)?telegram\s+(?:messages|chats)(?:\s+from\s+([a-zA-Z0-9\-_]+))?" + SUFFIX
+        ],
+        "send_slack": [
+            PREFIX + r"(?:send|post)\s+(?:a\s+)?slack\s+(?:message|post)\s+(?:to\s+)?(?:channel\s+)?([a-zA-Z0-9\-_#]+)\s+(?:saying|with|text)\s+(.+)" + SUFFIX
+        ],
+        "read_slack": [
+            PREFIX + r"(?:read|check|show|get)\s+(?:my\s+)?slack\s+(?:messages|channel)(?:\s+(?:for|from|in))?\s+([a-zA-Z0-9\-_#]+)" + SUFFIX
+        ],
+        "wait": [
+            PREFIX + r"(?:wait|pause)\s+(\d+)\s*(?:seconds?|s)?" + SUFFIX
         ],
         "find_file": [
             PREFIX + r"(?:find|search\s+for)\s+(?:my\s+)?([a-zA-Z0-9\s_\-\.]+)(?:\s+file|\s+folder|\s+project)?" + SUFFIX
@@ -251,22 +279,36 @@ class IntentRouter:
             PREFIX + r"check\s+file\s+exists?\s+(.+)" + SUFFIX
         ],
         "list_directory": [
-            PREFIX + r"(?:list|show)\s+(?:directory|folder|dir)\s*(.+)??" + SUFFIX
+            PREFIX + r"(?:list|show)\s+(?:the\s+)?(?:directory|folder|dir)\s*(.+)??" + SUFFIX
+        ],
+        "open_file": [
+            PREFIX + r"(?:open|read|view|show)\s+(?:the\s+)?(?:file\s+)?([a-zA-Z0-9\s_\-\./\\]+\.[a-zA-Z0-9]+)" + SUFFIX
         ],
 
         # ---------------------------------------------------------------
         # REAL-TIME INTELLIGENCE UPGRADE — new intent patterns
         # ---------------------------------------------------------------
-        "web_search": [
-            PREFIX + r"(?:search|google|look\s+up|find\s+out|search\s+for)\s+(.+)" + SUFFIX,
-            PREFIX + r"what\s+is\s+(?:the\s+)?(?:current|latest|today'?s?)\s+(.+)" + SUFFIX,
-            PREFIX + r"(?:current|live|real-?time)\s+(?:price|value|stock|rate)\s+(?:of\s+)?(.+)" + SUFFIX,
+        "get_weather": [
+            PREFIX + r"(?:get|check|show|read|what\s+is|what'?s?)\s+(?:the\s+)?(?:local\s+)?weather\s+(?:in|for|at)\s+([a-zA-Z0-9\s,\-_]+)" + SUFFIX,
+            PREFIX + r"(?:get|check|show|read|what\s+is|what'?s?)\s+(?:the\s+)?(?:local\s+)?weather" + SUFFIX
         ],
-        "news_query": [
-            PREFIX + r"(?:latest|recent|today'?s?|breaking)\s+(?:news|headlines|articles?)(?:\s+(?:about|on|for)\s+(.+))?" + SUFFIX,
-            PREFIX + r"(?:what'?s?|what\s+is)\s+(?:happening|going\s+on|new)\s+(?:in|with|about)\s+(.+)" + SUFFIX,
-            PREFIX + r"(?:news|headlines)\s+(?:about|on|for|regarding)\s+(.+)" + SUFFIX,
-            PREFIX + r"(?:show|get|fetch)\s+(?:me\s+)?(?:the\s+)?(?:latest\s+)?news(?:\s+(?:about|on)\s+(.+))?" + SUFFIX,
+        "get_news": [
+            PREFIX + r"(?:latest|recent|today'?s?|breaking)\s+(?:news|headlines|articles?)\s+(?:about|on|for|regarding|in)\s+([a-zA-Z0-9\s\-_]+)" + SUFFIX,
+            PREFIX + r"(?:latest|recent|today'?s?|breaking)\s+(?:news|headlines|articles?)" + SUFFIX,
+            PREFIX + r"(?:get|check|show|read|fetch)\s+(?:me\s+)?(?:the\s+)?(?:latest|recent|today'?s?|breaking\s+)?news\s+(?:about|on|for|regarding|in)\s+([a-zA-Z0-9\s\-_]+)" + SUFFIX,
+            PREFIX + r"(?:get|check|show|read|fetch)\s+(?:me\s+)?(?:the\s+)?(?:latest|recent|today'?s?|breaking\s+)?news" + SUFFIX
+        ],
+        "web_search": [
+            PREFIX + r"(?:search\s+for|search|google|look\s+up|find\s+out)\s+(.+)" + SUFFIX
+        ],
+        "get_stock": [
+            PREFIX + r"(?:current|live|real-?time)?\s*(?:stock\s+price|price|value|stock|quote)\s+(?:of|for)?\s*([a-zA-Z0-9\-_^\.]+)" + SUFFIX,
+            PREFIX + r"([a-zA-Z0-9\-_^\.]+)\s+stock\s+price" + SUFFIX,
+            PREFIX + r"([a-zA-Z0-9\-_^\.]+)\s+stock" + SUFFIX
+        ],
+        "get_time": [
+            PREFIX + r"(?:what\s+time\s+is\s+it\s+(?:in|for|at)|(?:current\s+)?time\s+(?:in|for|at))\s+([a-zA-Z0-9\s/\-_]+)" + SUFFIX,
+            PREFIX + r"(?:what\s+time\s+is\s+it|(?:current\s+)?time)" + SUFFIX
         ],
         "engineering_mode": [
             PREFIX + r"(?:debug|fix|review)\s+(?:this|my|the)?\s*(?:code|error|bug|issue)(?:\s+(.+))?" + SUFFIX,
@@ -326,19 +368,16 @@ class IntentRouter:
             logger.info(f"[ACADEMIC INTENT DETECTED] Query: {raw}")
             return IntentResult(intent="academic")
 
-        # ---------------------------------------------------------------
-        # REAL-TIME INTELLIGENCE: detect web/news/engineering/build intents
-        # (checked early so they are not swallowed by generic chat fallback)
-        # ---------------------------------------------------------------
-        rt_result = self._classify_realtime_intent(lower, raw)
-        if rt_result:
-            return rt_result
-        
         # Rules first
         result = self._classify_rules(lower, raw)
         if result.intent != "unknown":
             logger.debug(f"Rule: {result.intent}")
             return result
+
+        # REAL-TIME INTELLIGENCE fallback
+        rt_result = self._classify_realtime_intent(lower, raw)
+        if rt_result:
+            return rt_result
         
         # LLM fallback
         if self.use_llm_fallback:
@@ -470,6 +509,9 @@ class IntentRouter:
         # Safe, unambiguous commands — check before conversational guard
         for action in [
             "time", "system_info", "repair_self", "change_motd", "send_whatsapp", "read_whatsapp",
+            "send_email", "read_email", "send_discord", "read_discord", "send_telegram", "read_telegram",
+            "send_slack", "read_slack", "wait",
+            "get_weather", "get_news", "web_search", "get_stock", "get_time",
             "find_file", "move_file_bulk", "clean_duplicates", "create_folder", "open_folder", "arrange_windows",
             "launch_workspace", "research_competitors", "open_tabs", "download_file",
             "create_presentation", "manage_email", "manage_calendar",
@@ -478,7 +520,7 @@ class IntentRouter:
             "agent_scan", "agent_explain", "agent_code", "agent_run_tests", "agent_fix_errors", "agent_refactor",
             "start_meeting", "stop_meeting", "recall_meeting", "get_action_items",
             "register_project", "scan_project_changes", "get_project_status", "query_recent_work", "continue_where_left_off",
-            "screenshot", "lock_computer", "press_key", "mouse_control", "check_file_exists", "list_directory"
+            "screenshot", "lock_computer", "press_key", "mouse_control", "check_file_exists", "list_directory", "open_file"
         ]:
             if action in self.COMMAND_PATTERNS:
                 for pat in self.COMMAND_PATTERNS[action]:
@@ -495,6 +537,9 @@ class IntentRouter:
         for action, patterns in self.COMMAND_PATTERNS.items():
             if action in [
                 "time", "system_info", "repair_self", "send_whatsapp", "read_whatsapp",
+                "send_email", "read_email", "send_discord", "read_discord", "send_telegram", "read_telegram",
+                "send_slack", "read_slack", "wait",
+                "get_weather", "get_news", "web_search", "get_stock", "get_time",
                 "find_file", "move_file_bulk", "clean_duplicates", "create_folder", "open_folder", "arrange_windows",
                 "launch_workspace", "research_competitors", "open_tabs", "download_file",
                 "create_presentation", "manage_email", "manage_calendar",
@@ -503,7 +548,7 @@ class IntentRouter:
                 "agent_scan", "agent_explain", "agent_code", "agent_run_tests", "agent_fix_errors", "agent_refactor",
                 "start_meeting", "stop_meeting", "recall_meeting", "get_action_items",
                 "register_project", "scan_project_changes", "get_project_status", "query_recent_work",
-                "screenshot", "lock_computer", "press_key", "mouse_control", "check_file_exists", "list_directory"
+                "screenshot", "lock_computer", "press_key", "mouse_control", "check_file_exists", "list_directory", "open_file"
             ]:
                 continue
             for pat in patterns:
@@ -575,8 +620,57 @@ class IntentRouter:
             return {"contact": contact_val, "message": message_val}
         elif action == "read_whatsapp":
             return {}
+        elif action == "send_email":
+            to_val = groups[0].strip() if groups and groups[0] else ""
+            body_val = groups[1].strip() if len(groups) > 1 and groups[1] else ""
+            return {"to": to_val, "body": body_val}
+        elif action == "read_email":
+            from_val = groups[0].strip() if groups and groups[0] else ""
+            return {"sender": from_val}
+        elif action == "send_discord":
+            channel_val = groups[0].strip().lstrip('#') if groups and groups[0] else ""
+            message_val = groups[1].strip() if len(groups) > 1 and groups[1] else ""
+            return {"channel": channel_val, "message": message_val}
+        elif action == "read_discord":
+            channel_val = groups[0].strip().lstrip('#') if groups and groups[0] else ""
+            return {"channel": channel_val}
+        elif action == "send_telegram":
+            contact_val = groups[0].strip() if groups and groups[0] else ""
+            message_val = groups[1].strip() if len(groups) > 1 and groups[1] else ""
+            return {"contact": contact_val, "message": message_val}
+        elif action == "read_telegram":
+            contact_val = groups[0].strip() if groups and groups[0] else ""
+            return {"contact": contact_val}
+        elif action == "send_slack":
+            channel_val = groups[0].strip().lstrip('#') if groups and groups[0] else ""
+            message_val = groups[1].strip() if len(groups) > 1 and groups[1] else ""
+            return {"channel": channel_val, "message": message_val}
+        elif action == "read_slack":
+            channel_val = groups[0].strip().lstrip('#') if groups and groups[0] else ""
+            return {"channel": channel_val}
+        elif action == "wait":
+            seconds_val = int(groups[0].strip()) if groups and groups[0] else 2
+            return {"seconds": seconds_val}
+        elif action == "get_weather":
+            loc_val = groups[0].strip() if groups and groups[0] else "Delhi"
+            return {"location": loc_val}
+        elif action == "get_news":
+            topic_val = groups[0].strip() if groups and groups[0] else ""
+            return {"topic": topic_val}
+        elif action == "web_search":
+            return {"query": target}
+        elif action == "get_stock":
+            ticker_val = groups[0].strip() if groups and groups[0] else ""
+            return {"ticker": ticker_val}
+        elif action == "get_time":
+            loc_val = groups[0].strip() if groups and groups[0] else ""
+            return {"location": loc_val}
         elif action == "find_file":
             return {"query": target}
+        elif action == "open_file":
+            return {"path": groups[0].strip() if groups and groups[0] else ""}
+        elif action == "list_directory":
+            return {"path": groups[0].strip() if groups and groups[0] else "."}
         elif action == "move_file_bulk":
             ext_val = groups[0].strip() if groups and groups[0] else ""
             src_val = groups[1].strip() if len(groups) > 1 and groups[1] else ""
@@ -723,3 +817,48 @@ class IntentRouter:
             return IntentResult(intent=m.group(1)) if m else IntentResult(intent="chat")
         except:
             return IntentResult(intent="chat")
+
+
+def detect_intent_and_params(text: str) -> Dict[str, Any]:
+    """
+    Detect intent and extract parameters from user text.
+    Uses the canonical IntentRouter class rules classification.
+    """
+    from typing import Dict, Any
+    text_clean = text.strip().lower()
+    
+    if not text_clean:
+        return {"intent": "unknown", "parameters": {}}
+        
+    try:
+        router = IntentRouter(use_llm_fallback=False)
+        res = router._classify_rules(text_clean, text)
+        
+        if res and res.intent in ["command", "system", "academic"]:
+            # Retrieve intent and action details
+            action = res.action
+            if not action and res.intent == "academic":
+                action = "academic"
+            
+            # Map legacy names if they differ
+            if action == "repair":
+                action = "repair_self"
+                
+            params = dict(res.params) if res.params else {}
+            
+            # Compatibility mapping for parameter keys (e.g. app -> app_name)
+            if "app" in params:
+                params["app_name"] = params["app"]
+                
+            return {
+                "intent": action,
+                "parameters": params
+            }
+        elif res and res.intent == "chat":
+            return {"intent": "chat", "parameters": {}}
+            
+    except Exception as e:
+        logger.error(f"Error in detect_intent_and_params rules classification: {e}")
+        
+    return {"intent": "unknown", "parameters": {}}
+

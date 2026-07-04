@@ -3,12 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:* http://localhost:* http://127.0.0.1:11434 ws://127.0.0.1:* ws://localhost:*; img-src 'self' data: file: http://127.0.0.1:* http://localhost:*;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:* http://localhost:* http://127.0.0.1:11434 ws://127.0.0.1:* ws://localhost:*; img-src 'self' data: file: http://127.0.0.1:* http://localhost:*;">
   <title>VOID AI Assistant - Command Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;800&family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  
+  <!-- CodeMirror 5 Integration -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
 </head>
 <body>
 
@@ -190,6 +199,9 @@
           </a>
           <a href="#" class="nav-item" data-view="projects">
             <span class="nav-icon">◧</span> Projects
+          </a>
+          <a href="#" class="nav-item" data-view="editor">
+            <span class="nav-icon">📝</span> Editor
           </a>
           <a href="#" class="nav-item" data-view="memory">
             <span class="nav-icon">◎</span> Memory
@@ -678,6 +690,45 @@
                   <button id="submitSocialPostBtn" class="btn btn-primary" style="padding: 5px 12px; font-size: 11px;">Queue Post</button>
                   <button id="cancelSocialPostBtn" class="btn" style="padding: 5px 12px; font-size: 11px;">Cancel</button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === 4G-2. EDITOR VIEW (IDE GROUNDWORK) === -->
+        <div id="view-editor" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>WORKSPACE CODE EDITOR</h2>
+            <p>Secure workspace-scoped read-only file viewer and code explorer</p>
+          </div>
+          
+          <div class="editor-workspace-layout" style="display: flex; gap: 20px; height: calc(100vh - 200px); min-height: 500px; margin-top: 15px;">
+            <!-- Left Side: File Explorer -->
+            <div class="editor-file-explorer" style="width: 250px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;">
+              <div class="explorer-header" style="padding: 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+                <span style="font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: bold; color: var(--accent); letter-spacing: 1px;">EXPLORER</span>
+                <button id="refreshWorkspaceBtn" class="btn" style="padding: 2px 8px; font-size: 10px; background: transparent; border: 1px solid var(--border); color: var(--text-dim);">Refresh</button>
+              </div>
+              <div id="workspaceFileTree" style="flex: 1; overflow-y: auto; padding: 12px; font-family: 'Share Tech Mono', monospace; font-size: 12px; line-height: 1.6;">
+                <div style="color: var(--text-dim);">Initializing file tree...</div>
+              </div>
+            </div>
+            
+            <!-- Right Side: Editor Display -->
+            <div class="editor-code-container" style="flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;">
+              <div class="editor-header" style="padding: 10px 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="editorActiveFilePath" style="font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--text);">No file open</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span id="workspacePathDisplay" style="font-size: 10px; color: var(--text-dim); background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">Root: Loading...</span>
+                  <span style="font-size: 9px; font-weight: bold; color: #ff5555; background: rgba(255,85,85,0.1); border: 1px solid rgba(255,85,85,0.3); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">READ-ONLY</span>
+                </div>
+              </div>
+              <div class="editor-body" style="flex: 1; position: relative; overflow: hidden; background: #0b0b0b;">
+                <textarea id="editorCodearea" style="display: none;"></textarea>
+                <!-- Fallback code container when CodeMirror is not yet initialized or fails to load -->
+                <pre id="editorFallbackCode" style="margin: 0; padding: 20px; overflow: auto; height: 100%; font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--text); display: block; white-space: pre-wrap; word-break: break-all;">Select a file from the explorer tree to view its content here, Sir.</pre>
               </div>
             </div>
           </div>
@@ -1239,7 +1290,7 @@ System idle. Standing by for task sequence dispatch...</div>
         <!-- Recent Activity Panel -->
         <div class="card recent-activity-card">
           <div class="card-title">RECENT ACTIVITY</div>
-          <div class="activity-timeline">
+          <div class="activity-timeline" id="dashboardActivityTimeline">
             <div class="activity-item">
               <span class="activity-time">10:40 PM</span>
               <span class="activity-event">Project scan completed</span>

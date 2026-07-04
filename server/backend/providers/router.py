@@ -389,3 +389,56 @@ class MultiModelRouter(BaseProvider):
                 except Exception:
                     pass
             raise e
+
+    def chat_sync(self, history: List[Dict[str, str]], prompt: str, system_prompt: Optional[str] = None) -> str:
+        """Synchronously send a chat request and return the full response."""
+        provider_name, provider, model_name, reason = self.select_provider_and_model(prompt)
+        
+        total_chars = len(prompt) + (len(system_prompt) if system_prompt else 0)
+        for msg in history:
+            total_chars += len(msg.get("content", ""))
+        estimated_tokens = int(total_chars / 4)
+        
+        t_start = time.perf_counter()
+        logger.info(f"[ROUTER-SYNC] Routing to {provider_name} | Model: {model_name} ({reason})")
+        
+        try:
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+            if loop.is_running():
+                import threading
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(lambda: asyncio.run(provider.chat(history, prompt, system_prompt=system_prompt)))
+                    res = future.result()
+            else:
+                res = loop.run_until_complete(provider.chat(history, prompt, system_prompt=system_prompt))
+                
+            self.metrics["last_provider"] = provider_name
+            self.metrics["last_model"] = model_name
+            self.metrics["last_context_tokens"] = estimated_tokens
+            self.metrics["last_latency_seconds"] = time.perf_counter() - t_start
+            self.metrics["last_routing_reason"] = reason
+            return res
+        except Exception as e:
+            logger.error(f"[ROUTER] chat_sync failed: {e}")
+            if provider_name != "Local" and self.config["fallback_enabled"]:
+                logger.warning(f"[CLOUD FALLBACK-SYNC] Cloud failed. Switching to Local model...")
+                try:
+                    if loop.is_running():
+                        with ThreadPoolExecutor(max_workers=1) as executor:
+                            future = executor.submit(lambda: asyncio.run(self.ollama_provider.chat(history, prompt, system_prompt=system_prompt)))
+                            local_res = future.result()
+                    else:
+                        local_res = loop.run_until_complete(self.ollama_provider.chat(history, prompt, system_prompt=system_prompt))
+                    self.metrics["last_provider"] = "Local (Fallback Sync)"
+                    self.metrics["last_model"] = self.config["local_model"]
+                    self.metrics["last_latency_seconds"] = time.perf_counter() - t_start
+                    return local_res
+                except Exception as local_err:
+                    logger.error(f"[ROUTER-SYNC] Fallback sync failed: {local_err}")
+            raise e

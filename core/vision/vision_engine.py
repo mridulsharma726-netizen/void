@@ -44,11 +44,15 @@ class VisionEngine:
             # Look at a resized version to quickly check colors
             small_img = img.resize((32, 32))
             red_pixels = 0
-            for pixel in small_img.getdata():
-                # pixel is (R, G, B) or (R, G, B, A)
-                r, g, b = pixel[0], pixel[1], pixel[2]
-                if r > 180 and g < 60 and b < 60:  # Strong red
-                    red_pixels += 1
+            pixels = small_img.load()
+            s_width, s_height = small_img.size
+            for y in range(s_height):
+                for x in range(s_width):
+                    pixel = pixels[x, y]
+                    if isinstance(pixel, (tuple, list)) and len(pixel) >= 3:
+                        r, g, b = pixel[0], pixel[1], pixel[2]
+                        if r > 180 and g < 60 and b < 60:  # Strong red
+                            red_pixels += 1
             if red_pixels > 5:
                 anomaly_detected = True
                 anomaly_reason = "Significant red indicator blocks detected (potential crash or error modal)."
