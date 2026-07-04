@@ -2,20 +2,25 @@ import psutil
 import shutil
 import time
 import platform
+import logging
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger("void.system_stats")
 
 # GPU stats are optional - wrap in try/except for compatibility
 try:
     import GPUtil
     GPUUTIL_AVAILABLE = True
-except Exception:
+except Exception as e:
+    logger.debug(f"GPUtil not available: {e}")
     GPUUTIL_AVAILABLE = False
 
 # CPU info - optional
 try:
     import cpuinfo
     CPUINFO_AVAILABLE = True
-except Exception:
+except Exception as e:
+    logger.debug(f"cpuinfo not available: {e}")
     CPUINFO_AVAILABLE = False
 
    
@@ -39,8 +44,8 @@ class SystemStats:
                 try:
                     info = cpuinfo.get_cpu_info()
                     SystemStats._cached_processor_info = info.get("brand_raw", platform.processor())
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to get cpu_info: {e}")
         self._processor_info = SystemStats._cached_processor_info
     
     def _should_refresh(self) -> bool:
@@ -68,8 +73,8 @@ class SystemStats:
                         if sensor_name in temps and temps[sensor_name]:
                             cpu_stats["cpu_temp"] = temps[sensor_name][0].current
                             break
-            except Exception:
-                pass  # Temperature not available
+            except Exception as e:
+                logger.debug(f"Failed to get CPU temperature: {e}")
         
         return cpu_stats
     
@@ -105,8 +110,8 @@ class SystemStats:
             total, used, free = shutil.disk_usage(drive)
             storage_stats["storage_total_gb"] = round(total / (1024**3), 2)
             storage_stats["storage_used_gb"] = round(used / (1024**3), 2)
-        except Exception:
-            pass  # Keep storage stats at 0
+        except Exception as e:
+            logger.debug(f"Failed to get storage stats: {e}")
         
         return storage_stats
     
@@ -123,8 +128,8 @@ class SystemStats:
                 if battery:
                     battery_stats["battery_percent"] = battery.percent
                     battery_stats["battery_charging"] = battery.power_plugged
-            except Exception:
-                pass  # Keep battery stats at None
+            except Exception as e:
+                logger.debug(f"Failed to get battery stats: {e}")
         
         return battery_stats
     
@@ -146,8 +151,8 @@ class SystemStats:
                 gpu = gpus[0]
                 gpu_stats["gpu_usage"] = gpu.load * 100
                 gpu_stats["gpu_temp"] = gpu.temperature
-        except Exception:
-            pass  # Keep GPU stats at None
+        except Exception as e:
+            logger.debug(f"Failed to get GPU stats: {e}")
         
         return gpu_stats
     

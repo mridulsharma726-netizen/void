@@ -294,7 +294,7 @@ class ToolRegistry:
         cmd = app_map.get(app.lower(), app)
         
         try:
-            subprocess.Popen(["cmd", "/c", "start", "", cmd], shell=True)
+            subprocess.Popen(["cmd", "/c", "start", "", cmd])
             return {"status": "ok", "message": f"Opened {app}"}
         except Exception as e:
             return {"status": "error", "message": str(e)}
@@ -309,7 +309,7 @@ class ToolRegistry:
             url = "https://" + url
         
         try:
-            subprocess.Popen(["cmd", "/c", "start", "", url], shell=True)
+            subprocess.Popen(["cmd", "/c", "start", "", url])
             return {"status": "ok", "message": f"Opened {url}"}
         except Exception as e:
             return {"status": "error", "message": str(e)}

@@ -22,6 +22,14 @@ class ToolOrchestrator:
             "press_key": "medium"
         }
 
+    def enforce_permission(self, name: str) -> None:
+        """Enforces risk tier. Raises Exception if permission is denied."""
+        perm = self.permissions.get(name, "low")
+        if perm in ["high", "critical"]:
+            from core.brain import is_developer_mode
+            if not is_developer_mode():
+                raise PermissionError(f"Action Denied: Tool '{name}' requires Developer Mode (Risk Tier: {perm.upper()}).")
+
     def get_tool_metadata(self, name: str) -> Dict[str, Any]:
         """Retrieve full structured tool metadata."""
         try:

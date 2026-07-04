@@ -36,7 +36,8 @@ def get_ollama_model() -> str:
         from server.backend.llm_client import OllamaClient
         client = OllamaClient()
         return client.model
-    except Exception:
+    except Exception as e:
+        logger.debug(f"[SQLITE MEMORY] get_ollama_model failed, falling back to default: {e}")
         return "llama3.2:3b"
 
 def init_db():
@@ -475,8 +476,8 @@ def _increment_user_pattern(intent: str) -> None:
         )
         conn.commit()
         conn.close()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY] Failed incrementing user pattern for intent {intent}: {e}")
 
 
 def set_profile_value(key: str, value: str) -> bool:
@@ -507,7 +508,8 @@ def get_profile_value(key: str) -> Optional[str]:
         cursor.execute("SELECT value FROM profile_data WHERE key = ?", (key,))
         row = cursor.fetchone()
         return row[0] if row else None
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed getting profile value {key}: {e}")
         return None
     finally:
         conn.close()
@@ -527,8 +529,8 @@ def get_embedding(text: str) -> List[float]:
         resp = requests.post(OLLAMA_EMBED_URL, json={"model": model, "prompt": text}, timeout=4.0)
         if resp.status_code == 200:
             vector = resp.json().get("embedding", [])
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[SQLITE MEMORY] Embedding classic API failed: {e}")
         
     if not vector:
         try:
@@ -538,8 +540,8 @@ def get_embedding(text: str) -> List[float]:
                 vectors = resp.json().get("embeddings", [])
                 if vectors:
                     vector = vectors[0]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[SQLITE MEMORY] Embedding fallback API failed: {e}")
             
     if vector:
         _EMBEDDING_CACHE[text_key] = vector
@@ -589,7 +591,8 @@ def remove_fact(fact: str) -> bool:
         cursor.execute("DELETE FROM facts WHERE fact LIKE ?", (fact,))
         conn.commit()
         return cursor.rowcount > 0
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed removing fact: {e}")
         return False
     finally:
         conn.close()
@@ -606,7 +609,8 @@ def set_preference(key: str, value: str) -> bool:
         )
         conn.commit()
         return True
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed setting preference key {key}: {e}")
         return False
     finally:
         conn.close()
@@ -620,7 +624,8 @@ def get_preference(key: str) -> Optional[str]:
         cursor.execute("SELECT value FROM preferences WHERE key = ?", (key,))
         row = cursor.fetchone()
         return row[0] if row else None
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed getting preference key {key}: {e}")
         return None
     finally:
         conn.close()
@@ -637,7 +642,8 @@ def add_history(role: str, content: str) -> bool:
         )
         conn.commit()
         return True
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed adding history: {e}")
         return False
     finally:
         conn.close()
@@ -650,7 +656,8 @@ def get_all_facts() -> List[str]:
     try:
         cursor.execute("SELECT fact FROM facts ORDER BY timestamp DESC")
         return [row[0] for row in cursor.fetchall()]
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed getting all facts: {e}")
         return []
     finally:
         conn.close()
@@ -663,7 +670,8 @@ def get_all_preferences() -> Dict[str, Any]:
     try:
         cursor.execute("SELECT key, value FROM preferences")
         return {row[0]: row[1] for row in cursor.fetchall()}
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed getting all preferences: {e}")
         return {}
     finally:
         conn.close()
@@ -678,7 +686,8 @@ def get_recent_history(limit: int = 50) -> List[Dict[str, str]]:
         rows = cursor.fetchall()
         # Return in correct chronological order
         return [{"role": row[0], "content": row[1]} for row in reversed(rows)]
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed getting recent history: {e}")
         return []
     finally:
         conn.close()
@@ -694,7 +703,8 @@ def purge_all() -> bool:
         cursor.execute("DELETE FROM history")
         conn.commit()
         return True
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed purging all data: {e}")
         return False
     finally:
         conn.close()
@@ -732,7 +742,8 @@ def query_semantic_facts(query: str, limit: int = 5) -> List[str]:
                 # Convert timestamps to float age, marking dt as UTC
                 dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
                 age_seconds = max(1.0, (now - dt).total_seconds())
-            except Exception:
+            except Exception as e:
+                logger.debug(f"[SQLITE MEMORY ERROR] Failed parsing timestamp {timestamp_str}: {e}")
                 age_seconds = 1.0
             # Lambda decay constant (decay slowly over days)
             lambda_decay = 1e-6
@@ -826,7 +837,8 @@ def get_xp() -> Dict[str, int]:
         if row:
             return {"points": row[0], "level": row[1]}
         return {"points": 0, "level": 1}
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed getting xp: {e}")
         return {"points": 0, "level": 1}
     finally:
         conn.close()
@@ -857,7 +869,8 @@ def get_achievements() -> List[Dict[str, Any]]:
     try:
         cursor.execute("SELECT badge_id, title, earned_at FROM achievements ORDER BY earned_at DESC")
         return [{"badge_id": r[0], "title": r[1], "earned_at": r[2]} for r in cursor.fetchall()]
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed getting achievements: {e}")
         return []
     finally:
         conn.close()
@@ -919,7 +932,8 @@ def get_streaks() -> List[Dict[str, Any]]:
     try:
         cursor.execute("SELECT subject_id, streak_count, last_active_date FROM learning_streaks")
         return [{"subject_id": r[0], "streak_count": r[1], "last_active_date": r[2]} for r in cursor.fetchall()]
-    except Exception:
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed getting streaks: {e}")
         return []
     finally:
         conn.close()
@@ -1184,8 +1198,8 @@ def get_active_project() -> Optional[Dict[str, Any]]:
             for proj in projects:
                 if proj["name"].lower() in title:
                     return get_project(proj["project_id"])
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[SQLITE MEMORY ERROR] Failed getting foreground window title: {e}")
 
     # 3. Check if current directory path corresponds to any tracked project path
     import os
@@ -1512,7 +1526,9 @@ def update_recording_status(recording_id: int, status: str) -> bool:
         cursor.execute("UPDATE audio_recordings SET status = ? WHERE id = ?", (status, recording_id))
         conn.commit()
         return True
-    except: return False
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed updating recording status {recording_id}: {e}")
+        return False
     finally: conn.close()
 
 def add_bookmark(recording_id: int, timestamp: float, label: str) -> bool:
@@ -1533,7 +1549,9 @@ def update_recording_metadata(recording_id: int, **metadata) -> bool:
                 cursor.execute(f"UPDATE audio_recordings SET {key} = ? WHERE id = ?", (val, recording_id))
         conn.commit()
         return True
-    except: return False
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed updating recording metadata {recording_id}: {e}")
+        return False
     finally: conn.close()
 
 def update_recording_bookmarks(recording_id: int, bookmarks: List[dict]) -> bool:
@@ -1544,7 +1562,9 @@ def update_recording_bookmarks(recording_id: int, bookmarks: List[dict]) -> bool
         cursor.execute("UPDATE audio_recordings SET bookmarks = ? WHERE id = ?", (json.dumps(bookmarks), recording_id))
         conn.commit()
         return True
-    except: return False
+    except Exception as e:
+        logger.error(f"[SQLITE MEMORY ERROR] Failed updating recording bookmarks {recording_id}: {e}")
+        return False
     finally: conn.close()
 
 def delete_audio_recording(recording_id: int) -> bool:
@@ -1617,7 +1637,8 @@ def semantic_search_recordings(query: str, limit: int = 5) -> List[Dict[str, Any
                     dt = datetime.strptime(r[2], "%Y-%m-%d %H:%M:%S")
                     days_diff = (datetime.now() - dt).days
                     recency_boost = 0.1 * math.exp(-days_diff / 7.0) # decays over a week
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"[SQLITE MEMORY ERROR] Failed parsing recording timestamp {r[2]}: {e}")
                     recency_boost = 0.0
                     
                 score = sim + recency_boost

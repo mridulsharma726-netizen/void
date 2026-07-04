@@ -366,8 +366,8 @@ class AudioMemoryService:
                 samples = struct.unpack(f"{count}h", data)
                 sum_squares = sum(s * s for s in samples)
                 rms = math.sqrt(sum_squares / count)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[AUDIO SERVICE] RMS calculation failed: {e}")
                 
         # Check VAD
         block_duration = count / self.sample_rate
@@ -490,8 +490,8 @@ class AudioMemoryService:
                         if r["recording_path"] == file_path:
                             rec_id = r["id"]
                             break
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[AUDIO SERVICE] Failed to fetch recording ID from DB: {e}")
                 
                 # 1. Transcribe
                 transcript, words, confidence = self._transcribe_file(file_path, vosk_model)
@@ -698,8 +698,8 @@ class AudioMemoryService:
                             from tools.voice_stt import VOSK_MODEL_PATH, ensure_vosk_model
                             if ensure_vosk_model():
                                 vosk_model = vosk.Model(str(VOSK_MODEL_PATH))
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[AUDIO SERVICE] Deferred processing failed to load Vosk model: {e}")
                             
                     if vosk_model is not None:
                         for r in pending_trans:
@@ -738,8 +738,8 @@ class AudioMemoryService:
                                         with open(transcript_path, "r", encoding="utf-8") as f:
                                             td = json.load(f)
                                             transcript = td.get("transcript", "")
-                                    except Exception:
-                                        pass
+                                    except Exception as e:
+                                        logger.debug(f"[AUDIO SERVICE] Failed to read transcript JSON: {e}")
                                         
                             if transcript:
                                 logger.info(f"[AUDIO SERVICE] Deferred processing: summarizing {file_path}")

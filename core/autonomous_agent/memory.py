@@ -1,8 +1,11 @@
 import os
 import json
 import hashlib
+import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger("void.agent_memory")
 
 class CodebaseMemory:
     def __init__(self, root_dir: str):
@@ -20,8 +23,8 @@ class CodebaseMemory:
             try:
                 with open(self.memory_file, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to load memory state: {e}")
         
         # Initialize default structure
         return {
@@ -38,8 +41,8 @@ class CodebaseMemory:
         try:
             with open(self.memory_file, "w", encoding="utf-8") as f:
                 json.dump(self.memory_data, f, indent=2)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to save memory state: {e}")
 
     def compute_hash(self, file_path: Path) -> str:
         """Compute the SHA256 hash of a file."""
@@ -49,7 +52,8 @@ class CodebaseMemory:
                 while chunk := f.read(8192):
                     hasher.update(chunk)
             return hasher.hexdigest()
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to compute hash for {file_path}: {e}")
             return ""
 
     def has_file_changed(self, file_path: str) -> bool:
@@ -65,7 +69,8 @@ class CodebaseMemory:
             stat = abs_path.stat()
             mtime = stat.st_mtime
             size = stat.st_size
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to stat file {abs_path}: {e}")
             return True
 
         state = self.memory_data["file_states"].get(file_path)
@@ -97,7 +102,8 @@ class CodebaseMemory:
             mtime = stat.st_mtime
             size = stat.st_size
             current_hash = self.compute_hash(abs_path)
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to update file state for {abs_path}: {e}")
             return False
 
         state = self.memory_data["file_states"].get(file_path)

@@ -20,7 +20,7 @@ import urllib.parse
 import requests
 from typing import Dict, Any, List, Optional
 from backend.llm_client import OllamaClient
-from tools.web_search import read_page
+from tools.websearch_control import read_page
 
 logger = logging.getLogger("void.deep_research")
 

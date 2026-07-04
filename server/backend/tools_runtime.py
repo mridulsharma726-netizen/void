@@ -40,6 +40,9 @@ class ToolRuntime:
         started = dt.datetime.now()
         
         try:
+            from core.tools.tool_orchestrator import ToolOrchestrator
+            ToolOrchestrator().enforce_permission(name)
+            
             if name == "time":
                 output = self._time()
             elif name == "system_info":
@@ -253,7 +256,7 @@ class ToolRuntime:
                 
         try:
             subprocess.Popen(["cmd", "/c", "start", "", cmd], 
-                           shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                           creationflags=subprocess.CREATE_NO_WINDOW)
             return f"✅ Opened '{app}'"
         except Exception as e:
             return f"❌ Failed to open '{app}': {e}"
@@ -279,7 +282,7 @@ class ToolRuntime:
             target = "https://" + target
         try:
             subprocess.Popen(["cmd", "/c", "start", "", target],
-                           shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                           creationflags=subprocess.CREATE_NO_WINDOW)
             return f"✅ Opened {target[:50]}..."
         except Exception as e:
             return f"❌ URL open failed: {e}"
@@ -383,7 +386,7 @@ class ToolRuntime:
             return f"Error: folder or file not found: {path}"
             
         try:
-            subprocess.Popen(["cmd", "/c", "start", "", os.path.normpath(resolved_path)], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            subprocess.Popen(["cmd", "/c", "start", "", os.path.normpath(resolved_path)], creationflags=subprocess.CREATE_NO_WINDOW)
             return f"✅ Opened: {resolved_path}"
         except Exception as e:
             return f"❌ Open failed: {e}"
@@ -1035,10 +1038,10 @@ class ToolRuntime:
 
     async def _launch_vscode(self, path: Optional[str]) -> str:
         try:
-            cmd = ["code"]
+            cmd = ["cmd", "/c", "code"]
             if path:
                 cmd.append(os.path.abspath(path))
-            subprocess.Popen(cmd, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            subprocess.Popen(cmd, creationflags=subprocess.CREATE_NO_WINDOW)
             return f"Successfully launched Visual Studio Code{' on ' + path if path else ''}, Sir."
         except Exception as e:
             return f"Error launching VS Code: {e}"

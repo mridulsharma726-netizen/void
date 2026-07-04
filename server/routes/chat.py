@@ -5,6 +5,8 @@ import time
 import requests
 import sys
 import platform
+import ast
+import operator
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -96,6 +98,27 @@ def clean_intercept_text(text: str) -> str:
     cleaned = re.sub(r'[^\w\s]', '', text)
     return " ".join(cleaned.lower().split())
 
+def _safe_math_eval(expr: str) -> float:
+    ops = {
+        ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+        ast.Div: operator.truediv, ast.Pow: operator.pow, ast.Mod: operator.mod,
+        ast.USub: operator.neg, ast.UAdd: operator.pos
+    }
+    
+    def eval_node(node):
+        if isinstance(node, ast.Expression):
+            return eval_node(node.body)
+        elif isinstance(node, ast.Constant):
+            return node.value
+        elif isinstance(node, ast.BinOp):
+            return ops[type(node.op)](eval_node(node.left), eval_node(node.right))
+        elif isinstance(node, ast.UnaryOp):
+            return ops[type(node.op)](eval_node(node.operand))
+        else:
+            raise TypeError(f"Unsupported mathematical operation: {type(node)}")
+
+    return eval_node(ast.parse(expr, mode='eval'))
+
 def evaluate_math_locally(text: str) -> Optional[str]:
     cleaned = text.lower().strip()
     cleaned = re.sub(
@@ -110,7 +133,7 @@ def evaluate_math_locally(text: str) -> Optional[str]:
         return None
     try:
         expr = cleaned.replace('^', '**')
-        val = eval(expr, {"__builtins__": {}}, {})
+        val = _safe_math_eval(expr)
         if isinstance(val, float) and val.is_integer():
             val = int(val)
         return f"The calculation result is {val}, Sir."

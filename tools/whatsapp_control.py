@@ -30,7 +30,7 @@ def open_whatsapp() -> bool:
                 
         # Start WhatsApp native app protocol on Windows
         logger.info("WhatsApp not found. Starting native app protocol...")
-        subprocess.Popen(["cmd", "/c", "start", "whatsapp:"], shell=True)
+        subprocess.Popen(["cmd", "/c", "start", "whatsapp:"])
         
         # Wait up to 5s for WhatsApp to launch
         for _ in range(10):

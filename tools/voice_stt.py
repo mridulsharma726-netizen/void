@@ -125,7 +125,8 @@ def get_best_microphone_index() -> Optional[int]:
                 default_info = p.get_default_input_device_info()
                 logger.info(f"[STT] Default mic info: {default_info.get('name')}")
                 return default_info.get('index')
-            except Exception:
+            except Exception as e:
+                logger.debug(f"[STT] Could not get default PyAudio device: {e}")
                 # Iterate and find first working input device
                 for i in range(p.get_device_count()):
                     try:
@@ -133,8 +134,8 @@ def get_best_microphone_index() -> Optional[int]:
                         if dev_info.get('maxInputChannels', 0) > 0:
                             logger.info(f"[STT] Found mic info: {dev_info.get('name')} at index {i}")
                             return i
-                    except:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[STT] Failed checking PyAudio device info at index {i}: {e}")
             finally:
                 p.terminate()
         except Exception as e:
@@ -162,7 +163,8 @@ def is_tts_speaking() -> bool:
     try:
         from tools.voice_tts import is_speaking
         return is_speaking()
-    except Exception:
+    except Exception as e:
+        logger.debug(f"[STT] is_tts_speaking check failed: {e}")
         return False
 
 def stop_tts_speaking():
@@ -170,8 +172,8 @@ def stop_tts_speaking():
     try:
         from tools.voice_tts import stop_speaking
         stop_speaking()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[STT] stop_tts_speaking check failed: {e}")
 
 
 # ==================== QUEUE-BASED AUDIO INPUT STREAM ====================
@@ -293,7 +295,8 @@ class VoiceSTT:
                     while not self._audio_queue.empty():
                         try:
                             self._audio_queue.get_nowait()
-                        except Exception:
+                        except Exception as e:
+                            logger.debug(f"[VOICE INTERRUPT] Error clearing queue: {e}")
                             break
                     # Enqueue this segment as the start of user command
                     self._audio_queue.put(raw_bytes)
@@ -347,7 +350,8 @@ class VoiceSTT:
                             while not self._audio_queue.empty():
                                 try:
                                     self._audio_queue.get_nowait()
-                                except Exception:
+                                except Exception as e:
+                                    logger.debug(f"[VOICE INTERRUPT] Error clearing queue (PyAudio): {e}")
                                     break
                             self._audio_queue.put(data)
                         continue
@@ -472,7 +476,8 @@ class VoiceSTT:
                     try:
                         from backend.owner_profile import OWNER_PROFILE
                         dialects = OWNER_PROFILE.get("preferences", {}).get("preferred_dialects", ["en-US", "en-IN", "en-GB"])
-                    except Exception:
+                    except Exception as e:
+                        logger.debug(f"[STT] Failed to fetch owner dialects, using defaults: {e}")
                         dialects = ["en-US", "en-IN", "en-GB"]
                     
                     # Recognize multiple dialects in parallel
@@ -492,8 +497,8 @@ class VoiceSTT:
                                     }
                             elif isinstance(res, str):
                                 return {"text": res, "confidence": 0.8}
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[STT] Dialect recognition failed for {dialect}: {e}")
                         return None
 
                     with concurrent.futures.ThreadPoolExecutor(max_workers=len(dialects)) as executor:

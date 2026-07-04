@@ -369,7 +369,7 @@ def quick_diagnose() -> Dict[str, Any]:
         ("file_status", "tools.file_status"),
         ("diagnostics", "tools.diagnostics"),
         ("self_repair", "tools.self_repair"),
-        ("web_search", "tools.web_search"),
+        ("websearch_control", "tools.websearch_control"),
         ("system_control", "tools.system_control"),
     ]
     

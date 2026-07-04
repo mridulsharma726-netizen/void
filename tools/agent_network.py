@@ -188,8 +188,8 @@ async def run_agent_llm(agent_name: str, badge: str, system_prompt: str, instruc
                 blackboard_context = "\nShared Blackboard Memory Status:\n" + "\n".join(
                     f"- [{posted}] {key}: {val[:120]}" for key, val, posted in rows
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to query swarm_blackboard: {e}")
         finally:
             conn.close()
 
@@ -344,8 +344,8 @@ async def run_testing_task(instruction: str) -> Dict[str, Any]:
         resp = requests.get(url, timeout=3.0)
         status_code = str(resp.status_code)
         latency_ms = (time.time() - start_time) * 1000
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Testing Agent failed HTTP probe: {e}")
         
     # 2. Run local diagnostics
     diagnostics_passed = False
@@ -354,8 +354,8 @@ async def run_testing_task(instruction: str) -> Dict[str, Any]:
         diag = DiagnosticsEngine()
         diag_report = await diag.run()
         diagnostics_passed = diag_report.get("status") == "OK"
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Testing Agent failed diagnostics: {e}")
         
     conn = sqlite3.connect(str(DB_FILE))
     cursor = conn.cursor()
@@ -400,8 +400,8 @@ async def run_security_task(instruction: str) -> Dict[str, Any]:
                         if "eval(" in line or "exec(" in line:
                             if "def " not in line and "#" not in line:
                                 unsafe_evals.append(f"`{fpath.name}:{idx+1}`: {line.strip()[:35]}")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Security Agent failed reading {fpath}: {e}")
                 
     conn = sqlite3.connect(str(DB_FILE))
     cursor = conn.cursor()
@@ -432,8 +432,8 @@ async def run_planner_task(instruction: str) -> Dict[str, Any]:
     try:
         cursor.execute("SELECT key, value FROM swarm_blackboard")
         blackboard_info = {row[0]: row[1] for row in cursor.fetchall()}
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Planner Agent failed reading blackboard: {e}")
     finally:
         conn.close()
         
@@ -532,8 +532,8 @@ def get_network_status() -> Dict[str, Any]:
     try:
         cursor.execute("SELECT key, value, posted_by FROM swarm_blackboard ORDER BY timestamp DESC LIMIT 10")
         blackboard_items = cursor.fetchall()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Failed getting network status from blackboard: {e}")
     finally:
         conn.close()
         

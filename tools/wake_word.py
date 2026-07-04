@@ -35,8 +35,8 @@ try:
         if self.stream is None:
             try:
                 self.audio.terminate()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[WAKE WORD] Failed to terminate PyAudio stream in patched_exit: {e}")
             return False
         return original_exit(self, exc_type, exc_value, traceback)
 
@@ -201,14 +201,16 @@ def listen_for_wake_word(timeout: Optional[float] = None,
                         try:
                             res_dict = json.loads(text_raw)
                             text = res_dict.get("text", text_raw).strip().lower()
-                        except Exception:
+                        except Exception as e:
+                            logger.debug(f"[WAKE WORD] Failed to parse Vosk JSON output: {e}")
                             text = text_raw.strip().lower()
-                    except Exception:
+                    except Exception as e:
+                        logger.debug(f"[WAKE WORD] Vosk recognition failed: {e}")
                         # Fallback to Google online recognition
                         try:
                             text = _recognizer.recognize_google(audio).lower()
-                        except Exception:
-                            pass
+                        except Exception as e2:
+                            logger.debug(f"[WAKE WORD] Google recognition fallback failed: {e2}")
 
                     if text:
                         logger.info(f"[WAKE WORD] Heard: {text}")
@@ -291,9 +293,11 @@ def detect_wake_word_from_audio(audio_data) -> bool:
             import json
             res_dict = json.loads(text_raw)
             text = res_dict.get("text", text_raw).strip().lower()
-        except Exception:
+        except Exception as e:
+            logger.debug(f"[WAKE WORD] Vosk detection failed in detect_wake_word_from_audio: {e}")
             text = _recognizer.recognize_google(audio_data).lower()
             
         return _check_for_wake_word(text)
-    except Exception:
+    except Exception as e:
+        logger.debug(f"[WAKE WORD] detect_wake_word_from_audio overall failure: {e}")
         return False

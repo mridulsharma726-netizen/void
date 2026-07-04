@@ -85,8 +85,8 @@ class SystemMetricsCollector:
                 s.connect(("8.8.8.8", 53))
                 s.close()
                 latency = (time.time() - start) * 1000.0  # in ms
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to check network latency: {e}")
                 
             return {
                 "sent_rate_bps": sent_speed * 8, # bits per second
@@ -111,8 +111,8 @@ class SystemMetricsCollector:
             from backend.memory_sqlite import get_all_facts
             get_all_facts()
             db_ok = True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to check database status: {e}")
         services["database"] = "running" if db_ok else "error"
         
         # 3. Ollama Status
@@ -123,8 +123,8 @@ class SystemMetricsCollector:
             status_info = ollama_manager.get_status()
             ollama_status = status_info.get("status", "offline")
             active_model = status_info.get("active_model", "--")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to check Ollama status: {e}")
         services["ollama"] = ollama_status
         services["ollama_model"] = active_model
         
@@ -138,8 +138,8 @@ class SystemMetricsCollector:
                 thread = getattr(main_module, "_voice_thread", None)
                 if thread and thread.is_alive():
                     wake_word_running = True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to check Wake Word Engine status: {e}")
         services["wake_word"] = "running" if wake_word_running else "stopped"
         
         # 5. Recording Service
@@ -164,8 +164,8 @@ class SystemMetricsCollector:
                     if m.get("is_default"):
                         current_mic = m["name"]
                         break
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to check Recording Service status: {e}")
         services["recording_service"] = "running" if recording_service_running else "stopped"
         services["recording_active"] = recording_active
         services["current_microphone"] = current_mic
@@ -176,8 +176,8 @@ class SystemMetricsCollector:
             from tools.voice_stt import VOSK_MODEL_PATH
             if VOSK_MODEL_PATH.exists():
                 vosk_ok = True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to check Speech-to-Text status: {e}")
         services["speech_to_text"] = "running" if vosk_ok else "error"
         
         # 7. Project Monitor
@@ -187,8 +187,8 @@ class SystemMetricsCollector:
             monitor = get_monitor_instance()
             if monitor and monitor.monitor_thread and monitor.monitor_thread.is_alive():
                 monitor_running = True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to check Project Monitor status: {e}")
         services["project_monitor"] = "running" if monitor_running else "stopped"
         
         # 8. OCR & Automation Engine (Simulated or mapped to corresponding subservices)
@@ -242,8 +242,8 @@ class SystemMetricsCollector:
                 planner = TaskPlanner()
                 tasks = planner.list_tasks()
                 stats["pending_tasks_count"] = len([t for t in tasks if t.get("status") in ["pending", "running"]])
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to get pending tasks count: {e}")
                 
             # Conversations count today (query short term memory or chat logs)
             # For simplicity, we can query SQLite or count entries.
@@ -266,7 +266,8 @@ def _get_short_term_history_today() -> list:
         history = mem.short_term
         # filter today's messages if timestamp is present, or return all
         return history
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Failed to get short term history: {e}")
         return []
 
 # Singleton instance

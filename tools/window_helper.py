@@ -157,14 +157,13 @@ def launch_workspace(workspace_name: str) -> Dict[str, Any]:
         if "skipit" in name:
             # 1. Open codebase folder
             skipit_dir = "C:\\Users\\HP\\OneDrive\\Desktop\\void\\VOID" # Default path or workspace path
-            subprocess.Popen(["explorer", skipit_dir], shell=True)
+            subprocess.Popen(["explorer", skipit_dir])
             
             # 2. Launch standard browser portals
-            chrome_cmd = "start chrome https://github.com http://localhost:3000"
-            subprocess.Popen(["cmd", "/c", chrome_cmd], shell=True)
+            subprocess.Popen(["cmd", "/c", "start", "chrome", "https://github.com", "http://localhost:3000"])
             
             # 3. Open VS Code
-            subprocess.Popen(["cmd", "/c", "code", skipit_dir], shell=True)
+            subprocess.Popen(["cmd", "/c", "code", skipit_dir])
             
             return {
                 "status": "ok",
@@ -173,7 +172,7 @@ def launch_workspace(workspace_name: str) -> Dict[str, Any]:
             
         elif "smart" in name or "cart" in name:
             # Smart Cart Workspace
-            subprocess.Popen(["cmd", "/c", "start chrome https://smartcart-admin.local"], shell=True)
+            subprocess.Popen(["cmd", "/c", "start", "chrome", "https://smartcart-admin.local"])
             return {
                 "status": "ok",
                 "message": "Initialized **Smart Cart Portal**, Sir. Standing by on store pilots."
@@ -181,7 +180,7 @@ def launch_workspace(workspace_name: str) -> Dict[str, Any]:
             
         else:
             # Generic dev workspace
-            subprocess.Popen(["cmd", "/c", "start chrome https://github.com"], shell=True)
+            subprocess.Popen(["cmd", "/c", "start", "chrome", "https://github.com"])
             return {
                 "status": "ok",
                 "message": f"Initialized generic workspace for **'{workspace_name}'**, Sir."

@@ -69,14 +69,14 @@ def open_app(app_name: str) -> dict:
     if app_lower in APP_MAP:
         cmd = APP_MAP[app_lower]
         try:
-            subprocess.Popen(["cmd", "/c", "start", "", cmd], shell=True)
+            subprocess.Popen(["cmd", "/c", "start", "", cmd])
             return {"status": "ok", "message": f"Opening {app_name}"}
         except Exception as e:
             return {"status": "error", "message": f"Failed: {str(e)}"}
     
     # Try to open directly
     try:
-        subprocess.Popen(["cmd", "/c", "start", "", app_name], shell=True)
+        subprocess.Popen(["cmd", "/c", "start", "", app_name])
         return {"status": "ok", "message": f"Opening {app_name}"}
     except Exception as e:
         return {"status": "error", "message": f"App not found: {app_name}"}

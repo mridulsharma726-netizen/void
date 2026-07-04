@@ -59,7 +59,8 @@ def _compute_file_hash(filepath: str) -> str:
             for chunk in iter(lambda: f.read(8192), b""):
                 hasher.update(chunk)
         return hasher.hexdigest()
-    except Exception:
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL] Failed to compute file hash for {filepath}: {e}")
         return ""
 
 
@@ -109,8 +110,8 @@ def _scan_directory(project_path: str, read_contents: bool = True) -> Dict[str, 
                 try:
                     with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
                         file_contents[rel_path] = f.read()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[PROJECT INTEL] Failed to read contents of {full_path}: {e}")
 
         # Build folder tree
         if rel_root:
@@ -483,23 +484,28 @@ def get_project_status(project_name: str = "") -> Dict[str, Any]:
     # Parse JSON fields
     try:
         features_done = json.loads(project.get("features_completed", "[]"))
-    except Exception:
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL ERROR] Failed to parse features_completed: {e}")
         features_done = []
     try:
         features_wip = json.loads(project.get("features_progress", "[]"))
-    except Exception:
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL ERROR] Failed to parse features_progress: {e}")
         features_wip = []
     try:
         features_planned = json.loads(project.get("features_planned", "[]"))
-    except Exception:
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL ERROR] Failed to parse features_planned: {e}")
         features_planned = []
     try:
         blockers = json.loads(project.get("blockers", "[]"))
-    except Exception:
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL ERROR] Failed to parse blockers: {e}")
         blockers = []
     try:
         technologies = json.loads(project.get("technologies", "[]"))
-    except Exception:
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL ERROR] Failed to parse technologies: {e}")
         technologies = []
 
     # Get pending action items
@@ -645,8 +651,8 @@ def _get_git_branch(project_path: str) -> str:
                              cwd=project_path, capture_output=True, text=True, timeout=2)
         if res.returncode == 0:
             return res.stdout.strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL] Failed to get git branch for {project_path}: {e}")
     return "main"
 
 
@@ -743,8 +749,8 @@ def generate_architecture_map(project_id: str = "") -> str:
     techs = []
     try:
         techs = json.loads(project.get("technologies", "[]"))
-    except:
-        pass
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL ERROR] Failed to parse technologies: {e}")
     
     purpose = project.get("purpose", "Unknown purpose")
     architecture = project.get("architecture", "Unknown architecture")
@@ -961,8 +967,8 @@ def detect_project_blockers(project_path: str) -> List[Dict[str, Any]]:
                             "file": filepath,
                             "line": node.lineno
                         })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[PROJECT INTEL] Error parsing AST for empty function check in {filepath}: {e}")
 
     # 6. Check for missing package dependencies
     STD_LIBS = {
@@ -993,8 +999,8 @@ def detect_project_blockers(project_path: str) -> List[Dict[str, Any]]:
                     if line and not line.startswith("#"):
                         lib_name = re.split(r"==|>=|<=|>|<|~=", line)[0].strip().lower().replace("-", "_")
                         declared.add(lib_name)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[PROJECT INTEL] Error reading requirements.txt: {e}")
             
     pkg_path = os.path.join(project_path, "package.json")
     if os.path.exists(pkg_path):
@@ -1005,8 +1011,8 @@ def detect_project_blockers(project_path: str) -> List[Dict[str, Any]]:
                     if dep_type in pkg_data:
                         for dep in pkg_data[dep_type].keys():
                             declared.add(dep.lower().replace("-", "_").replace("@", ""))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[PROJECT INTEL] Error reading package.json: {e}")
 
     for filepath, content in file_contents.items():
         if not filepath.endswith(".py"):
@@ -1039,8 +1045,8 @@ def detect_project_blockers(project_path: str) -> List[Dict[str, Any]]:
                             "file": filepath,
                             "line": node.lineno
                         })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[PROJECT INTEL] Error parsing AST for imports check in {filepath}: {e}")
 
     # 7. Gather TODO items
     todos = _extract_todos(file_contents)
@@ -1080,8 +1086,8 @@ def get_workspace_state(project_path: str = "") -> Dict[str, Any]:
         win_title = monitor.get_foreground_window_title()
         if win_title and any(k in win_title.lower() for k in ["visual studio code", "vscode", "code"]):
             vscode_workspace = win_title
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL] Failed to get VSCode workspace title: {e}")
         
     # 2. Current Git branch
     git_branch = _get_git_branch(project_path)
@@ -1095,8 +1101,8 @@ def get_workspace_state(project_path: str = "") -> Dict[str, Any]:
                 if r["project"] == project_name:
                     modified_files = [f["file"] for f in r["files"]]
                     break
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL] Failed to get recently modified files: {e}")
                 
     # 4. Recent build alerts/failures from CVCS Monitor
     recent_alerts = []
@@ -1107,8 +1113,8 @@ def get_workspace_state(project_path: str = "") -> Dict[str, Any]:
         for n in unread:
             if n.get("category") == "build":
                 recent_alerts.append(n.get("message"))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL] Failed to get recent build alerts: {e}")
             
     return {
         "active_project_folder": project_path,
@@ -1146,21 +1152,24 @@ def generate_project_report(report_type: str, project_id: str = "") -> str:
     techs = []
     try:
         techs = json.loads(project.get("technologies", "[]"))
-    except:
-        pass
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL ERROR] Failed to parse technologies: {e}")
 
     # Features
     try:
         features_done = json.loads(project.get("features_completed", "[]"))
-    except:
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL ERROR] Failed to parse features_completed: {e}")
         features_done = []
     try:
         features_wip = json.loads(project.get("features_progress", "[]"))
-    except:
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL ERROR] Failed to parse features_progress: {e}")
         features_wip = []
     try:
         features_planned = json.loads(project.get("features_planned", "[]"))
-    except:
+    except Exception as e:
+        logger.debug(f"[PROJECT INTEL ERROR] Failed to parse features_planned: {e}")
         features_planned = []
 
     # Completion calculation

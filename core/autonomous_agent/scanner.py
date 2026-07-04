@@ -1,7 +1,10 @@
 import os
 import json
+import logging
 from pathlib import Path
 from typing import List, Dict, Any
+
+logger = logging.getLogger("void.scanner")
 
 # Exclude directories
 EXCLUDE_DIRS = {
@@ -39,7 +42,8 @@ class ProjectScanner:
                 chunk = f.read(1024)
                 if b'\x00' in chunk:
                     return True
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed binary check for {file_path}: {e}")
             return True
         return False
 
@@ -59,8 +63,8 @@ class ProjectScanner:
                         frameworks.append("Flask")
                     if "django" in content:
                         frameworks.append("Django")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed reading requirements.txt: {e}")
 
         # Check package.json for JS/TS frameworks
         pkg_file = self.root_dir / "package.json"
@@ -80,8 +84,8 @@ class ProjectScanner:
                         frameworks.append("Vue")
                     if "next" in all_deps:
                         frameworks.append("Next.js")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed reading package.json: {e}")
 
         # Check pubspec.yaml for Dart/Flutter
         pubspec_file = self.root_dir / "pubspec.yaml"
@@ -93,8 +97,8 @@ class ProjectScanner:
                         frameworks.append("Flutter")
                     else:
                         frameworks.append("Dart")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed reading pubspec.yaml: {e}")
 
         return frameworks
 
@@ -131,7 +135,8 @@ class ProjectScanner:
                 
                 try:
                     size = file_path.stat().st_size
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Failed getting file size for {file_path}: {e}")
                     size = 0
 
                 files_list.append({
