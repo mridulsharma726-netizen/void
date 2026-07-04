@@ -8,6 +8,63 @@
 
 const API_BASE = "http://127.0.0.1:8003";
 
+// === HUD TOAST NOTIFICATION SYSTEM ===
+window.showToast = function(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) {
+    console.log(`[Toast ${type}] ${message}`);
+    return;
+  }
+  const toast = document.createElement('div');
+  toast.className = `hud-toast ${type}`;
+  toast.style.background = 'rgba(20, 20, 20, 0.95)';
+  toast.style.borderLeft = type === 'error' ? '4px solid #ff3333' : (type === 'success' ? '4px solid #33ff33' : '4px solid #33aaff');
+  toast.style.borderTop = '1px solid rgba(255, 255, 255, 0.1)';
+  toast.style.borderRight = '1px solid rgba(255, 255, 255, 0.1)';
+  toast.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+  toast.style.color = '#fff';
+  toast.style.padding = '10px 15px';
+  toast.style.fontSize = '11px';
+  toast.style.fontFamily = 'monospace';
+  toast.style.borderRadius = '3px';
+  toast.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+  toast.style.minWidth = '220px';
+  toast.style.maxWidth = '350px';
+  toast.style.opacity = '0';
+  toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+  toast.style.transform = 'translateX(50px)';
+  toast.style.backdropFilter = 'blur(5px)';
+  
+  // Format message
+  toast.innerText = message;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(0)';
+  }, 50);
+  
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(50px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+};
+
+// Override window.alert
+window.alert = function(message) {
+  let type = 'info';
+  const lower = message.toLowerCase();
+  if (lower.includes('failed') || lower.includes('error') || lower.includes('invalid') || lower.includes('alert')) {
+    type = 'error';
+  } else if (lower.includes('complete') || lower.includes('success') || lower.includes('trophy') || lower.includes('🏆')) {
+    type = 'success';
+  }
+  window.showToast(message, type);
+};
+
+
 const state = {
   online: false,
   isThinking: false,
@@ -374,7 +431,7 @@ async function refreshSocialQueue() {
           const platformClass = post.platform.toLowerCase().replace(/[^a-z]/g, '');
           const isPending = post.status === 'pending';
           const buttonHtml = isPending 
-            ? `<button class="btn btn-success" style="padding: 2px 6px; font-size: 9px; align-self: flex-end;" onclick="postSocialPost(${post.id})">Post Now</button>`
+            ? `<button class="btn btn-success" style="padding: 2px 6px; font-size: 9px; align-self: flex-end;" onclick="postSocialPost(${post.id})">Mark as Posted</button>`
             : '';
             
           return `
@@ -400,10 +457,10 @@ async function refreshSocialQueue() {
 
 window.postSocialPost = async function(postId) {
   try {
-    addMessage('system', `Executing post ${postId} draft...`);
+    addMessage('system', `Marking post ${postId} draft as posted...`);
     const res = await api(`/social/post/${postId}`, { method: 'POST' });
     if (res && !res.error) {
-      addMessage('system', `✓ Post ${postId} successfully executed.`);
+      addMessage('system', `✓ Post ${postId} draft marked as posted in your queue.`);
       await refreshSocialQueue();
     } else {
       addMessage('system', `Failed to execute post: ${res.error || 'Server error'}`);
@@ -424,7 +481,7 @@ async function submitSocialPost() {
   }
   
   try {
-    addMessage('system', `Scheduling social post on ${platform}...`);
+    addMessage('system', `Saving social draft for ${platform}...`);
     const res = await api('/social/schedule', {
       method: 'POST',
       body: JSON.stringify({
@@ -435,7 +492,7 @@ async function submitSocialPost() {
     });
     
     if (res && !res.error) {
-      addMessage('system', `✓ Successfully scheduled post on ${platform}.`);
+      addMessage('system', `✓ Successfully saved draft for ${platform}.`);
       getEl('socialContent').value = '';
       getEl('socialTime').value = '';
       getEl('socialDraftForm').classList.add('hidden');

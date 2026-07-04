@@ -654,14 +654,14 @@
           <!-- Social Media Scheduler Card -->
           <div class="card social-scheduler-card" style="margin-top: 20px;">
             <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
-              <span>SOCIAL MEDIA POST SCHEDULER</span>
+              <span>SOCIAL POST DRAFT QUEUE</span>
               <button id="addSocialPostBtn" class="btn" style="padding: 3px 10px; font-size: 10px;">+ Draft Post</button>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
               <!-- Queue List -->
               <div>
-                <div style="font-size: 11px; font-weight: bold; margin-bottom: 8px; color: var(--text-dim); text-transform: uppercase;">Scheduled Queue</div>
+                <div style="font-size: 11px; font-weight: bold; margin-bottom: 8px; color: var(--text-dim); text-transform: uppercase;">Draft Queue</div>
                 <div id="socialQueueList" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
                   <div style="color: #666; text-align: center; font-size: 11px; padding: 15px;">No posts in queue.</div>
                 </div>
@@ -687,7 +687,7 @@
                   <input type="datetime-local" id="socialTime" class="hud-search-input" style="padding: 6px; font-size: 11px;">
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 5px;">
-                  <button id="submitSocialPostBtn" class="btn btn-primary" style="padding: 5px 12px; font-size: 11px;">Queue Post</button>
+                  <button id="submitSocialPostBtn" class="btn btn-primary" style="padding: 5px 12px; font-size: 11px;">Save Draft</button>
                   <button id="cancelSocialPostBtn" class="btn" style="padding: 5px 12px; font-size: 11px;">Cancel</button>
                 </div>
               </div>
@@ -1740,6 +1740,9 @@ System idle. Standing by for task sequence dispatch...</div>
     <button id="closeNetworkTools"></button>
     <select id="voidModeSelect"><option value="normal">normal</option></select>
   </div>
+  
+  <!-- HUD Toast Notifications -->
+  <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
 
   <script src="app.js"></script>
 </body>

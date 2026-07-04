@@ -215,12 +215,12 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 178973,
+      "size_bytes": 181005,
       "suffix": ".js"
     },
     {
       "path": "app/ui/index.html",
-      "size_bytes": 114540,
+      "size_bytes": 114718,
       "suffix": ".html"
     },
     {
@@ -330,7 +330,7 @@
     },
     {
       "path": "core/integrations/social_manager.py",
-      "size_bytes": 2939,
+      "size_bytes": 2946,
       "suffix": ".py"
     },
     {
@@ -365,7 +365,7 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 34913,
+      "size_bytes": 35028,
       "suffix": ".json"
     },
     {
@@ -395,7 +395,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 20680,
+      "size_bytes": 21197,
       "suffix": ".log"
     },
     {
@@ -405,7 +405,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 27326,
+      "size_bytes": 27935,
       "suffix": ".log"
     },
     {
@@ -425,7 +425,7 @@
     },
     {
       "path": "logs/terminal_history.log",
-      "size_bytes": 795,
+      "size_bytes": 848,
       "suffix": ".log"
     },
     {
@@ -485,7 +485,7 @@
     },
     {
       "path": "memory/data/active_tasks.json",
-      "size_bytes": 87779,
+      "size_bytes": 90522,
       "suffix": ".json"
     },
     {
@@ -1145,7 +1145,7 @@
     },
     {
       "path": "server/data/project_memory.json",
-      "size_bytes": 9114,
+      "size_bytes": 9116,
       "suffix": ".json"
     },
     {
@@ -1160,7 +1160,7 @@
     },
     {
       "path": "server/routes/automation.py",
-      "size_bytes": 11964,
+      "size_bytes": 12622,
       "suffix": ".py"
     },
     {
@@ -1211,6 +1211,11 @@
     {
       "path": "tests/test_phase6_audit_stability.py",
       "size_bytes": 3618,
+      "suffix": ".py"
+    },
+    {
+      "path": "tests/test_phase7_ui_polish.py",
+      "size_bytes": 2470,
       "suffix": ".py"
     },
     {

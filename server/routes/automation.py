@@ -196,12 +196,31 @@ async def execute_social_post(post_id: int):
 @router.get("/automation/status")
 async def get_automation_status():
     from tools.task_scheduler import get_scheduled_tasks
+    from backend.metrics_service import SystemMetricsCollector
     try:
         tasks = get_scheduled_tasks()
+        collector = SystemMetricsCollector()
+        svc_status = collector.get_services_status()
+        
         active_workflows = [
-            {"id": "sys_diag", "name": "System Health Monitor", "status": "Running", "interval": "10s"},
-            {"id": "cvcs_scan", "name": "CVCS Window Track Loop", "status": "Running", "interval": "2s"},
-            {"id": "voice_wake", "name": "Voice Wake Word Daemon", "status": "Listening", "trigger": "Yes?"}
+            {
+                "id": "sys_diag",
+                "name": "System Health Monitor",
+                "status": "Running" if svc_status.get("backend") == "running" else "Stopped",
+                "interval": "10s"
+            },
+            {
+                "id": "cvcs_scan",
+                "name": "CVCS Window Track Loop",
+                "status": "Running" if svc_status.get("project_monitor") == "running" else "Stopped",
+                "interval": "2s"
+            },
+            {
+                "id": "voice_wake",
+                "name": "Voice Wake Word Daemon",
+                "status": "Listening" if svc_status.get("wake_word") == "running" else "Stopped",
+                "trigger": "Yes?" if svc_status.get("wake_word") == "running" else "--"
+            }
         ]
         return {
             "scheduled_tasks": tasks,

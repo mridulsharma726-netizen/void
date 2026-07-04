@@ -40,7 +40,7 @@ class SocialManager:
                     (platform, content, scheduled_time)
                 )
                 conn.commit()
-            return {"status": "ok", "message": f"Successfully queued post for {platform}."}
+            return {"status": "ok", "message": f"Successfully saved draft for {platform}."}
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
@@ -73,6 +73,6 @@ class SocialManager:
             with get_connection() as conn:
                 conn.execute("UPDATE social_queue SET status = 'posted' WHERE id = ?", (post_id,))
                 conn.commit()
-            return {"status": "ok", "message": f"Post {post_id} successfully marked as posted."}
+            return {"status": "ok", "message": f"Post {post_id} draft marked as posted in your queue."}
         except Exception as e:
             return {"status": "error", "message": str(e)}
