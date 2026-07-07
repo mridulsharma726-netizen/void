@@ -85,6 +85,17 @@ class WakeWordDetector:
             self._thread = None
         logger.info("[WAKEWORD DETECTOR] Listening thread stopped.")
 
+    def process_frame(self, audio_frame: np.ndarray) -> float:
+        """Processes a single 1280-sample audio frame. Returns the prediction score."""
+        if not self.oww_model:
+            return 0.0
+        prediction = self.oww_model.predict(audio_frame)
+        score = prediction.get(self.prediction_key, 0.0)
+        if score > 0.5:
+            logger.info(f"[WAKEWORD DETECTOR] Wake word detected! Score: {score:.4f}")
+            self.callback()
+        return score
+
     def _listen_loop(self):
         """Continuously reads microphone stream and runs openWakeWord inference."""
         import pyaudio
@@ -121,22 +132,15 @@ class WakeWordDetector:
                         
                     # Convert to numpy int16 array
                     audio_frame = np.frombuffer(data, dtype=np.int16)
-                    
-                    # Run prediction
-                    if self.oww_model:
-                        prediction = self.oww_model.predict(audio_frame)
-                        score = prediction.get(self.prediction_key, 0.0)
+                    score = self.process_frame(audio_frame)
+                    if score > 0.5:
+                        # Cool-down to avoid double trigger
+                        time.sleep(1.5)
                         
-                        if score > 0.5:
-                            logger.info(f"[WAKEWORD DETECTOR] Wake word detected! Score: {score:.4f}")
-                            # Trigger callback
-                            self.callback()
-                            # Cool-down to avoid double trigger
-                            time.sleep(1.5)
-                            
                 except Exception as loop_err:
                     logger.debug(f"[WAKEWORD DETECTOR] Audio loop warning: {loop_err}")
                     time.sleep(0.1)
+
                     
         except Exception as e:
             logger.error(f"[WAKEWORD DETECTOR] Failed to open microphone or initialize audio: {e}")

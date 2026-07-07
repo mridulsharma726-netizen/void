@@ -14,19 +14,23 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger("void.core.voice_ai.whisper_stt")
-
+ 
 ROOT_DIR = Path(__file__).parent.parent.parent
 MODEL_DIR = ROOT_DIR / "memory" / "data" / "models"
 WHISPER_MODEL_PATH = MODEL_DIR / "ggml-tiny.en.bin"
 BIN_DIR = ROOT_DIR / "memory" / "data" / "bin"
 WHISPER_EXE_PATH = BIN_DIR / "whisper.exe"  # Can also be "whisper-cli.exe" or "main.exe"
-
+ 
+# Cloud fallback configuration (default False for 100% offline security)
+ALLOW_CLOUD_STT_FALLBACK = False
+ 
 class WhisperSTT:
     """Manages whisper.cpp CLI compilation/execution and output parsing."""
     
     def __init__(self):
         self.exe_path = self._find_whisper_exe()
         self.model_path = WHISPER_MODEL_PATH
+        self.allow_cloud_fallback = ALLOW_CLOUD_STT_FALLBACK
         
         # Verify readiness
         self.ready = False
@@ -35,6 +39,7 @@ class WhisperSTT:
             logger.info(f"[WHISPER STT] Ready. Using executable {self.exe_path} and model {self.model_path}")
         else:
             logger.warning("[WHISPER STT] whisper.cpp or ggml-tiny.en.bin not found. Speech-to-text will fallback to Vosk/SpeechRecognition.")
+
 
     def _find_whisper_exe(self) -> Optional[str]:
         """Finds the whisper.cpp executable in local folder or system PATH."""
@@ -224,30 +229,17 @@ class WhisperSTT:
             return wav_path
 
     def _fallback_transcribe(self, wav_path: str) -> Optional[str]:
-        """Fallback transcription using Vosk or online SpeechRecognition."""
+        """Fallback transcription using Vosk (offline, local-first) or online SpeechRecognition (if enabled)."""
         try:
             logger.info("[WHISPER STT DIAGNOSIS] Entering fallback transcription path.")
             
-            # 1. Try online SpeechRecognition (Google API) fallback
-            import speech_recognition as sr
-            r = sr.Recognizer()
-            try:
-                logger.info("[WHISPER STT DIAGNOSIS] Attempting SpeechRecognition (Google Cloud Fallback) engine...")
-                with sr.AudioFile(wav_path) as source:
-                    audio = r.record(source)
-                text = r.recognize_google(audio)
-                logger.info(f"[WHISPER STT DIAGNOSIS] SpeechRecognition fallback success: \"{text}\"")
-                return text
-            except Exception as sr_err:
-                logger.warning(f"[WHISPER STT DIAGNOSIS] SpeechRecognition fallback failed: {sr_err}")
-                
-            # 2. Try offline local Vosk fallback
+            # 1. Try offline local Vosk fallback FIRST
             try:
                 import vosk
                 import wave
                 import json
                 from tools.voice_stt import VOSK_MODEL_PATH
-                logger.info(f"[WHISPER STT DIAGNOSIS] Attempting local Vosk model fallback ({VOSK_MODEL_PATH})...")
+                logger.info(f"[WHISPER STT DIAGNOSIS] Attempting local Vosk model fallback ({VOSK_MODEL_PATH}) first...")
                 if VOSK_MODEL_PATH.exists():
                     wf = wave.open(wav_path, "rb")
                     if wf.getnchannels() == 1:
@@ -261,7 +253,7 @@ class WhisperSTT:
                             if rec.AcceptWaveform(data):
                                 pass
                         res_json = json.loads(rec.FinalResult())
-                        res_text = res_json.get("text", "")
+                        res_text = res_json.get("text", "").strip()
                         wf.close()
                         if res_text:
                             logger.info(f"[WHISPER STT DIAGNOSIS] Local Vosk fallback success: \"{res_text}\"")
@@ -271,8 +263,25 @@ class WhisperSTT:
             except Exception as vosk_err:
                 logger.warning(f"[WHISPER STT DIAGNOSIS] Local Vosk model fallback failed: {vosk_err}")
                 
+            # 2. Only fall back to online SpeechRecognition (Google API) if explicitly allowed
+            if self.allow_cloud_fallback:
+                import speech_recognition as sr
+                r = sr.Recognizer()
+                try:
+                    logger.warning("[WHISPER STT DIAGNOSIS] WARNING: Making an external network call to Google Cloud STT API!")
+                    with sr.AudioFile(wav_path) as source:
+                        audio = r.record(source)
+                    text = r.recognize_google(audio)
+                    logger.info(f"[WHISPER STT DIAGNOSIS] SpeechRecognition fallback success: \"{text}\"")
+                    return text
+                except Exception as sr_err:
+                    logger.warning(f"[WHISPER STT DIAGNOSIS] SpeechRecognition fallback failed: {sr_err}")
+            else:
+                logger.info("[WHISPER STT DIAGNOSIS] External cloud fallback is disabled (ALLOW_CLOUD_STT_FALLBACK=False). Offline options exhausted.")
+                
             return ""
         except Exception as fallback_err:
             logger.error(f"[WHISPER STT DIAGNOSIS] All fallback paths failed: {fallback_err}")
             return ""
+
 
