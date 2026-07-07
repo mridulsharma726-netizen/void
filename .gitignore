@@ -13,10 +13,12 @@ build/
 # Local databases and model assets
 memory/data/lancedb/
 memory/data/models/
+memory/**/*.db
 memory/*.db
 memory/*.db-journal
 memory/data/*.json
 data/project_map.json
 server/data/project_memory.json
+
 
 

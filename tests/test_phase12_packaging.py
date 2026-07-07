@@ -60,5 +60,25 @@ class TestPhase12Packaging(unittest.TestCase):
         self.assertIn("lib/codemirror/codemirror.min.js", content)
         self.assertIn("lib/codemirror/javascript.min.js", content)
 
+    def test_no_external_font_cdn(self):
+        """Confirm that no googleapis.com / gstatic.com / any external host string appears in index.html or loaded CSS."""
+        html_path = ROOT_DIR / "app" / "ui" / "index.html"
+        self.assertTrue(html_path.exists(), "app/ui/index.html is missing")
+        
+        with open(html_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            
+        self.assertNotIn("googleapis.com", content, "Found external Google Fonts API reference in index.html")
+        self.assertNotIn("gstatic.com", content, "Found external Google Fonts Static reference in index.html")
+        
+        # Also check local fonts.css
+        css_path = ROOT_DIR / "app" / "ui" / "lib" / "fonts" / "fonts.css"
+        self.assertTrue(css_path.exists(), "Local fonts.css is missing")
+        with open(css_path, "r", encoding="utf-8") as f:
+            css_content = f.read()
+        self.assertNotIn("googleapis.com", css_content, "Found external Google Fonts API reference in fonts.css")
+        self.assertNotIn("gstatic.com", css_content, "Found external Google Fonts Static reference in fonts.css")
+
 if __name__ == "__main__":
     unittest.main()
+

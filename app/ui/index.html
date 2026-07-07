@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:* http://localhost:* http://127.0.0.1:11434 ws://127.0.0.1:* ws://localhost:*; img-src 'self' data: file: http://127.0.0.1:* http://localhost:*;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:* http://127.0.0.1:11434 ws://127.0.0.1:* ws://localhost:*; img-src 'self' data: file: http://127.0.0.1:* http://localhost:*;">
   <title>VOID AI Assistant - Command Center</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;800&family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="lib/fonts/fonts.css">
   <link rel="stylesheet" href="style.css">
+
   
   <!-- CodeMirror 5 Integration -->
   <link rel="stylesheet" href="lib/codemirror/codemirror.min.css">
@@ -791,7 +790,7 @@
                   <select id="settingsLlmRoutingSelect" class="hud-search-input" style="padding: 6px; font-size: 12px;">
                     <option value="AUTO">AUTO (Intelligent Routing)</option>
                     <option value="LOCAL">LOCAL (Ollama Only)</option>
-                    <option value="OPENAI">OPENAI (Remote OpenAI)</option>
+                    <option value="OPENAI">OPENAI (Opt-in Remote / Custom)</option>
                     <option value="GEMINI">GEMINI (Remote Google)</option>
                     <option value="ANTHROPIC">ANTHROPIC (Remote Anthropic)</option>
                     <option value="CLOUD">KIMI (Remote Moonshot)</option>
@@ -800,7 +799,7 @@
                   <label style="font-size: 11px; color: var(--text-dim); font-weight: bold;">Active Provider (AUTO Fallback default)</label>
                   <select id="settingsActiveProviderSelect" class="hud-search-input" style="padding: 6px; font-size: 12px;">
                     <option value="ollama">Ollama (Local)</option>
-                    <option value="openai">OpenAI (Cloud)</option>
+                    <option value="openai">OpenAI (Opt-in Cloud / Custom)</option>
                     <option value="gemini">Gemini (Cloud)</option>
                     <option value="anthropic">Anthropic (Cloud)</option>
                   </select>
@@ -815,7 +814,7 @@
                     <label style="font-size: 10px; color: var(--text-dim);">Ollama Base URL</label>
                     <input type="text" id="settingsOllamaUrl" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="http://127.0.0.1:11434">
                   </div>
-
+ 
                   <div style="margin-top: 12px; border-top: 1px solid #222; padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
                     <div style="font-weight: bold; font-size: 11px; color: var(--accent-neon);">GEMINI BRAIN</div>
                     <label style="font-size: 10px; color: var(--text-dim);">Gemini API Key</label>
@@ -824,17 +823,19 @@
                     <input type="text" id="settingsGeminiModel" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="gemini-1.5-flash">
                   </div>
                 </div>
-
+ 
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                   <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div style="font-weight: bold; font-size: 11px; color: var(--accent-neon);">OPENAI BRAIN</div>
+                    <div style="font-weight: bold; font-size: 11px; color: var(--accent-neon);">OPENAI BRAIN (OPT-IN REMOTE / CUSTOM)</div>
                     <label style="font-size: 10px; color: var(--text-dim);">OpenAI API Key</label>
                     <input type="password" id="settingsOpenaiApiKey" class="hud-search-input" style="padding: 6px; font-size: 11px;" placeholder="Enter OpenAI Key...">
                     <label style="font-size: 10px; color: var(--text-dim);">OpenAI Model Name</label>
                     <input type="text" id="settingsOpenaiModel" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="gpt-4o">
                     <label style="font-size: 10px; color: var(--text-dim);">OpenAI Base URL</label>
-                    <input type="text" id="settingsOpenaiUrl" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="https://api.openai.com/v1">
+                    <input type="text" id="settingsOpenaiUrl" class="hud-search-input" style="padding: 6px; font-size: 11px;" value="" placeholder="https://api.openai.com/v1 (Opt-in)">
+                    <div style="font-size: 9px; color: var(--text-dim); margin-top: 4px; border: 1px dashed #333; padding: 4px; border-radius: 4px; line-height: 1.2;">⚠️ Opt-in remote providers are disabled by default and require custom user keys/endpoints. Out of scope of local-offline claims.</div>
                   </div>
+
 
                   <div style="margin-top: 12px; border-top: 1px solid #222; padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
                     <div style="font-weight: bold; font-size: 11px; color: var(--accent-neon);">ANTHROPIC BRAIN</div>
