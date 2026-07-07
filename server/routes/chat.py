@@ -1349,6 +1349,15 @@ Guidelines:
             else:
                 llm.system_prompt = orig_prompt
 
+            # RAG Context Retrieval (Phase 8)
+            try:
+                from core.memory.vector_memory import get_vector_memory
+                rag_context = get_vector_memory().retrieve_context(text, limit=3)
+                if rag_context:
+                    llm.system_prompt += "\n\n" + rag_context
+            except Exception as rag_err:
+                logger.error(f"[RAG ERROR] Context retrieval failed: {rag_err}")
+
             try:
                 from core.voice_ai.voice_profile import VoiceProfileManager
                 profile_mgr = VoiceProfileManager()

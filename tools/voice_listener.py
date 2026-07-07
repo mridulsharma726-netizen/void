@@ -1,31 +1,27 @@
 """
-VOID Voice Listener
-================
+VOID Voice Listener Adapter
+===========================
 
-Continuous voice loop that waits for wake word, then captures commands.
-
-Functions:
-- start_voice_loop() -> Optional[str]
-- stop_voice_loop()
-- is_listening() -> bool
-- set_activation_phrase(phrase: str)
+Continuous voice loop using the new unified core VoicePipeline.
+Provides a backward-compatible interface for the FastAPI backend and test suites.
 """
 
 import time
 import threading
 import logging
 from typing import Optional, Callable
+from core.voice_ai.voice_pipeline import get_voice_pipeline
 
 # Configure logging
 logger = logging.getLogger("VOID-VoiceListener")
 
-# State and Locks
-_listening = False
+# State
 _running = False
-_activation_phrase = "activated"
+_listening = False
+_activation_phrase = "Yes?"
 _command_callback: Optional[Callable[[str], None]] = None
-
 _state_lock = threading.Lock()
+_pipeline = None
 
 def set_activation_phrase(phrase: str):
     """Set the phrase VOID says when activated."""
@@ -34,19 +30,19 @@ def set_activation_phrase(phrase: str):
         _activation_phrase = phrase
     logger.info(f"Activation phrase set to: {phrase}")
 
-
 def set_command_callback(callback: Callable[[str], None]):
     """Set callback for when command is captured."""
     global _command_callback
     with _state_lock:
         _command_callback = callback
-
+    # Also update pipeline callback
+    pipeline = get_voice_pipeline()
+    pipeline.command_handler = callback
 
 def is_listening() -> bool:
     """Check if voice loop is active."""
     with _state_lock:
         return _listening
-
 
 def stop_voice_loop():
     """Stop the voice loop."""
@@ -54,142 +50,67 @@ def stop_voice_loop():
     with _state_lock:
         _running = False
         _listening = False
-
-    # Also stop wake word if active
+        
     try:
-        import tools.wake_word as wake_word
-        wake_word.stop()
-    except Exception:
-        pass
-
+        pipeline = get_voice_pipeline()
+        pipeline.stop()
+    except Exception as e:
+        logger.warning(f"Error stopping voice pipeline: {e}")
+        
     logger.info("Voice loop stop requested")
 
-
 def _speak(text: str):
-    """Speak text using TTS if available."""
+    """Speak text using pipeline."""
     try:
-        from tools.voice_tts import speak
-        speak(text)
+        pipeline = get_voice_pipeline()
+        pipeline.speak(text)
     except Exception as e:
-        logger.warning(f"TTS not available: {e}")
-
-
-def _play_activation_chime():
-    """Play a subtle high-tech futuristic activation tone on Windows."""
-    try:
-        import winsound
-        # Sleek, double neon-cyberpunk chirp:
-        # 1. 2000Hz (70ms)
-        # 2. 2400Hz (110ms)
-        winsound.Beep(2000, 70)
-        winsound.Beep(2400, 110)
-    except Exception as e:
-        logger.warning(f"Could not play activation chime: {e}")
-
+        logger.warning(f"TTS speak failed: {e}")
 
 def start_voice_loop() -> Optional[str]:
     """
     Start the voice loop - waits for wake word, then captures command.
-    
-    This is a blocking function that runs until wake word detected
-    and command captured, or loop is stopped.
-    
-    Returns:
-        Captured command text, or None if stopped
+    Fallback wrapper for tests.
     """
     global _listening, _running
-
     with _state_lock:
         if _listening:
             logger.warning("Voice loop already running")
             return None
         _running = True
         _listening = True
-
-    logger.info("[VOICE LOOP] Starting...")
-
+        
+    logger.info("[VOICE LOOP] Starting voice loop using new VoicePipeline...")
+    
     try:
-        try:
-            from tools.wake_word import listen_for_wake_word
-            logger.info("[VOICE LOOP] Wake word detector ready")
-        except ImportError:
-            logger.error("[VOICE LOOP] Wake word module not available")
-            return None
-
+        pipeline = get_voice_pipeline()
+        # Feed callback
+        def pipe_cb(cmd):
+            global _command_callback
+            if _command_callback:
+                _command_callback(cmd)
+                
+        pipeline.command_handler = pipe_cb
+        pipeline.start(wake_phrase="hey_jarvis")  # Map to openWakeWord hey_jarvis model
+        
+        # Keep loop alive until stopped
         while True:
             with _state_lock:
                 if not _running:
                     break
-
-            logger.info("[VOICE LOOP] Waiting for wake word...")
-
-            # Listen for wake word (with timeout to allow checking _running)
-            wake_detected = listen_for_wake_word(timeout=10)
-
-            with _state_lock:
-                if not _running:
-                    break
-
-            if wake_detected:
-                logger.info("[VOICE LOOP] Wake word detected!")
-
-                # Play activation chime tone
-                _play_activation_chime()
-
-                # Optional: speak activation phrase
-                phrase = ""
-                with _state_lock:
-                    phrase = _activation_phrase
-                if phrase:
-                    _speak(phrase)
-
-                # Now listen for the actual command
-                try:
-                    from tools.voice_stt import listen_once
-                    logger.info("[VOICE LOOP] Listening for command...")
-
-                    # Listen with reasonable timeout
-                    result = listen_once(timeout=5, phrase_time_limit=6)
-
-                    if isinstance(result, dict):
-                        command = result.get("text", "")
-                    else:
-                        command = result
-
-                    if command and command.strip():
-                        logger.info(f"[VOICE LOOP] Captured: {command}")
-
-                        # Run callback if set
-                        callback = None
-                        with _state_lock:
-                            callback = _command_callback
-                        if callback:
-                            callback(command)
-
-                        return command.strip()
-                    else:
-                        logger.info("[VOICE LOOP] No command captured")
-
-                except Exception as e:
-                    logger.error(f"[VOICE LOOP] Command listen error: {e}")
-
-            # Small delay before retry
             time.sleep(0.5)
-
+            
+    except Exception as e:
+        logger.error(f"[VOICE LOOP] Failed initializing voice pipeline: {e}. Degrading to text-only mode.")
+        stop_voice_loop()
     finally:
         with _state_lock:
             _listening = False
-        logger.info("[VOICE LOOP] Stopped")
+            
     return None
 
-
 def start_voice_loop_thread() -> threading.Thread:
-    """
-    Start voice loop in a background thread.
-    
-    Returns:
-        The thread object
-    """
+    """Start voice loop in a background thread."""
     global _running
     with _state_lock:
         _running = True
@@ -202,96 +123,10 @@ def start_voice_loop_thread() -> threading.Thread:
     logger.info("[VOICE LOOP] Started in background thread")
     return thread
 
-
 def voice_loop_wrapper():
-    """
-    Wrapper for voice loop that handles continuous operation.
-    """
+    """Wrapper for voice loop that handles continuous operation."""
     logger.info("[VOICE LOOP] Wrapper starting...")
-
-    while True:
-        with _state_lock:
-            if not _running:
-                break
-        try:
-            command = start_voice_loop()
-
-            if command:
-                logger.info(f"[VOICE LOOP] Got command: {command}")
-                time.sleep(1)
-            else:
-                # Loop was stopped or interrupted
-                with _state_lock:
-                    if not _running:
-                        break
-                time.sleep(0.5)
-
-        except Exception as e:
-            logger.error(f"[VOICE LOOP] Wrapper error: {e}")
-            time.sleep(1)
-
-    logger.info("[VOICE LOOP] Wrapper ended")
-
-
-def listen_for_command(timeout: int = 5, phrase_time_limit: int = 6) -> Optional[str]:
-    """
-    Listen for a single voice command (without wake word).
-    
-    Args:
-        timeout: Max seconds to wait for speech
-        phrase_time_limit: Max seconds of speech to capture
-        
-    Returns:
-        Command text or None
-    """
     try:
-        from tools.voice_stt import listen_once
-        result = listen_once(timeout=timeout, phrase_time_limit=phrase_time_limit)
-
-        if isinstance(result, dict):
-            return result.get("text", "").strip()
-        elif result:
-            return str(result).strip()
-
-        return None
-
+        start_voice_loop()
     except Exception as e:
-        logger.error(f"Listen for command error: {e}")
-        return None
-
-
-def activate_and_listen() -> Optional[str]:
-    """
-    Single activation: wake word + command.
-    Blocks until command captured or timeout.
-    
-    Returns:
-        Command text or None
-    """
-    from tools.wake_word import listen_for_wake_word
-
-    wake_detected = listen_for_wake_word(timeout=15)
-
-    if not wake_detected:
-        return None
-
-    # Got wake word, now listen for command
-    _play_activation_chime()
-    phrase = ""
-    with _state_lock:
-        phrase = _activation_phrase
-    if phrase:
-        _speak(phrase)
-
-    return listen_for_command()
-
-
-if __name__ == "__main__":
-    print("Testing voice listener...")
-    print("Say 'VOID' to activate, then give a command")
-    set_activation_phrase("Yes?")
-    command = start_voice_loop()
-    if command:
-        print(f"Captured command: {command}")
-    else:
-        print("No command captured")
+        logger.error(f"[VOICE LOOP] Wrapper encountered fatal error: {e}. Voice disabled.")

@@ -261,3 +261,15 @@ async def get_unified_metrics():
     except Exception as e:
         logger.error(f"Error getting unified metrics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/metrics")
+async def get_prometheus_metrics():
+    from fastapi.responses import Response
+    try:
+        from core.observability.telemetry import get_metrics_payload
+        payload, content_type = get_metrics_payload()
+        return Response(content=payload, media_type=content_type)
+    except Exception as e:
+        logger.error(f"Error serving prometheus metrics: {e}")
+        return Response(content=f"# Error: {e}", media_type="text/plain", status_code=500)
+

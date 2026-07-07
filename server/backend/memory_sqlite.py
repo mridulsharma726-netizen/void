@@ -575,12 +575,22 @@ def add_fact(fact: str, importance: int = 5) -> bool:
             (fact, importance, embedding_json)
         )
         conn.commit()
+        
+        # Index in LanceDB
+        fact_id = cursor.lastrowid
+        try:
+            from core.memory.vector_memory import get_vector_memory
+            get_vector_memory().add_fact(fact_id, fact)
+        except Exception as ve:
+            logger.error(f"[VECTOR MEMORY ERROR] Failed indexing fact: {ve}")
+            
         return True
     except Exception as e:
         logger.error(f"[SQLITE MEMORY ERROR] Failed storing fact: {e}")
         return False
     finally:
         conn.close()
+
 
 def remove_fact(fact: str) -> bool:
     """Remove a fact by exact or substring match."""
@@ -641,12 +651,22 @@ def add_history(role: str, content: str) -> bool:
             (role, content)
         )
         conn.commit()
-        return True
+        
+        # Index in LanceDB
+        msg_id = cursor.lastrowid
+        try:
+            from core.memory.vector_memory import get_vector_memory
+            get_vector_memory().add_interaction(msg_id, role, content)
+        except Exception as ve:
+            logger.error(f"[VECTOR MEMORY ERROR] Failed indexing conversation history: {ve}")
+            
+        return msg_id
     except Exception as e:
         logger.error(f"[SQLITE MEMORY ERROR] Failed adding history: {e}")
         return False
     finally:
         conn.close()
+
 
 def get_all_facts() -> List[str]:
     """Return all facts list."""

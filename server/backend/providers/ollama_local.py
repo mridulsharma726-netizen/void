@@ -132,16 +132,40 @@ class OllamaProvider(BaseProvider):
                 timeout=(5.0, self.timeout - 15)
             ))
             resp.raise_for_status()
+            
+            # Prometheus instrumentation
+            try:
+                from core.observability.telemetry import OLLAMA_CALLS
+                OLLAMA_CALLS.labels(model=self.model, status="success").inc()
+            except Exception:
+                pass
+                
             return resp.json().get("message", {}).get("content", "").strip()
         except requests.exceptions.Timeout as te:
             logger.error(f"[Ollama] Chat timed out: {te}")
+            try:
+                from core.observability.telemetry import OLLAMA_CALLS
+                OLLAMA_CALLS.labels(model=self.model, status="timeout").inc()
+            except Exception:
+                pass
             raise asyncio.TimeoutError("The local AI model timed out. The request may be too complex, Sir.")
         except requests.exceptions.ConnectionError as ce:
             logger.error(f"[Ollama] Connection failed. Service may be down: {ce}")
+            try:
+                from core.observability.telemetry import OLLAMA_CALLS
+                OLLAMA_CALLS.labels(model=self.model, status="connection_error").inc()
+            except Exception:
+                pass
             raise RuntimeError("The local AI service (Ollama) is currently unreachable. Please make sure it is running, Sir.")
         except Exception as e:
             logger.error(f"[Ollama] Chat failed: {e}", exc_info=True)
+            try:
+                from core.observability.telemetry import OLLAMA_CALLS
+                OLLAMA_CALLS.labels(model=self.model, status="error").inc()
+            except Exception:
+                pass
             raise RuntimeError(f"The local AI service encountered an error, Sir. Details: {str(e)}")
+
 
     async def chat_stream(self, history: List[Dict[str, str]], prompt: str, system_prompt: Optional[str] = None) -> AsyncGenerator[str, None]:
         if not self.model_detected:

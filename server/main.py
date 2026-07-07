@@ -343,17 +343,24 @@ async def lifespan(app: FastAPI):
     logger.info("VOID startup...")
     # Register the main running event loop
     VoidSingletons._instances["main_loop"] = asyncio.get_running_loop()
-    # Spawn startup tasks in background to keep startup time near zero
-    asyncio.create_task(run_background_startup())
+    
+    import sys
+    import os
+    is_pytest = any("pytest" in arg for arg in sys.argv) or any("pytest" in key for key in sys.modules)
+    
+    if not is_pytest and not os.environ.get("VOID_TESTING") == "true":
+        # Spawn startup tasks in background to keep startup time near zero
+        asyncio.create_task(run_background_startup())
 
-    # --- Real-Time Intelligence: start RSS background poller ---
-    try:
-        from news.rss_engine import get_engine as get_rss_engine
-        rss_engine = get_rss_engine()
-        rss_engine.start_background_fetch()
-        logger.info("[LIFESPAN] RSS news engine started (background polling active).")
-    except Exception as _rss_err:
-        logger.warning(f"[LIFESPAN] RSS engine could not start: {_rss_err}")
+        # --- Real-Time Intelligence: start RSS background poller ---
+        try:
+            from news.rss_engine import get_engine as get_rss_engine
+            rss_engine = get_rss_engine()
+            rss_engine.start_background_fetch()
+            logger.info("[LIFESPAN] RSS news engine started (background polling active).")
+        except Exception as _rss_err:
+            logger.warning(f"[LIFESPAN] RSS engine could not start: {_rss_err}")
+
 
     yield
 
@@ -429,7 +436,8 @@ class WebSocketBypassCORSMiddleware(CORSMiddleware):
 app.add_middleware(WebSocketBypassCORSMiddleware, allow_origins=["*", "file://"], allow_origin_regex=".*", allow_methods=["*"], allow_headers=["*"])
 
 # Exempt paths from token verification (like /health)
-EXEMPT_PATHS = {"/health", "/docs", "/openapi.json", "/ws/approval"}
+EXEMPT_PATHS = {"/health", "/docs", "/openapi.json", "/ws/approval", "/metrics"}
+
 
 class SecureTokenAuthMiddleware:
     def __init__(self, app):

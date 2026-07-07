@@ -24,3 +24,19 @@ py-cpuinfo==9.0.0
 ddgs>=9.14.0                 # DDG search provider (no API key required)
 feedparser>=6.0.11           # RSS/Atom feed parser
 beautifulsoup4>=4.12.3       # HTML cleaning for web page content extraction
+
+# --- Local Memory & RAG Layer (Phase 8) ---
+lancedb>=0.18.0
+sentence-transformers>=3.0.1
+
+# --- System-Level Automation (Phase 10) ---
+pywinauto>=0.6.8
+watchdog>=4.0.1
+
+# --- Observability (Phase 11) ---
+opentelemetry-api>=1.25.0
+opentelemetry-sdk>=1.25.0
+prometheus-client>=0.20.0
+
+
+

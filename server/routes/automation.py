@@ -197,6 +197,8 @@ async def execute_social_post(post_id: int):
 async def get_automation_status():
     from tools.task_scheduler import get_scheduled_tasks
     from backend.metrics_service import SystemMetricsCollector
+    from core.automation.fs_watchdog import get_fs_watchdog
+    import os
     try:
         tasks = get_scheduled_tasks()
         collector = SystemMetricsCollector()
@@ -222,6 +224,20 @@ async def get_automation_status():
                 "trigger": "Yes?" if svc_status.get("wake_word") == "running" else "--"
             }
         ]
+        
+        # Integrate real registered watchdog monitors
+        try:
+            watchdog = get_fs_watchdog()
+            for w in watchdog.list_active_watchers():
+                active_workflows.append({
+                    "id": f"watch_{abs(hash(w['path'])) % 10000}",
+                    "name": f"File Watcher: {os.path.basename(w['path'])}",
+                    "status": "Running" if w["status"] == "active" else "Stopped",
+                    "path": w["path"]
+                })
+        except Exception as w_err:
+            logger.warning(f"Failed to fetch active watchdog monitors: {w_err}")
+            
         return {
             "scheduled_tasks": tasks,
             "active_workflows": active_workflows
@@ -229,6 +245,7 @@ async def get_automation_status():
     except Exception as e:
         logger.error(f"Failed to get automation status: {e}")
         return {"scheduled_tasks": [], "active_workflows": []}
+
 
 # /system/health-details extracted to routes/admin.py
 
