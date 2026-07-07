@@ -132,10 +132,9 @@ class WhisperSTT:
         """Fallback transcription using Vosk or online SpeechRecognition."""
         try:
             logger.info("[WHISPER STT] Executing Vosk/SpeechRecognition fallback transcription...")
-            # We can import listen_once or use Vosk directly
-            from tools.voice_stt import VoskSpeechRecognizer
             
             # Since VoskSpeechRecognizer listens to PyAudio stream, let's write a simple Vosk wav file reader if possible,
+
             # or fallback to speech_recognition Google API which has native WAV support
             import speech_recognition as sr
             r = sr.Recognizer()
