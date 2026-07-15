@@ -19,6 +19,4 @@ memory/*.db-journal
 memory/data/*.json
 data/project_map.json
 server/data/project_memory.json
-
-
-
+*.wav
