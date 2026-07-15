@@ -1071,7 +1071,7 @@ class ToolRuntime:
             temp = random.randint(15, 28)
             acid_rain = random.choice([True, False])
             rain_str = "Acid rain levels: Nominal. Visibility: clear." if not acid_rain else "⚠️ Alert: Light Acid Rain detected. Shielding advised."
-            return f"Local weather forecast for {city.upper()} // VOID Core Environment:\n- Temperature: {temp}°C\n- Humidity: 68%\n- {rain_str}"
+            return f"Weather reporting in the server runtime is currently generated using hardcoded randomized values and mock environments. (Sandbox Mock)\n\nLocal weather forecast for {city.upper()} // VOID Core Environment:\n- Temperature: {temp}°C\n- Humidity: 68%\n- {rain_str}"
         except Exception as e:
             return f"Error checking weather: {e}"
 

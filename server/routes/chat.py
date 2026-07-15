@@ -200,6 +200,36 @@ DIRECT_TOOLS = {
     "file_manager"
 }
 
+MOCK_OR_UNWIRED_EXPLANATIONS = {
+    # Category (b) - Mock data
+    "manage_email": "Email management is currently using a mock sandbox inbox with hardcoded developer emails and is not connected to a live mail account.",
+    "manage_calendar": "Calendar scheduling is currently using a local database seeded with mock corporate events and is not connected to a real Google or Outlook Calendar account.",
+    "skipit_assistant": "The SkipIt Founder Assistant is currently running queries against a local database seeded with mock rental listings and fake user statistics.",
+    "smart_cart_assistant": "The Smart Cart Founder Assistant is currently running queries against a local database seeded with mock store pilot metrics.",
+    "business_intelligence": "Business Intelligence recommendations are generated using mock metrics seeded in a local database.",
+    "weather": "Weather reporting in the server runtime is currently generated using hardcoded randomized values and mock environments.",
+    "get_weather": "Weather reporting in the server runtime is currently generated using hardcoded randomized values and mock environments.",
+    
+    # Category (c) - Unwired
+    "send_email": "Email sending isn't connected to a real account yet.",
+    "read_email": "Email reading isn't connected to a real account yet.",
+    "send_discord": "Discord messaging isn't connected to a real server or bot account yet.",
+    "read_discord": "Discord message retrieval isn't connected to a real server or bot account yet.",
+    "send_telegram": "Telegram messaging isn't connected to a real account or bot yet.",
+    "read_telegram": "Telegram message retrieval isn't connected to a real account or bot yet.",
+    "send_slack": "Slack messaging isn't connected to a real workspace or bot account yet.",
+    "read_slack": "Slack message retrieval isn't connected to a real workspace or bot account yet.",
+    "wait": "The wait action is recognized but currently has no active execution wiring in the server runtime.",
+    "open_file": "Opening files directly is recognized but currently has no active execution wiring in the server runtime.",
+    "get_news": "News retrieval isn't connected to a live search or RSS reader in the server runtime yet.",
+    "news_query": "News retrieval isn't connected to a live search or RSS reader in the server runtime yet.",
+    "web_search": "Web search is recognized by the router but has no registered executor in the server runtime.",
+    "get_stock": "Stock quote retrieval isn't connected to a live API in the server runtime yet.",
+    "get_time": "Timezone lookup isn't connected to a geolocation API in the server runtime yet.",
+    "engineering_mode": "Engineering review mode is recognized by the router but is not wired to an executor yet.",
+    "build_project": "Project building and scaffolding is recognized by the router but has no active executor wired yet.",
+}
+
 class SearchRequest(BaseModel):
     query: str
     max_results: int = 5
@@ -1335,8 +1365,14 @@ Guidelines:
         try:
             if router:
                 intent = await router.classify(text)
+                if intent and intent.intent != "chat":
+                    logger.info(f"[ROUTER MATCH] Matched intent '{intent.intent}' with action '{intent.action}' and params: {intent.params}")
+                else:
+                    logger.info(f"[ROUTER NO-MATCH] No intent matched (or intent is 'chat') for user message. Falling back to pure chat.")
+            else:
+                logger.warning("[ROUTER WARNING] Router singleton is not initialized.")
         except Exception as e:
-            logger.error(f"Intent classification failed: {e}. Falling back to pure chat mode.")
+            logger.error(f"Intent classification failed: {e}. Falling back to pure chat mode.", exc_info=True)
             
         try:
             from backend.emotion_engine import EmotionEngine
@@ -1448,12 +1484,25 @@ Guidelines:
             
         elif intent and (intent.intent == "command" or (intent.intent == "system" and intent.action in ["repair", "diagnostics"])):
             action_name = "repair_self" if intent.action == "repair" else intent.action
+            if action_name in MOCK_OR_UNWIRED_EXPLANATIONS:
+                explanation = MOCK_OR_UNWIRED_EXPLANATIONS[action_name]
+                final_reply = f"⚠️ **Feature Unavailable**, Sir.\n\n{explanation}"
+                memory.remember_turn("user", text)
+                memory.remember_turn("void", final_reply)
+                log_chat_request(intent.action, "DIRECT_EXPLANATION", action_name, "Mock/Unwired Intercepted", start_time)
+                return {"reply": final_reply, "meta": {"intent": intent.intent, "action": intent.action, "status": "mock_intercepted"}}
+            
             if action_name in DIRECT_TOOLS:
                 # Bypasses Ollama completely
                 try:
+                    logger.info(f"[TOOL START] Executing direct tool '{action_name}' with parameters: {intent.params}")
                     tm = VoidSingletons.get("tool_manager")
                     result = await tm.execute(action_name, intent.params)
                     is_success = result.meta.get("status") != "FAIL"
+                    if not is_success:
+                        logger.error(f"[TOOL FAILURE] Direct tool '{action_name}' execution completed with status FAIL. Output: {result.output}")
+                    else:
+                        logger.info(f"[TOOL SUCCESS] Direct tool '{action_name}' executed successfully.")
                     final_reply = humanize_tool_output_locally(action_name, intent.params, result.output, is_success)
                     
                     memory.remember_turn("user", text)
@@ -1461,7 +1510,7 @@ Guidelines:
                     log_chat_request(intent.action, "DIRECT_TOOL", action_name, "Success" if is_success else "Failure", start_time)
                     return {"reply": final_reply, "meta": {"intent": intent.intent, "action": intent.action}}
                 except Exception as tool_err:
-                    logger.error(f"Direct tool execution failed: {tool_err}")
+                    logger.error(f"[TOOL FAILURE] Direct tool '{action_name}' threw an exception: {tool_err}", exc_info=True)
                     from tools.error_interpreter import interpret_error
                     friendly_err = interpret_error(str(tool_err))
                     final_reply = f"⚠️ Tool execution failed, Sir. {friendly_err}"
@@ -1482,9 +1531,14 @@ Guidelines:
             else:
                 # LLM required to summarize tool output
                 try:
+                    logger.info(f"[TOOL START] Executing summarized tool '{action_name}' with parameters: {intent.params}")
                     tm = VoidSingletons.get("tool_manager")
                     result = await tm.execute(action_name, intent.params)
                     is_success = result.meta.get("status") != "FAIL"
+                    if not is_success:
+                        logger.error(f"[TOOL FAILURE] Summarized tool '{action_name}' execution completed with status FAIL. Output: {result.output}")
+                    else:
+                        logger.info(f"[TOOL SUCCESS] Summarized tool '{action_name}' executed successfully. Summarizing output via LLM.")
                     
                     final_reply = await asyncio.wait_for(
                         llm.summarize_tool_output(text, action_name, result.output, is_success=is_success),
@@ -1496,7 +1550,7 @@ Guidelines:
                     log_chat_request(intent.action, "LLM_REQUIRED", action_name, "Success" if is_success else "Failure", start_time)
                     return {"reply": final_reply, "meta": {"intent": intent.intent, "action": intent.action}}
                 except asyncio.TimeoutError as time_err:
-                    logger.error("LLM tool summarization timed out.")
+                    logger.error(f"[TOOL FAILURE] LLM tool summarization for '{action_name}' timed out.", exc_info=True)
                     from tools.error_interpreter import translate_exception
                     translated = translate_exception(time_err)
                     final_reply = f"⚠️ Action completed but LLM response timed out, Sir. Raw: {result.output[:100]}..."
@@ -1514,7 +1568,7 @@ Guidelines:
                         }
                     }
                 except Exception as tool_err:
-                    logger.error(f"Tool execution or humanization failed: {tool_err}")
+                    logger.error(f"[TOOL FAILURE] Summarized tool '{action_name}' execution or LLM summarization threw an exception: {tool_err}", exc_info=True)
                     from tools.error_interpreter import interpret_error
                     friendly_err = interpret_error(str(tool_err))
                     final_reply = f"⚠️ Tool execution failed, Sir. {friendly_err}"

@@ -93,31 +93,7 @@ def get_or_generate_api_token() -> str:
 
 API_TOKEN = get_or_generate_api_token()
 
-class VoidSingletons:
-    """Consolidated singletons."""
-    _instances = {}
-    
-    @classmethod
-    def get(cls, name):
-        if name not in cls._instances:
-            try:
-                if name == "router":
-                    cls._instances[name] = IntentRouter()
-                elif name == "llm":
-                    cls._instances[name] = OllamaClient()
-                elif name == "memory":
-                    cls._instances[name] = MemoryManager(DATA_DIR)
-                elif name == "tool_manager":
-                    runtime = ToolRuntime()
-                    cls._instances[name] = ToolManager(runtime)
-                elif name == "validator":
-                    cls._instances[name] = ResponseValidator()
-                else:
-                    cls._instances[name] = None
-            except Exception as e:
-                logger.error(f"Singleton {name} initialization failed: {e}", exc_info=True)
-                cls._instances[name] = None
-        return cls._instances[name]
+from server.dependencies import VoidSingletons
 
 def _get_memory():
     """Get singleton MemoryManager."""

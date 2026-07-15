@@ -68,25 +68,38 @@ class VoidSingletons:
     
     @classmethod
     def get(cls, name):
-        if name not in cls._instances:
-            try:
-                if name == "router":
-                    cls._instances[name] = IntentRouter()
-                elif name == "llm":
-                    cls._instances[name] = OllamaClient()
-                elif name == "memory":
-                    cls._instances[name] = MemoryManager(DATA_DIR)
-                elif name == "tool_manager":
-                    runtime = ToolRuntime()
-                    cls._instances[name] = ToolManager(runtime)
-                elif name == "validator":
-                    cls._instances[name] = ResponseValidator()
-                else:
-                    cls._instances[name] = None
-            except Exception as e:
-                logger.error(f"Singleton {name} initialization failed: {e}", exc_info=True)
+        if cls._instances.get(name) is not None:
+            return cls._instances[name]
+            
+        try:
+            if name == "router":
+                cls._instances[name] = IntentRouter()
+            elif name == "llm":
+                cls._instances[name] = OllamaClient()
+            elif name == "memory":
+                cls._instances[name] = MemoryManager(DATA_DIR)
+            elif name == "tool_manager":
+                runtime = ToolRuntime()
+                cls._instances[name] = ToolManager(runtime)
+            elif name == "validator":
+                cls._instances[name] = ResponseValidator()
+            else:
                 cls._instances[name] = None
-        return cls._instances[name]
+        except Exception as e:
+            import traceback
+            tb_str = traceback.format_exc()
+            msg = f"\n[CRITICAL] Singleton '{name}' initialization failed: {e}\nTraceback:\n{tb_str}\n"
+            sys.stderr.write(msg)
+            sys.stderr.flush()
+            logger.error(f"Singleton {name} initialization failed: {e}", exc_info=True)
+            
+            if name in ["router", "llm", "tool_manager"]:
+                if name in cls._instances:
+                    del cls._instances[name]
+                return None
+            else:
+                cls._instances[name] = None
+        return cls._instances.get(name)
 
 def _get_memory():
     """Get singleton MemoryManager."""

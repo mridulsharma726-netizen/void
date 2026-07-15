@@ -15,7 +15,7 @@ def send_email_message(to: str, body: str) -> Dict[str, Any]:
         logger.info(f"[EMAIL SEND] Simulating outgoing email to {to}:\nContent: {body}")
         return {
             "status": "ok",
-            "message": f"Successfully sent sandbox email to **{to}**:\n\"{body}\""
+            "message": f"Email sending isn't connected to a real account yet. (Sandbox Mock: sent email to **{to}**:\n\"{body}\")"
         }
     except Exception as e:
         logger.error(f"[EMAIL SEND] Failed: {e}", exc_info=True)
@@ -36,11 +36,11 @@ def read_email_inbox(sender: str = None) -> Dict[str, Any]:
             if not filtered:
                 return {
                     "status": "ok",
-                    "message": f"You have no unread emails from **{sender}**, Sir.",
+                    "message": f"Email reading isn't connected to a real account yet. (Sandbox Mock: you have no unread emails from **{sender}**, Sir.)",
                     "data": []
                 }
             
-            summary_lines = [f"Here is a summary of unread emails from **{sender}**, Sir:\n"]
+            summary_lines = [f"Email reading isn't connected to a real account yet. (Sandbox Mock: unread emails from **{sender}**):\n"]
             for m in filtered:
                 summary_lines.append(f"- **{m['category']}**:\n  \"{m['subject']}\" → *{m['body'][:120]}...*")
             return {
@@ -49,7 +49,9 @@ def read_email_inbox(sender: str = None) -> Dict[str, Any]:
                 "data": filtered
             }
             
-        return res
+        res_copy = dict(res)
+        res_copy["message"] = f"Email reading isn't connected to a real account yet. (Sandbox Mock Inbox):\n\n" + res_copy.get("message", "")
+        return res_copy
     except Exception as e:
         logger.error(f"[EMAIL READ] Failed: {e}", exc_info=True)
         return {"status": "error", "message": f"Failed to read inbox: {str(e)}"}

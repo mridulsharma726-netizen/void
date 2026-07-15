@@ -208,6 +208,7 @@ def get_bookings_today() -> Dict[str, Any]:
         return {
             "status": "ok",
             "message": (
+                "The SkipIt Founder Assistant is currently running queries against a local database seeded with mock rental listings and fake user statistics. (Sandbox Mock)\n\n"
                 f"📊 **SkipIt Bookings Today**: We have captured **{count} active bookings** "
                 f"created today, generating a stellar **Gross Transactional Value (GTV) of ${gtv:.2f}**, Sir!"
             ),
@@ -226,13 +227,19 @@ def get_inactive_listings() -> Dict[str, Any]:
         rows = cursor.fetchall()
         conn.close()
         
-        lines = ["⚠️ **Inactive SkipIt Listings**: The following active gear shares are currently offline, Sir:\n"]
+        lines = [
+            "The SkipIt Founder Assistant is currently running queries against a local database seeded with mock rental listings and fake user statistics. (Sandbox Mock)\n\n"
+            "⚠️ **Inactive SkipIt Listings**: The following active gear shares are currently offline, Sir:\n"
+        ]
         for row in rows:
             l_id, title, cat, price, owner = row
             lines.append(f"- **{title}** ({cat}) | Owner: *{owner}* | Rate: *${price}/day* (ID: {l_id})")
             
         if not rows:
-            lines = ["✅ **All SkipIt Listings Active**: Outstanding, Sir! All rental listings are currently online and earning fees."]
+            lines = [
+                "The SkipIt Founder Assistant is currently running queries against a local database seeded with mock rental listings and fake user statistics. (Sandbox Mock)\n\n"
+                "✅ **All SkipIt Listings Active**: Outstanding, Sir! All rental listings are currently online and earning fees."
+            ]
             
         return {
             "status": "ok",
@@ -263,7 +270,10 @@ def get_inactive_users(days: int = 60) -> Dict[str, Any]:
         rows = cursor.fetchall()
         conn.close()
         
-        lines = [f"📉 **Inactive Users (>={days} Days)**: Found **{len(rows)} users** matching churn indicators, Sir:\n"]
+        lines = [
+            "The SkipIt Founder Assistant is currently running queries against a local database seeded with mock rental listings and fake user statistics. (Sandbox Mock)\n\n"
+            f"📉 **Inactive Users (>={days} Days)**: Found **{len(rows)} users** matching churn indicators, Sir:\n"
+        ]
         for row in rows:
             u_id, name, email, last_act = row
             # Calculate actual inactive days
@@ -272,7 +282,10 @@ def get_inactive_users(days: int = 60) -> Dict[str, Any]:
             lines.append(f"- **{name}** (*{email}*) — Inactive for **{elapsed} days** *(Last active: {last_act} | ID: {u_id})*")
             
         if not rows:
-            lines = [f"✅ **Zero Churned Users**: Excellent! All registered users have been active within the last {days} days, Sir."]
+            lines = [
+                "The SkipIt Founder Assistant is currently running queries against a local database seeded with mock rental listings and fake user statistics. (Sandbox Mock)\n\n"
+                f"✅ **Zero Churned Users**: Excellent! All registered users have been active within the last {days} days, Sir."
+            ]
             
         return {
             "status": "ok",
@@ -314,6 +327,7 @@ def generate_weekly_report() -> Dict[str, Any]:
         active_user_pct = (active_users_30d / total_users * 100) if total_users else 0.0
         
         report = (
+            "The SkipIt Founder Assistant is currently running queries against a local database seeded with mock rental listings and fake user statistics. (Sandbox Mock)\n\n"
             f"📈 **SKIPIT WEEKLY INVESTOR METRICS**\n"
             f"====================================\n"
             f"💰 **Gross Transactional Value (GTV)**: ${total_gtv:.2f}\n"
@@ -351,7 +365,10 @@ def get_pilot_performance() -> Dict[str, Any]:
         rows = cursor.fetchall()
         conn.close()
         
-        lines = ["🛒 **Smart Cart Pilot Performance Metrics**:\n"]
+        lines = [
+            "The Smart Cart Founder Assistant is currently running queries against a local database seeded with mock store pilot metrics. (Sandbox Mock)\n\n"
+            "🛒 **Smart Cart Pilot Performance Metrics**:\n"
+        ]
         for row in rows:
             s_id, name, loc, carts, txs, check_time, shrink = row
             # Baseline checkout time is 8.0 minutes (480 seconds)
@@ -412,6 +429,7 @@ def generate_revenue_projections() -> Dict[str, Any]:
         last_date = datetime.strptime(last_month_str + "-01", "%Y-%m-%d")
         
         lines = [
+            "The Smart Cart Founder Assistant is currently running queries against a local database seeded with mock store pilot metrics. (Sandbox Mock)\n\n"
             f"📊 **Smart Cart Growth Projections (Next 6 Months)**:\n"
             f"Calculated using organic historical revenue growth (*{avg_growth*100:.1f}% MoM*):\n"
         ]
@@ -463,6 +481,7 @@ def create_store_pitch_deck() -> Dict[str, Any]:
             # Enhance message with specialized store pitch details
             filepath = res["message"].split("at **")[1].split("**,")[0]
             msg = (
+                "The Smart Cart Founder Assistant is currently running queries against a local database seeded with mock store pilot metrics. (Sandbox Mock)\n\n"
                 f"✅ **Smart Cart Store Pitch Deck Compiled successfully, Sir!**\n\n"
                 f"I have constructed a high-end, extremely premium **5-slide store pitch deck** "
                 f"specifically designed to secure partnerships with leading retail hubs. "
@@ -506,6 +525,7 @@ def business_intelligence_recommendations() -> Dict[str, Any]:
         
         # Compile strategic BI recommendations
         lines = [
+            "Business Intelligence recommendations are generated using mock metrics seeded in a local database. (Sandbox Mock)\n\n"
             f"💡 **VOID AUTONOMOUS FOUNDER RECOMMENDATIONS & BI ANALYTICS**\n",
             f"🔴 **RECOMMENDATION 1 — Churn Prevention Campaign**:\n"
             f"  - *Insight*: **{churn_users} users ({churn_pct:.1f}% of base)** have not logged in or rented in **60+ days**.\n"

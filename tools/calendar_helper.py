@@ -164,7 +164,10 @@ def plan_week() -> Dict[str, Any]:
             if day_name in by_day:
                 by_day[day_name].append(ev)
                 
-        md = ["Here is your strategic calendar schedule for this week, Sir:\n"]
+        md = [
+            "Calendar scheduling is currently using a local database seeded with mock corporate events and is not connected to a real Google or Outlook Calendar account. (Sandbox Mock)\n\n"
+            "Here is your strategic calendar schedule for this week, Sir:\n"
+        ]
         for day in days_names:
             events = by_day[day]
             if events:
@@ -309,6 +312,7 @@ def schedule_event(title: str, start_time: str, end_time: str, priority: str = "
         return {
             "status": "ok",
             "message": (
+                "Calendar scheduling is currently using a local database seeded with mock corporate events and is not connected to a real Google or Outlook Calendar account. (Sandbox Mock)\n\n"
                 f"✅ Successfully scheduled **'{title}'** for **{start_dt.strftime('%A, %b %d at %I:%M %p')}** "
                 f"to **{end_dt.strftime('%I:%M %p')}**{rec_text}, Sir!{resolution_msg}"
             ),

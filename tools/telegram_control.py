@@ -36,7 +36,7 @@ def send_telegram_message(contact: str, message: str) -> Dict[str, Any]:
         
         return {
             "status": "ok",
-            "message": f"Successfully sent Telegram message to **{contact}**:\n\"{message}\""
+            "message": f"Telegram messaging isn't connected to a real account or bot yet. (Sandbox Mock: sent Telegram message to **{contact}**:\n\"{message}\")"
         }
     except Exception as e:
         logger.error(f"[TELEGRAM SEND] Failed: {e}", exc_info=True)
@@ -52,11 +52,11 @@ def read_telegram_messages(contact: str = None) -> Dict[str, Any]:
             if clean_contact not in MOCK_TELEGRAM_CHATS:
                 return {
                     "status": "ok",
-                    "message": f"No recent Telegram chats found with **{contact}**, Sir.",
+                    "message": f"Telegram message retrieval isn't connected to a real account or bot yet. (Sandbox Mock: no recent Telegram chats found with **{contact}**, Sir.)",
                     "data": []
                 }
             messages = MOCK_TELEGRAM_CHATS[clean_contact]
-            summary_lines = [f"Here are recent Telegram messages from **{contact}**:\n"]
+            summary_lines = [f"Telegram message retrieval isn't connected to a real account or bot yet. (Sandbox Mock: recent Telegram messages from **{contact}**):\n"]
             for m in messages:
                 summary_lines.append(f"[{m['timestamp']}] **{m['sender']}**: {m['content']}")
             return {
@@ -66,7 +66,7 @@ def read_telegram_messages(contact: str = None) -> Dict[str, Any]:
             }
             
         # If no contact specified, summarize all unread chats
-        summary_lines = ["Here is a summary of active Telegram chats, Sir:\n"]
+        summary_lines = ["Telegram message retrieval isn't connected to a real account or bot yet. (Sandbox Mock: active Telegram chats, Sir):\n"]
         all_chats = []
         for c, msgs in MOCK_TELEGRAM_CHATS.items():
             if msgs:

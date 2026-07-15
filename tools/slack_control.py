@@ -38,7 +38,7 @@ def send_slack_message(channel: str, message: str) -> Dict[str, Any]:
         
         return {
             "status": "ok",
-            "message": f"Successfully posted to Slack channel **#{clean_chan}**:\n\"{message}\""
+            "message": f"Slack messaging isn't connected to a real workspace or bot account yet. (Sandbox Mock: posted to Slack channel **#{clean_chan}**:\n\"{message}\")"
         }
     except Exception as e:
         logger.error(f"[SLACK SEND] Failed: {e}", exc_info=True)
@@ -56,11 +56,11 @@ def read_slack_channel(channel: str) -> Dict[str, Any]:
         if clean_chan not in MOCK_SLACK_WORKSPACE:
             return {
                 "status": "ok",
-                "message": f"Slack channel **#{clean_chan}** is inactive. No recent messages found.",
+                "message": f"Slack message retrieval isn't connected to a real workspace or bot account yet. (Sandbox Mock: Slack channel **#{clean_chan}** is inactive. No recent messages found.)",
                 "data": []
             }
         messages = MOCK_SLACK_WORKSPACE[clean_chan]
-        summary_lines = [f"Here are recent messages in **#{clean_chan}**:\n"]
+        summary_lines = [f"Slack message retrieval isn't connected to a real workspace or bot account yet. (Sandbox Mock: recent messages in **#{clean_chan}**):\n"]
         for m in messages:
             summary_lines.append(f"[{m['timestamp']}] **{m['sender']}**: {m['content']}")
             

@@ -47,7 +47,10 @@ def summarize_inbox() -> Dict[str, Any]:
         med = [m for m in MOCK_INBOX if m["priority"] == "MEDIUM"]
         low = [m for m in MOCK_INBOX if m["priority"] == "LOW"]
         
-        summary_lines = ["Here is a summary of your priority inbox, Sir:\n"]
+        summary_lines = [
+            "Email management is currently using a mock sandbox inbox with hardcoded developer emails and is not connected to a live mail account. (Sandbox Mock)\n\n"
+            "Here is a summary of your priority inbox, Sir:\n"
+        ]
         
         if high:
             summary_lines.append("🔴 **HIGH PRIORITY**:")
@@ -121,7 +124,7 @@ def draft_reply(email_id: str, instructions: str) -> Dict[str, Any]:
             
         return {
             "status": "ok",
-            "message": f"Draft compiled successfully, Sir. Here is the drafted response to **{target_mail['sender']}**:\n\n```text\n{draft}\n```",
+            "message": f"Email management is currently using a mock sandbox inbox with hardcoded developer emails and is not connected to a live mail account. (Sandbox Mock)\n\nDraft compiled successfully, Sir. Here is the drafted response to **{target_mail['sender']}**:\n\n```text\n{draft}\n```",
             "data": {"draft": draft, "to": target_mail["sender"]}
         }
     except Exception as e:

@@ -39,7 +39,7 @@ def send_discord_message(channel: str, message: str) -> Dict[str, Any]:
         
         return {
             "status": "ok",
-            "message": f"Successfully posted to Discord channel **#{clean_chan}**:\n\"{message}\""
+            "message": f"Discord messaging isn't connected to a real server or bot account yet. (Sandbox Mock: posted to Discord channel **#{clean_chan}**:\n\"{message}\")"
         }
     except Exception as e:
         logger.error(f"[DISCORD SEND] Failed: {e}", exc_info=True)
@@ -57,12 +57,12 @@ def read_discord_channel(channel: str) -> Dict[str, Any]:
         if clean_chan not in MOCK_DISCORD_CHANNELS:
             return {
                 "status": "ok",
-                "message": f"Channel **#{clean_chan}** is quiet, Sir. No new messages found.",
+                "message": f"Discord message retrieval isn't connected to a real server or bot account yet. (Sandbox Mock: Channel **#{clean_chan}** is quiet, Sir. No new messages found.)",
                 "data": []
             }
             
         messages = MOCK_DISCORD_CHANNELS[clean_chan]
-        summary_lines = [f"Here are recent messages in **#{clean_chan}**:\n"]
+        summary_lines = [f"Discord message retrieval isn't connected to a real server or bot account yet. (Sandbox Mock: recent messages in **#{clean_chan}**):\n"]
         for m in messages:
             summary_lines.append(f"[{m['timestamp']}] **{m['sender']}**: {m['content']}")
             
