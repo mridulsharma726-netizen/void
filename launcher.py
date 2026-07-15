@@ -5,6 +5,13 @@ Usage: python launcher.py
 """
 
 import os
+# Force CPU-bound math libraries (ONNX Runtime, NumPy, OpenBLAS, etc.) to use 1 thread to optimize CPU usage
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import sys
 import time
 import subprocess

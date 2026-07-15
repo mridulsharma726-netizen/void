@@ -1,5 +1,5 @@
 {
-  "architecture_summary": "I do not have enough project data to determine that.",
+  "architecture_summary": "The project is a Python-based application that provides various functionalities to students by managing their academic projects.\n\n**Architecture:**\n- **Framework:** The project uses Django as its backend framework, which allows for the development of scalable and maintainable web applications.\n- **Backend:**\n  - Contains the `backend/academic_engine.py` file, where LLM (Language Models) is utilized to provide assistive learning and academic projects.\n  - Contains the `backend/audio_memory_service.py`, `backend/builder_agent.py`, and `backend/decision_engine.py`, which handle audio memory services, build agents, and decision engines respectively.\n- **Tools:**\n  - The project uses `memory_sqlite` for managing project data in a SQLite database. This is used to store the academic project information like files, projects, and safety rules for the user.\n\n**Files:**\n- There are multiple `.py` files in the root directory of the project that contain the codebase. Each file serves its specific purpose:\n  - `dependencies.py`: Contains the dependencies required by the application.\n  - `main.py`: The entry point to run the application's main function.\n  - `backend/academic_engine.py`: This file handles the development and maintenance of academic projects with a built-in library called `llm_client`.\n  - `tools_runtime.py`: It provides runtime services for managing project information, such as handling projects and safety rules.\n\n**Detailed Entry Points:**\n- The project contains several entry points that are used to interact with user's project data.\n  - There is an entry point in the main application file (e.g., `main.py`) which provides a simple interface for users to access various functionalities of the application.\n  - Each file or module has its own specific entry point, such as the `backend/academic_engine.py` file having its own entry point.\n\n**User Experience:**\n- The user interacts with the application in a way that is intuitive and efficient. Users are able to access different functionalities through the provided entry points.\n- They can manage projects using the project management features provided by the `backend`. They can also interact with other users' projects (e.g., the `tools_runtime.py` file) for additional support or collaboration.\n\n**Safety Rules:**\n- The application adheres to a set of safety rules that are clearly defined in the project's context. These rules ensure that data privacy and user security are maintained.\n  - All project files, databases, APIs, etc., are stored in a secure environment to protect against",
   "technology_stack": [],
   "apis": {},
   "db_layouts": {},
@@ -11,9 +11,9 @@
       "size": 5667
     },
     "main.py": {
-      "hash": "a26fe2b045ba5ddcb6bb908a69b8713e9013d38cd8899a627476992a1134d81a",
-      "mtime": 1783107893.7434423,
-      "size": 26703
+      "hash": "bae19d2bb7c5485544e4a39d65f2ef7b0ee754274dbb4574c211079badc0ac1f",
+      "mtime": 1783939130.9374669,
+      "size": 27560
     },
     "backend/academic_engine.py": {
       "hash": "4a2ba3520ab83ff207636fcb23c9b0cedc8472612ca4fcb7d41f94cec6af0e1e",
@@ -86,8 +86,8 @@
       "size": 11799
     },
     "backend/llm_client.py": {
-      "hash": "c76e1467d2350c7c88cf4a5d8dec0c8ec9c0508100c2af4993f3ecd924a6d390",
-      "mtime": 1782422041.194734,
+      "hash": "8c9ba0a5949801efbe2a1c640f8c5180b8b23a2067f48a4670bf7a4f57fca698",
+      "mtime": 1783915638.7704787,
       "size": 29382
     },
     "backend/memory_manager.py": {
@@ -96,9 +96,9 @@
       "size": 8305
     },
     "backend/memory_sqlite.py": {
-      "hash": "0b087e55bfaa8c716c60926790fbe5f575d170efc15cbebb6467ca56717cace0",
-      "mtime": 1783190731.1714573,
-      "size": 62445
+      "hash": "85d1e89c59a3513384cd3c69be7093de58674f6b9572920abfb39a6debe6f04c",
+      "mtime": 1783383215.3457983,
+      "size": 63141
     },
     "backend/metrics_service.py": {
       "hash": "88142471683b3d6d89f1aff607edf102f0c3e62cbfaba04502c62dd818be2941",
@@ -106,9 +106,9 @@
       "size": 10673
     },
     "backend/ollama_manager.py": {
-      "hash": "c89bc3a30adbc0326c9cdbc0a6f8904b6ccfec683279aed21350103e7f1dc45d",
-      "mtime": 1782645861.9850638,
-      "size": 8316
+      "hash": "37f189e919f280fe2866efce6836fef9a2beaab0b0ee6bb2a18edfe6a0fea33b",
+      "mtime": 1783915771.5042806,
+      "size": 8871
     },
     "backend/owner_profile.py": {
       "hash": "10789f4915d5fe7eeb55251f2568274b5986d022a2c3028fde93fff4ed32c4bd",
@@ -191,9 +191,9 @@
       "size": 5090
     },
     "backend/providers/ollama_local.py": {
-      "hash": "cc37fa4d7ce2fa35ee52ece2219749bdf554db4c7100bce8cf7dd763c7f2ff01",
-      "mtime": 1783183099.2256887,
-      "size": 12463
+      "hash": "e552b2c1f6320a35111e901b425cbda3236ede1a5fdd8f7742d075d36883c472",
+      "mtime": 1783915636.6323955,
+      "size": 13406
     },
     "backend/providers/openai_compatible.py": {
       "hash": "6130633e1f5a06dd7b503a209a16f1002c86805964b7b4a2ad07d608a0ac0d6f",
@@ -206,24 +206,24 @@
       "size": 23073
     },
     "routes/admin.py": {
-      "hash": "06792bdc12124dbaf15579a7f357edc170bc7de3b93bfb2e06af89cf86fa4db3",
-      "mtime": 1783183060.7796779,
-      "size": 8837
+      "hash": "0e0d2329f9a92c50b748def278c8340af322095b885f376fa40da08bf95fd944",
+      "mtime": 1783915626.6975865,
+      "size": 9410
     },
     "routes/chat.py": {
-      "hash": "7b495e39d7429de47d1b7d060f59374a1b2ef51921ef40a0429867e7ee154f4c",
-      "mtime": 1783191293.5807636,
-      "size": 80639
+      "hash": "2724accf99fd8e574a3f46e402580bcc72739cd71bba57a915b4499f8f2915f7",
+      "mtime": 1783915651.3336434,
+      "size": 81082
     },
     "data/project_map.json": {
-      "hash": "9feae5a4aadf3a20bce27cae3a8d4d843885deee39bdfbc5507bb44de9c6991f",
-      "mtime": 1783193244.502077,
-      "size": 5453
+      "hash": "cba61dbc41d59d992837e07a0cc329122c8056b5b8574747c35b9b84622dfa9e",
+      "mtime": 1783939694.2294462,
+      "size": 5770
     },
     "data/project_memory.json": {
-      "hash": "fc6dbf9c73cba2c160e6662b4f6a9449f5c28c90f64ae174775ef9a6b3be8ef7",
-      "mtime": 1783193244.520404,
-      "size": 9114
+      "hash": "20632cbd0bd648266d5c5b686170bacf3ccb8a6d966a3830fbef07c2550ab15e",
+      "mtime": 1783939694.2690234,
+      "size": 12189
     },
     "routes/memory.py": {
       "hash": "32fd64771cc91a7ce9f8f25e55226c0789c19a3fa8ccd10c24632b99623ee876",
@@ -236,19 +236,34 @@
       "size": 21126
     },
     "routes/automation.py": {
-      "hash": "3588c48dfcdeeb516ce6a12697d9611b8f96d2d61416def5369a91d4c7389845",
-      "mtime": 1783193090.768681,
-      "size": 12622
+      "hash": "6c03a73f11d273e63442cf132dcef1e1cbce573d32e45cff708bc30003a4f5e7",
+      "mtime": 1783383411.098631,
+      "size": 13339
     },
     "routes/voice.py": {
-      "hash": "5a2229a15c8252d835823f1c773647248c86c50ff7a91b348959ee46663435b7",
-      "mtime": 1783153236.7229278,
-      "size": 18201
+      "hash": "cfb9e4874f662a8c7db86824cbd34e030c286b75a90c71c2f15e542adaf1c09c",
+      "mtime": 1783939654.2787657,
+      "size": 19332
     },
     "routes/academic.py": {
       "hash": "fff47a5948fb96469b57c4ece3aa986582355a168cdb093f70944f9f2a47701c",
       "mtime": 1783107906.217278,
       "size": 15475
+    },
+    "routes/code_intelligence.py": {
+      "hash": "8ee03473a2411bc8a71cc6580d177f8a8f3155351a30712574ce37156918b346",
+      "mtime": 1783939154.3414621,
+      "size": 13140
+    },
+    "routes/live_intel.py": {
+      "hash": "b48e2155b0e1511f5478c15c50b4e2bfbca51b65a256f09df07acbcfcb12eddb",
+      "mtime": 1783914845.4677176,
+      "size": 5667
+    },
+    "routes/pc_hub.py": {
+      "hash": "1ebdb83672f2fd663978daf6746cdd93bd95878fa0afc0516adc8f20c228ca81",
+      "mtime": 1783914831.4236605,
+      "size": 5127
     }
   }
 }

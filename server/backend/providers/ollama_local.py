@@ -13,7 +13,7 @@ class OllamaProvider(BaseProvider):
         self.base_url = base_url
         self.chat_url = f"{base_url}/api/chat"
         self.tags_url = f"{base_url}/api/tags"
-        self.timeout = 120
+        self.timeout = 600
         self.model_detected = False
         self._detect_model()
 

@@ -2049,6 +2049,13 @@ body {
   box-shadow: 0 0 4px rgba(255, 0, 127, 0.15);
 }
 
+.status-indicator.status-orange {
+  color: var(--warning);
+  background: rgba(255, 179, 0, 0.08);
+  border-color: rgba(255, 179, 0, 0.25);
+  box-shadow: 0 0 4px rgba(255, 179, 0, 0.15);
+}
+
 .specs-details {
   display: flex;
   flex-direction: column;
@@ -3075,5 +3082,215 @@ body {
   color: var(--accent-neon);
   background: rgba(0, 255, 255, 0.05);
 }
+
+/* ================================================= */
+/* === FEATURE 1: CODE INTELLIGENCE CSS STYLES === */
+/* ================================================= */
+.code-intel-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 12px;
+  height: calc(100vh - 120px);
+  overflow: hidden;
+}
+
+.code-intel-left {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.code-intel-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* File Tree Styles */
+.file-tree-container {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+}
+
+.tree-folder-header:hover {
+  background: rgba(255, 0, 0, 0.05);
+  color: var(--accent-neon);
+}
+
+.tree-file-node:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tree-arrow {
+  display: inline-block;
+  width: 10px;
+  text-align: center;
+}
+
+/* Stats Cards */
+.code-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-red);
+  border-radius: 6px;
+  padding: 10px 15px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--border-glow);
+}
+
+.stat-card .stat-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-card strong {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 20px;
+  color: var(--text-white);
+  margin-top: 4px;
+}
+
+/* File Health Table */
+.file-health-table th, .file-health-table td {
+  border-bottom: 1px solid rgba(255, 0, 0, 0.1);
+  padding: 6px;
+}
+
+.file-health-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* =========================================== */
+/* === FEATURE 2: PC CONTROL HUB CSS STYLES === */
+/* =========================================== */
+.pc-control-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 12px;
+  height: calc(100vh - 120px);
+  overflow: hidden;
+}
+
+.pc-control-left {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.pc-control-right {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Quick Action Grid */
+.quick-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.action-btn {
+  background: rgba(5, 5, 5, 0.6);
+  border: 1px solid var(--border-red);
+  border-radius: 6px;
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.action-btn:hover {
+  background: rgba(255, 0, 0, 0.08);
+  border-color: var(--accent-neon);
+  box-shadow: var(--border-glow), inset 0 0 10px rgba(255,0,0,0.15);
+}
+
+.action-btn .action-icon {
+  font-size: 20px;
+}
+
+.action-btn .action-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  color: var(--text-dim);
+  font-weight: bold;
+}
+
+.action-btn:hover .action-label {
+  color: var(--text-white);
+}
+
+/* Gauges */
+.gauge-svg {
+  transform: rotate(-90deg);
+}
+
+.gauge-val-circle {
+  transition: stroke-dasharray 0.35s ease;
+}
+
+/* Processes */
+.processes-table th {
+  padding: 6px;
+}
+
+.processes-table td {
+  padding: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+
+.processes-table tbody tr:hover {
+  background: rgba(255, 0, 0, 0.04);
+}
+
+/* =========================================== */
+/* === FEATURE 3: LIVE INTELLIGENCE CSS === */
+/* =========================================== */
+.live-intel-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 12px;
+  height: calc(100vh - 120px);
+  overflow: hidden;
+}
+
+.live-intel-left {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.live-intel-right {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.news-feed-card, .ddg-search-card, .weather-card {
+  box-shadow: var(--border-glow);
+  border: 1px solid var(--border-red);
+}
+
+#newsFeedContainer a:hover {
+  color: var(--accent-neon) !important;
+}
+
+#liveSearchResults a:hover {
+  color: var(--success) !important;
+}
+
 
 

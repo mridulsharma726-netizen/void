@@ -1439,7 +1439,7 @@ Guidelines:
                     "for a software engineer's desktop panel (max 10 words). speak naturally, do NOT include quotes, "
                     "do NOT explain, and keep it punchy and related to coding/focus."
                 )
-                generated = await asyncio.wait_for(llm.chat([], prompt), timeout=150.0)
+                generated = await asyncio.wait_for(llm.chat([], prompt), timeout=600.0)
                 new_motd = generated.strip().strip('"').strip("'")
             
             global MOTD
@@ -1488,7 +1488,7 @@ Guidelines:
                     
                     final_reply = await asyncio.wait_for(
                         llm.summarize_tool_output(text, action_name, result.output, is_success=is_success),
-                        timeout=150.0
+                        timeout=600.0
                     )
                     
                     memory.remember_turn("user", text)
@@ -1552,7 +1552,7 @@ Guidelines:
             try:
                 final_reply = await asyncio.wait_for(
                     llm.chat(history, text),
-                    timeout=150.0
+                    timeout=600.0
                 )
             except asyncio.TimeoutError as time_err:
                 logger.error("LLM chat timed out.")

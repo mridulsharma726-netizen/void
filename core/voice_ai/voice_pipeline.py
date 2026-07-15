@@ -79,6 +79,14 @@ class VoicePipeline:
 
     def _trigger_command_recording(self):
         """Plays activation chime, records voice command, transcribes, and executes handler."""
+        # Stop the detector temporarily to free up the microphone resource
+        if self.detector:
+            try:
+                self.detector.stop()
+                logger.info("[VOICE PIPELINE] Wake-word detector stopped to free mic.")
+            except Exception as stop_err:
+                logger.error(f"[VOICE PIPELINE] Error stopping detector: {stop_err}")
+
         # 1. Play activation chime
         try:
             import winsound
@@ -157,6 +165,14 @@ class VoicePipeline:
                 p.terminate()
             except Exception:
                 pass
+        finally:
+            # Restart the wake-word detector so it resumes monitoring
+            if self._listening:
+                try:
+                    self.detector.start()
+                    logger.info("[VOICE PIPELINE] Wake-word detector resumed listening.")
+                except Exception as start_err:
+                    logger.error(f"[VOICE PIPELINE] Failed to restart detector: {start_err}")
 
 # Singleton voice pipeline instance
 _voice_pipeline_instance: Optional[VoicePipeline] = None

@@ -1,3 +1,11 @@
+import os
+# Force CPU-bound math libraries to use 1 thread to minimize CPU footprint
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import asyncio
 import json
 import logging
@@ -417,6 +425,10 @@ from routes.projects import router as projects_router
 from routes.automation import router as automation_router
 from routes.voice import router as voice_router
 from routes.academic import router as academic_router
+from routes.code_intelligence import router as code_intel_router
+from routes.pc_hub import router as pc_hub_router
+from routes.live_intel import router as live_intel_router
+
 app.include_router(admin_router)
 app.include_router(chat_router)
 app.include_router(memory_router)
@@ -424,6 +436,9 @@ app.include_router(projects_router)
 app.include_router(automation_router)
 app.include_router(voice_router)
 app.include_router(academic_router)
+app.include_router(code_intel_router)
+app.include_router(pc_hub_router)
+app.include_router(live_intel_router)
 
 class WebSocketBypassCORSMiddleware(CORSMiddleware):
     async def __call__(self, scope, receive, send):

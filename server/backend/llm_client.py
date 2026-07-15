@@ -54,7 +54,7 @@ class OllamaClient:
     def __init__(self, model: str = "qwen2.5:0.5b", base_url: str = "http://127.0.0.1:11434"):
         self.router = MultiModelRouter()
         self.system_prompt = SYSTEM_PROMPT
-        self.timeout = 120
+        self.timeout = 600
 
     @property
     def model(self) -> str:

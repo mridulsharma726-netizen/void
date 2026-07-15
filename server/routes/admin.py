@@ -220,7 +220,8 @@ async def ping_services():
 
 @router.get("/system/health-details")
 async def get_system_health_details():
-    ollama_ok = await is_ollama_ready()
+    from backend.ollama_manager import ollama_manager
+    ollama_ok = (ollama_manager.get_status().get("status") == "connected")
     db_ok = False
     try:
         from backend.memory_sqlite import get_all_facts

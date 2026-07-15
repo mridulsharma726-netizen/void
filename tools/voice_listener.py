@@ -130,3 +130,29 @@ def voice_loop_wrapper():
         start_voice_loop()
     except Exception as e:
         logger.error(f"[VOICE LOOP] Wrapper encountered fatal error: {e}. Voice disabled.")
+
+def listen_for_command(timeout: int = 5, phrase_time_limit: int = 6) -> Optional[str]:
+    """
+    Listen for a single voice command (without wake word).
+    
+    Args:
+        timeout: Max seconds to wait for speech
+        phrase_time_limit: Max seconds of speech to capture
+        
+    Returns:
+        Command text or None
+    """
+    try:
+        from tools.voice_stt import listen_once
+        result = listen_once(timeout=timeout, phrase_time_limit=phrase_time_limit)
+
+        if isinstance(result, dict):
+            return result.get("text", "").strip()
+        elif result:
+            return str(result).strip()
+
+        return None
+
+    except Exception as e:
+        logger.error(f"Listen for command error: {e}")
+        return None

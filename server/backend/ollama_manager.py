@@ -150,7 +150,7 @@ class OllamaConnectionManager:
 
         # 2. Verify model availability
         try:
-            resp = requests.get(f"{self.base_url}/api/tags", timeout=3.0)
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=10.0)
             if resp.status_code == 200:
                 models = [m.get("name") for m in resp.json().get("models", [])]
                 # Check exact match or :latest tag
@@ -181,6 +181,15 @@ class OllamaConnectionManager:
                     self.status = "offline"
                     self.error_message = f"Ollama API returned unexpected status code: {resp.status_code}"
                 return False
+        except requests.exceptions.Timeout as te:
+            # If already connected, preserve it (don't mark offline during heavy generation load)
+            with self._status_lock:
+                if self.status == "connected":
+                    logger.info("[OLLAMA MANAGER] Ollama tags query timed out. Keeping 'connected' status since server is active.")
+                    return True
+                self.status = "offline"
+                self.error_message = f"Failed to communicate with Ollama API (timeout): {te}"
+            return False
         except Exception as e:
             with self._status_lock:
                 self.status = "offline"

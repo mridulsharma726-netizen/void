@@ -2715,6 +2715,15 @@ function handleNavSwitch(view) {
     case 'tasks':
       initTasksWorkspace();
       break;
+    case 'code-intel':
+      loadCodeIntelView();
+      break;
+    case 'pc-control':
+      loadPCControlView();
+      break;
+    case 'live-intel':
+      loadLiveIntelView();
+      break;
   }
 }
 
@@ -4408,6 +4417,31 @@ async function pollOllamaStatus() {
         if (panel) panel.title = data.error_message || 'Ollama is offline.';
       }
     }
+
+    // Synchronize System Health Center indicator
+    const healthOllama = getEl('healthOllama');
+    if (healthOllama) {
+      if (data.status === 'connected') {
+        healthOllama.textContent = 'ONLINE';
+        healthOllama.className = 'status-indicator status-green';
+      } else if (data.status === 'connecting') {
+        healthOllama.textContent = 'CONNECTING';
+        healthOllama.className = 'status-indicator status-orange';
+      } else {
+        healthOllama.textContent = 'FAILED';
+        healthOllama.className = 'status-indicator status-red';
+      }
+    }
+
+    // Synchronize Chat view / Settings model values and status dots
+    const intelOllamaModel = getEl('intelOllamaModel');
+    const intelOllamaDot = getEl('intelOllamaDot');
+    if (intelOllamaModel) {
+      intelOllamaModel.textContent = data.active_model || '--';
+    }
+    if (intelOllamaDot) {
+      intelOllamaDot.className = 'intel-dot ' + (data.status === 'connected' ? 'online' : 'offline');
+    }
   } catch (err) {
     console.error("Error polling Ollama status:", err);
   }
@@ -5271,3 +5305,1063 @@ async function openWorkspaceFile(filePath) {
     if (fallbackPre) fallbackPre.textContent = `Error: ${e.message}`;
   }
 }
+
+// ==========================================
+// === FEATURE 1: CODE INTELLIGENCE LOGIC ===
+// ==========================================
+let currentCodeIntelScan = null;
+let codeIntelTreeFilter = "";
+let codeIntelExpandedPaths = new Set();
+
+async function loadCodeIntelView() {
+  console.log("[HUD] Loading Code Intelligence View...");
+  
+  // Set default path if empty
+  const pathInput = getEl("codeIntelPathInput");
+  if (pathInput && !pathInput.value) {
+    try {
+      const wsRes = await fetchApi("/api/workspace/get");
+      if (wsRes.status === "ok" && wsRes.path) {
+        pathInput.value = wsRes.path;
+      }
+    } catch (err) {
+      console.warn("Could not fetch active workspace path:", err);
+    }
+  }
+  
+  // Register click handlers once
+  const scanBtn = getEl("codeIntelScanBtn");
+  if (scanBtn) {
+    scanBtn.onclick = triggerCodeIntelScan;
+  }
+  
+  const treeFilterInput = getEl("fileTreeSearch");
+  if (treeFilterInput) {
+    treeFilterInput.oninput = (e) => {
+      codeIntelTreeFilter = e.target.value.toLowerCase().trim();
+      if (currentCodeIntelScan) {
+        renderCodeIntelTree(currentCodeIntelScan.tree);
+      }
+    };
+  }
+}
+
+async function triggerCodeIntelScan() {
+  const pathInput = getEl("codeIntelPathInput");
+  if (!pathInput || !pathInput.value.trim()) {
+    showNotification("Error: Please specify a valid repository path.", "danger");
+    return;
+  }
+  
+  const container = getEl("codeIntelTreeContainer");
+  if (container) {
+    container.innerHTML = `<div class="loading-state" style="padding: 20px; text-align: center; color: var(--accent-neon); font-family: 'Share Tech Mono', monospace;">
+      <span class="blink">●</span> DEEP SCANNING REPOSITORY FILE AST & METRICS...
+    </div>`;
+  }
+  
+  try {
+    const res = await fetchApi("/api/code-intel/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: pathInput.value.trim() })
+    });
+    
+    if (res.status === "ok") {
+      currentCodeIntelScan = res;
+      codeIntelExpandedPaths.clear();
+      // Auto-expand root folder
+      if (res.tree) {
+        codeIntelExpandedPaths.add(res.tree.path);
+      }
+      
+      // Populate stats
+      getEl("statTotalLoc").textContent = res.stats.total_loc.toLocaleString();
+      getEl("statTotalFiles").textContent = res.stats.total_files;
+      getEl("statAvgHealth").textContent = res.stats.avg_health + "%";
+      getEl("statTotalTodos").textContent = res.stats.total_todos + res.stats.total_fixmes + res.stats.total_hacks;
+      
+      // Color coding average health label
+      const healthEl = getEl("statAvgHealth");
+      if (res.stats.avg_health >= 80) {
+        healthEl.style.color = "var(--success)";
+      } else if (res.stats.avg_health >= 50) {
+        healthEl.style.color = "var(--warning)";
+      } else {
+        healthEl.style.color = "var(--danger)";
+      }
+      
+      // Render components
+      renderCodeIntelTree(res.tree);
+      drawCodeHealthRadar(res.stats);
+      drawLanguagePie(res.stats.languages);
+      drawDependencyGraph(res.files);
+      populateFileHealthTable(res.files);
+      
+      showNotification("Deep Scan completed successfully.", "success");
+    } else {
+      showNotification(`Scan failed: ${res.message || "Unknown error"}`, "danger");
+      if (container) {
+        container.innerHTML = `<div class="error-state" style="padding:20px; color:var(--danger);">${res.message || "Failed to scan."}</div>`;
+      }
+    }
+  } catch (err) {
+    console.error("Scan error:", err);
+    showNotification(`Scan failed: ${err.message}`, "danger");
+  }
+}
+
+function renderCodeIntelTree(rootNode) {
+  const container = getEl("codeIntelTreeContainer");
+  if (!container || !rootNode) return;
+  container.innerHTML = "";
+  
+  const treeRoot = document.createElement("div");
+  treeRoot.className = "tree-root";
+  
+  const element = buildTreeDOM(rootNode);
+  if (element) {
+    treeRoot.appendChild(element);
+    container.appendChild(treeRoot);
+  } else {
+    container.innerHTML = `<div class="empty-state" style="padding:20px; color:var(--text-muted);">No matching files found.</div>`;
+  }
+}
+
+function buildTreeDOM(node) {
+  const isDir = node.type === "directory";
+  
+  if (isDir) {
+    // If filtering, check if any descendant matches the filter
+    let hasMatchingChildren = false;
+    let childElements = [];
+    
+    if (node.children) {
+      for (const child of node.children) {
+        const childDOM = buildTreeDOM(child);
+        if (childDOM) {
+          hasMatchingChildren = true;
+          childElements.push(childDOM);
+        }
+      }
+    }
+    
+    // If filter is active and we have no matching kids, don't render this folder unless the folder name itself matches
+    const nameMatches = node.name.toLowerCase().includes(codeIntelTreeFilter);
+    if (codeIntelTreeFilter && !hasMatchingChildren && !nameMatches) {
+      return null;
+    }
+    
+    const folderDiv = document.createElement("div");
+    folderDiv.className = "tree-folder-node";
+    
+    const header = document.createElement("div");
+    header.className = "tree-folder-header";
+    header.style.display = "flex";
+    header.style.alignItems = "center";
+    header.style.cursor = "pointer";
+    header.style.padding = "3px 5px";
+    header.style.gap = "6px";
+    
+    const isExpanded = codeIntelExpandedPaths.has(node.path);
+    const arrow = document.createElement("span");
+    arrow.className = "tree-arrow";
+    arrow.textContent = isExpanded ? "▼" : "▶";
+    arrow.style.fontSize = "8px";
+    arrow.style.color = "var(--text-dim)";
+    
+    const icon = document.createElement("span");
+    icon.className = "tree-icon";
+    icon.textContent = isExpanded ? "📂" : "📁";
+    
+    const name = document.createElement("span");
+    name.className = "tree-label";
+    name.textContent = node.name;
+    name.style.fontFamily = "'Share Tech Mono', monospace";
+    name.style.fontSize = "12px";
+    
+    header.appendChild(arrow);
+    header.appendChild(icon);
+    header.appendChild(name);
+    
+    const childrenContainer = document.createElement("div");
+    childrenContainer.className = "tree-folder-children";
+    childrenContainer.style.paddingLeft = "14px";
+    childrenContainer.style.borderLeft = "1px solid rgba(255, 0, 0, 0.1)";
+    childrenContainer.style.marginLeft = "8px";
+    childrenContainer.style.display = isExpanded ? "block" : "none";
+    
+    childElements.forEach(el => childrenContainer.appendChild(el));
+    
+    header.onclick = () => {
+      const currentlyExpanded = codeIntelExpandedPaths.has(node.path);
+      if (currentlyExpanded) {
+        codeIntelExpandedPaths.delete(node.path);
+        arrow.textContent = "▶";
+        icon.textContent = "📁";
+        childrenContainer.style.display = "none";
+      } else {
+        codeIntelExpandedPaths.add(node.path);
+        arrow.textContent = "▼";
+        icon.textContent = "📂";
+        childrenContainer.style.display = "block";
+      }
+    };
+    
+    folderDiv.appendChild(header);
+    folderDiv.appendChild(childrenContainer);
+    return folderDiv;
+    
+  } else {
+    // File node
+    if (codeIntelTreeFilter && !node.name.toLowerCase().includes(codeIntelTreeFilter)) {
+      return null;
+    }
+    
+    const fileDiv = document.createElement("div");
+    fileDiv.className = "tree-file-node";
+    fileDiv.style.display = "flex";
+    fileDiv.style.alignItems = "center";
+    fileDiv.style.padding = "3px 5px";
+    fileDiv.style.paddingLeft = "24px";
+    fileDiv.style.gap = "6px";
+    
+    const icon = document.createElement("span");
+    icon.className = "tree-icon";
+    icon.textContent = "📄";
+    
+    const name = document.createElement("span");
+    name.className = "tree-label";
+    name.textContent = node.name;
+    name.style.fontFamily = "'Share Tech Mono', monospace";
+    name.style.fontSize = "11px";
+    name.style.color = "var(--text-white)";
+    
+    const healthBadge = document.createElement("span");
+    healthBadge.style.fontSize = "8px";
+    healthBadge.style.padding = "1px 4px";
+    healthBadge.style.borderRadius = "3px";
+    healthBadge.style.fontFamily = "monospace";
+    healthBadge.textContent = node.health + "%";
+    
+    if (node.health >= 80) {
+      healthBadge.style.background = "rgba(57, 255, 20, 0.1)";
+      healthBadge.style.color = "var(--success)";
+      healthBadge.style.border = "1px solid var(--success)";
+    } else if (node.health >= 50) {
+      healthBadge.style.background = "rgba(255, 179, 0, 0.1)";
+      healthBadge.style.color = "var(--warning)";
+      healthBadge.style.border = "1px solid var(--warning)";
+    } else {
+      healthBadge.style.background = "rgba(255, 0, 127, 0.1)";
+      healthBadge.style.color = "var(--danger)";
+      healthBadge.style.border = "1px solid var(--danger)";
+    }
+    
+    fileDiv.appendChild(icon);
+    fileDiv.appendChild(name);
+    fileDiv.appendChild(healthBadge);
+    
+    return fileDiv;
+  }
+}
+
+function drawCodeHealthRadar(stats) {
+  const canvas = getEl("codeHealthRadarChart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const r = 60;
+  
+  // Custom Cyberpunk Radar Chart drawing
+  const axes = ["Score", "Comment %", "Maintainability", "Clean Lines", "Stability"];
+  const numAxes = axes.length;
+  
+  // Calculate relative metrics for values (all 0 to 1)
+  const scoreVal = stats.avg_health / 100;
+  const commentVal = Math.min(1.0, (stats.total_loc > 0 ? (stats.total_todos * 5) / stats.total_loc : 0.2));
+  const maintainVal = Math.max(0.2, 1.0 - (stats.dead_code_count / (stats.total_files || 1)) * 0.1);
+  const cleanVal = Math.max(0.4, 1.0 - (stats.total_todos / (stats.total_files || 1)) * 0.05);
+  const stabVal = 0.9; // Stable core
+  
+  const values = [scoreVal, commentVal, maintainVal, cleanVal, stabVal];
+  
+  // Draw base concentric polygons
+  ctx.strokeStyle = "rgba(255, 0, 0, 0.15)";
+  ctx.lineWidth = 1;
+  for (let j = 1; j <= 4; j++) {
+    const scale = r * (j / 4);
+    ctx.beginPath();
+    for (let i = 0; i < numAxes; i++) {
+      const angle = (i * 2 * Math.PI) / numAxes - Math.PI / 2;
+      const x = cx + scale * Math.cos(angle);
+      const y = cy + scale * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+  
+  // Draw axis lines and labels
+  ctx.strokeStyle = "rgba(255, 0, 0, 0.25)";
+  ctx.fillStyle = "rgba(136, 136, 136, 0.85)";
+  ctx.font = "8px 'Share Tech Mono', monospace";
+  ctx.textAlign = "center";
+  
+  for (let i = 0; i < numAxes; i++) {
+    const angle = (i * 2 * Math.PI) / numAxes - Math.PI / 2;
+    const ax = cx + r * Math.cos(angle);
+    const ay = cy + r * Math.sin(angle);
+    
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(ax, ay);
+    ctx.stroke();
+    
+    // Label offset
+    const lx = cx + (r + 14) * Math.cos(angle);
+    const ly = cy + (r + 8) * Math.sin(angle);
+    ctx.fillText(axes[i], lx, ly);
+  }
+  
+  // Draw value poly
+  ctx.fillStyle = "rgba(255, 26, 26, 0.2)";
+  ctx.strokeStyle = "rgba(255, 26, 26, 0.85)";
+  ctx.lineWidth = 2;
+  
+  ctx.beginPath();
+  for (let i = 0; i < numAxes; i++) {
+    const angle = (i * 2 * Math.PI) / numAxes - Math.PI / 2;
+    const valRad = values[i] * r;
+    const vx = cx + valRad * Math.cos(angle);
+    const vy = cy + valRad * Math.sin(angle);
+    if (i === 0) ctx.moveTo(vx, vy);
+    else ctx.lineTo(vx, vy);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  
+  // Draw values points
+  ctx.fillStyle = "var(--success)";
+  for (let i = 0; i < numAxes; i++) {
+    const angle = (i * 2 * Math.PI) / numAxes - Math.PI / 2;
+    const valRad = values[i] * r;
+    const vx = cx + valRad * Math.cos(angle);
+    const vy = cy + valRad * Math.sin(angle);
+    ctx.beginPath();
+    ctx.arc(vx, vy, 3, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+}
+
+function drawLanguagePie(languages) {
+  const canvas = getEl("languageDistributionChart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  const langs = Object.keys(languages);
+  if (langs.length === 0) return;
+  
+  const totalLoc = Object.values(languages).reduce((a, b) => a + b, 0);
+  
+  const cx = 80;
+  const cy = canvas.height / 2;
+  const r = 50;
+  
+  let startAngle = -Math.PI / 2;
+  const colors = ["#FF1A1A", "#39ff14", "#ffb300", "#ff007f", "#00ffff", "#8a2be2", "#ff8c00"];
+  
+  langs.forEach((lang, idx) => {
+    const share = languages[lang] / totalLoc;
+    const sliceAngle = share * 2 * Math.PI;
+    
+    ctx.fillStyle = colors[idx % colors.length];
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, startAngle + sliceAngle);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Draw legend
+    const legendX = 145;
+    const legendY = 20 + idx * 18;
+    ctx.fillRect(legendX, legendY, 8, 8);
+    
+    ctx.fillStyle = "#888888";
+    ctx.font = "9px 'Share Tech Mono', monospace";
+    ctx.textAlign = "left";
+    const percent = Math.round(share * 100);
+    ctx.fillText(`${lang}: ${percent}%`, legendX + 14, legendY + 7);
+    
+    startAngle += sliceAngle;
+  });
+}
+
+function drawDependencyGraph(files) {
+  const canvas = getEl("depGraphCanvas");
+  if (!canvas) return;
+  
+  // Set absolute size based on parent bounding box
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width || 400;
+  canvas.height = rect.height || 250;
+  
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Extract files that import things, or are imported
+  const nodes = [];
+  const links = [];
+  const nameToNode = {};
+  
+  // Limit to top 20 files to keep graph readable
+  const filesToGraph = files.slice(0, 20);
+  
+  filesToGraph.forEach((file, idx) => {
+    const node = {
+      id: file.path,
+      name: file.name,
+      health: file.health,
+      // Random initialization around center
+      x: canvas.width / 2 + (Math.random() - 0.5) * 120,
+      y: canvas.height / 2 + (Math.random() - 0.5) * 100,
+      radius: Math.max(5, Math.min(10, file.loc / 150))
+    };
+    nodes.push(node);
+    nameToNode[file.name] = node;
+    nameToNode[file.path] = node;
+  });
+  
+  // Build links based on import statements
+  filesToGraph.forEach(file => {
+    const sourceNode = nameToNode[file.path];
+    if (sourceNode && file.imports) {
+      file.imports.forEach(imp => {
+        // Try to match import term to name of other node
+        const targetNode = filesToGraph.find(f => f.name.includes(imp) || f.path.includes(imp));
+        if (targetNode) {
+          const targetGraphNode = nameToNode[targetNode.path];
+          if (targetGraphNode && sourceNode.id !== targetGraphNode.id) {
+            links.push({ source: sourceNode, target: targetGraphNode });
+          }
+        }
+      });
+    }
+  });
+  
+  // Basic Force Layout simulation for 40 iterations
+  for (let k = 0; k < 40; k++) {
+    // 1. Repulsion between nodes
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const n1 = nodes[i];
+        const n2 = nodes[j];
+        const dx = n2.x - n1.x;
+        const dy = n2.y - n1.y;
+        const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+        if (dist < 80) {
+          const force = (80 - dist) / dist * 0.15;
+          n1.x -= dx * force;
+          n1.y -= dy * force;
+          n2.x += dx * force;
+          n2.y += dy * force;
+        }
+      }
+    }
+    
+    // 2. Attraction along links
+    links.forEach(link => {
+      const n1 = link.source;
+      const n2 = link.target;
+      const dx = n2.x - n1.x;
+      const dy = n2.y - n1.y;
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      if (dist > 40) {
+        const force = (dist - 40) / dist * 0.08;
+        n1.x += dx * force;
+        n1.y += dy * force;
+        n2.x -= dx * force;
+        n2.y -= dy * force;
+      }
+    });
+    
+    // 3. Gravity center pull
+    nodes.forEach(n => {
+      n.x += (canvas.width / 2 - n.x) * 0.03;
+      n.y += (canvas.height / 2 - n.y) * 0.03;
+    });
+  }
+  
+  // Keep inside canvas boundary
+  nodes.forEach(n => {
+    n.x = Math.max(15, Math.min(canvas.width - 15, n.x));
+    n.y = Math.max(15, Math.min(canvas.height - 15, n.y));
+  });
+  
+  // Draw link lines
+  ctx.strokeStyle = "rgba(255, 0, 0, 0.25)";
+  ctx.lineWidth = 1.2;
+  links.forEach(l => {
+    ctx.beginPath();
+    ctx.moveTo(l.source.x, l.source.y);
+    ctx.lineTo(l.target.x, l.target.y);
+    ctx.stroke();
+  });
+  
+  // Draw node points
+  nodes.forEach(n => {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.radius, 0, 2 * Math.PI);
+    
+    // Color depends on health
+    if (n.health >= 80) ctx.fillStyle = "rgba(57, 255, 20, 0.8)";
+    else if (n.health >= 50) ctx.fillStyle = "rgba(255, 179, 0, 0.8)";
+    else ctx.fillStyle = "rgba(255, 0, 127, 0.8)";
+    
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.fill();
+    
+    // Text labels
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#888888";
+    ctx.font = "8px 'Share Tech Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(n.name, n.x, n.y - n.radius - 4);
+  });
+}
+
+function populateFileHealthTable(files) {
+  const tbody = getEl("fileHealthTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  
+  if (files.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding: 12px; text-align: center; color: var(--text-muted);">No scan files found.</td></tr>`;
+    return;
+  }
+  
+  // Sort files by health ASC (worst first) so issues get priority view
+  const sortedFiles = [...files].sort((a, b) => a.health - b.health);
+  
+  sortedFiles.forEach(f => {
+    const tr = document.createElement("tr");
+    tr.style.borderBottom = "1px solid rgba(255, 255, 255, 0.03)";
+    
+    // Color mapping
+    let healthColor = "var(--success)";
+    if (f.health < 50) healthColor = "var(--danger)";
+    else if (f.health < 80) healthColor = "var(--warning)";
+    
+    tr.innerHTML = `
+      <td style="padding: 6px; color: var(--text-white); text-align: left; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.path}">${f.name}</td>
+      <td style="padding: 6px; color: var(--text-dim);">${f.language}</td>
+      <td style="padding: 6px; text-align: right; color: var(--text-white);">${f.loc}</td>
+      <td style="padding: 6px; text-align: right; color: var(--text-dim);">${f.todos}</td>
+      <td style="padding: 6px; text-align: right; font-weight: bold; color: ${healthColor};">${f.health}%</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ===================================
+// === FEATURE 2: PC CONTROL LOGIC ===
+// ===================================
+let pcControlTimer = null;
+
+async function loadPCControlView() {
+  console.log("[HUD] Loading PC Control View...");
+  refreshPCApps();
+  refreshPCTelemetry();
+  
+  // Clear any existing timer
+  if (pcControlTimer) clearInterval(pcControlTimer);
+  
+  // Set up 5s hardware polling loop
+  pcControlTimer = setInterval(refreshPCTelemetry, 5000);
+  
+  // Filter active tasks listener
+  const searchInput = getEl("procSearchInput");
+  if (searchInput) {
+    searchInput.oninput = (e) => {
+      const term = e.target.value.toLowerCase().trim();
+      filterProcessesTable(term);
+    };
+  }
+}
+
+async function triggerPCAc(appName) {
+  try {
+    const res = await fetchApi("/api/pc/open-app", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ app_name: appName })
+    });
+    if (res.status === "ok") {
+      showNotification(`Launched: ${appName}`, "success");
+    } else {
+      showNotification(`Launch failed: ${res.message}`, "danger");
+    }
+  } catch (err) {
+    showNotification(`Error: ${err.message}`, "danger");
+  }
+}
+
+async function triggerPCUtil(actionName) {
+  try {
+    const res = await fetchApi("/api/pc/run-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: actionName })
+    });
+    if (res.status === "ok") {
+      showNotification(`Executed: ${actionName.replace('_', ' ').toUpperCase()}`, "success");
+    } else {
+      showNotification(`Utility failed: ${res.message}`, "danger");
+    }
+  } catch (err) {
+    showNotification(`Error: ${err.message}`, "danger");
+  }
+}
+
+function launchCustomApp() {
+  const el = getEl("customAppInput");
+  if (el && el.value.trim()) {
+    triggerPCAc(el.value.trim());
+    el.value = "";
+  }
+}
+
+async function launchCustomUrl() {
+  const el = getEl("customUrlInput");
+  if (el && el.value.trim()) {
+    try {
+      const res = await fetchApi("/api/pc/open-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: el.value.trim() })
+      });
+      if (res.status === "ok") {
+        showNotification("URL loaded in default browser.", "success");
+        el.value = "";
+      } else {
+        showNotification(res.message, "danger");
+      }
+    } catch (err) {
+      showNotification(err.message, "danger");
+    }
+  }
+}
+
+async function launchYoutubeSearch() {
+  const el = getEl("youtubeSearchInput");
+  if (el && el.value.trim()) {
+    try {
+      const res = await fetchApi("/api/pc/play-youtube", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: el.value.trim() })
+      });
+      if (res.status === "ok") {
+        showNotification(`Streaming: ${el.value.trim()}`, "success");
+        el.value = "";
+      } else {
+        showNotification(res.message, "danger");
+      }
+    } catch (err) {
+      showNotification(err.message, "danger");
+    }
+  }
+}
+
+async function refreshPCApps() {
+  try {
+    const res = await fetchApi("/api/pc/run-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "list_apps", params: { limit: 30 } })
+    });
+    
+    if (res.status === "ok" && res.apps) {
+      renderPCAppsTable(res.apps);
+    }
+  } catch (err) {
+    console.warn("Failed to refresh running apps list:", err);
+  }
+}
+
+function renderPCAppsTable(apps) {
+  const tbody = getEl("pcAppsTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  
+  if (apps.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding: 12px; text-align: center; color: var(--text-muted);">No active apps detected.</td></tr>`;
+    return;
+  }
+  
+  apps.forEach(app => {
+    const tr = document.createElement("tr");
+    tr.style.borderBottom = "1px solid rgba(255, 255, 255, 0.02)";
+    tr.dataset.procName = app.name.toLowerCase();
+    
+    tr.innerHTML = `
+      <td style="padding: 6px; text-align: left; color: var(--text-white); font-weight: bold;">${app.name}</td>
+      <td style="padding: 6px; text-align: right; color: var(--text-dim);">${app.pid}</td>
+      <td style="padding: 6px; text-align: right; color: var(--accent-neon);">${app.cpu_percent || 0.0}%</td>
+      <td style="padding: 6px; text-align: right; color: var(--text-white);">${Math.round(app.memory_info?.rss / 1024 / 1024) || "--"}</td>
+      <td style="padding: 6px; text-align: center;">
+        <button class="btn btn-danger" style="font-size: 8px; padding: 2px 6px;" onclick="closeAppPCAc('${app.name}')">KILL</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterProcessesTable(term) {
+  const tbody = getEl("pcAppsTableBody");
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll("tr");
+  rows.forEach(row => {
+    const procName = row.dataset.procName || "";
+    if (procName.includes(term)) {
+      row.style.display = "";
+    } else {
+      row.style.display = "none";
+    }
+  });
+}
+
+async function closeAppPCAc(appName) {
+  try {
+    const res = await fetchApi("/api/pc/close-app", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ app_name: appName })
+    });
+    if (res.status === "ok") {
+      showNotification(`Killed task: ${appName}`, "success");
+      refreshPCApps();
+    } else {
+      showNotification(`Failed to close app: ${res.message}`, "danger");
+    }
+  } catch (err) {
+    showNotification(`Error: ${err.message}`, "danger");
+  }
+}
+
+async function refreshPCTelemetry() {
+  // If view is not active, skip API fetches to conserve resources
+  const view = getEl("view-pc-control");
+  if (view && view.classList.contains("hidden")) {
+    if (pcControlTimer) {
+      clearInterval(pcControlTimer);
+      pcControlTimer = null;
+    }
+    return;
+  }
+  
+  try {
+    const res = await fetchApi("/api/pc/system-info");
+    if (res.status === "ok" && res.stats) {
+      const stats = res.stats;
+      
+      // Update circular gauges (circumference is ~100px. stroke-dasharray = 'val, 100')
+      updateGauge("cpuGaugeCircle", "cpuGaugeLabel", "CPU", Math.round(stats.cpu_usage || 0));
+      updateGauge("ramGaugeCircle", "ramGaugeLabel", "RAM", Math.round(stats.ram_usage || 0));
+      
+      const diskPercent = stats.disk_usage?.percent || 0;
+      updateGauge("diskGaugeCircle", "diskGaugeLabel", "DISK", Math.round(diskPercent));
+      
+      const batPercent = stats.battery?.percent || 100;
+      updateGauge("batGaugeCircle", "batGaugeLabel", "BATT", Math.round(batPercent));
+    }
+  } catch (err) {
+    console.warn("Failed to fetch PC telemetry:", err);
+  }
+}
+
+function updateGauge(circleId, labelId, prefix, value) {
+  const circle = getEl(circleId);
+  const label = getEl(labelId);
+  if (circle) {
+    // Map value to SVG circle properties (dasharray length ~ 100)
+    circle.setAttribute("stroke-dasharray", `${value}, 100`);
+    if (value > 85) {
+      circle.setAttribute("stroke", "var(--danger)");
+    } else if (value > 60) {
+      circle.setAttribute("stroke", "var(--warning)");
+    } else {
+      circle.setAttribute("stroke", "var(--success)");
+    }
+  }
+  if (label) {
+    label.textContent = `${prefix}: ${value}%`;
+  }
+}
+
+// ==========================================
+// === FEATURE 3: LIVE INTELLIGENCE LOGIC ===
+// ==========================================
+let liveIntelTimer = null;
+let activeStockSymbols = "AAPL,GOOGL,MSFT";
+
+function loadLiveIntelView() {
+  console.log("[HUD] Loading Live Intelligence View...");
+  refreshWeather();
+  refreshClocks();
+  refreshStocks();
+  refreshNews();
+  
+  // Set up 15s clocks polling loop, and 60s other stats polling loop
+  if (liveIntelTimer) clearInterval(liveIntelTimer);
+  
+  liveIntelTimer = setInterval(() => {
+    const view = getEl("view-live-intel");
+    if (view && view.classList.contains("hidden")) {
+      clearInterval(liveIntelTimer);
+      liveIntelTimer = null;
+      return;
+    }
+    refreshClocks();
+  }, 1000);
+  
+  // Poll news and stocks every 60s
+  setInterval(() => {
+    const view = getEl("view-live-intel");
+    if (view && !view.classList.contains("hidden")) {
+      refreshStocks();
+      refreshNews();
+    }
+  }, 60000);
+}
+
+async function refreshWeather() {
+  const cityInput = getEl("weatherCityInput");
+  const city = (cityInput && cityInput.value.trim()) ? cityInput.value.trim() : "Delhi";
+  
+  try {
+    const res = await fetchApi(`/api/live/weather?city=${encodeURIComponent(city)}`);
+    if (res.status === "ok" && res.weather) {
+      const w = res.weather;
+      getEl("weatherCity").textContent = w.location || city;
+      getEl("weatherTemp").textContent = `${Math.round(w.temp_c || w.temperature || 0)}°C`;
+      getEl("weatherCond").textContent = w.condition || "Sky Clear";
+      getEl("weatherHumid").textContent = `${w.humidity || 60}%`;
+      getEl("weatherWind").textContent = `${w.wind_kph || w.wind_speed || 10} KPH`;
+      
+      // Basic weather emoji mapping
+      let icon = "☁️";
+      const cond = (w.condition || "").toLowerCase();
+      if (cond.includes("sunny") || cond.includes("clear")) icon = "☀️";
+      else if (cond.includes("rain") || cond.includes("shower")) icon = "🌧️";
+      else if (cond.includes("thunder") || cond.includes("storm")) icon = "⛈️";
+      else if (cond.includes("snow") || cond.includes("freeze")) icon = "❄️";
+      else if (cond.includes("cloud") || cond.includes("overcast")) icon = "☁️";
+      else if (cond.includes("mist") || cond.includes("fog") || cond.includes("haze")) icon = "🌫️";
+      
+      getEl("weatherIconContainer").textContent = icon;
+    } else {
+      getEl("weatherCond").textContent = "Weather Feed Unavailable";
+    }
+  } catch (err) {
+    console.warn("Weather refresh error:", err);
+  }
+}
+
+async function refreshClocks() {
+  const container = getEl("worldClocksContainer");
+  if (!container) return;
+  
+  const zones = "UTC,US/Eastern,Asia/Kolkata,Europe/London";
+  try {
+    const res = await fetchApi(`/api/live/time?timezones=${encodeURIComponent(zones)}`);
+    if (res.status === "ok" && res.times) {
+      container.innerHTML = "";
+      Object.keys(res.times).forEach(tz => {
+        const timeVal = res.times[tz];
+        // TimeVal format: "2026-07-13 09:12:49 UTC" or similar
+        const displayLabel = tz.replace("US/", "").replace("Asia/", "").replace("Europe/", "").replace("_", " ").toUpperCase();
+        
+        const clockRow = document.createElement("div");
+        clockRow.style.display = "flex";
+        clockRow.style.justifyContent = "space-between";
+        clockRow.style.borderBottom = "1px solid rgba(255, 255, 255, 0.02)";
+        clockRow.style.paddingBottom = "4px";
+        
+        clockRow.innerHTML = `
+          <span style="color: var(--text-dim);">${displayLabel}</span>
+          <strong style="color: var(--accent-neon);">${timeVal.split(' ')[1] || timeVal}</strong>
+        `;
+        container.appendChild(clockRow);
+      });
+    }
+  } catch (err) {
+    console.warn("Clocks refresh error:", err);
+  }
+}
+
+async function refreshStocks() {
+  const container = getEl("stocksTickerContainer");
+  if (!container) return;
+  
+  try {
+    const res = await fetchApi(`/api/live/stocks?symbols=${encodeURIComponent(activeStockSymbols)}`);
+    if (res.status === "ok" && res.stocks) {
+      container.innerHTML = "";
+      res.stocks.forEach(st => {
+        const stockRow = document.createElement("div");
+        stockRow.style.display = "flex";
+        stockRow.style.justifyContent = "space-between";
+        stockRow.style.alignItems = "center";
+        stockRow.style.padding = "6px";
+        stockRow.style.background = "rgba(5,5,5,0.6)";
+        stockRow.style.border = "1px solid rgba(255,0,0,0.1)";
+        stockRow.style.borderRadius = "4px";
+        
+        const price = st.price || st.current_price || 0.00;
+        const change = st.change || 0.00;
+        const changePercent = st.change_percent || 0.00;
+        const isUp = change >= 0;
+        const changeColor = isUp ? "var(--success)" : "var(--danger)";
+        const changeArrow = isUp ? "▲" : "▼";
+        
+        stockRow.innerHTML = `
+          <div>
+            <span style="font-family:'Orbitron', sans-serif; font-size:11px; font-weight:bold; color:var(--text-white);">${st.symbol}</span>
+            <div style="font-family:'Share Tech Mono', monospace; font-size:9px; color:var(--text-dim);">${st.name || "Stock Equity"}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:'Share Tech Mono', monospace; font-size:12px; font-weight:bold; color:var(--text-white);">$${price.toFixed(2)}</div>
+            <div style="font-family:'Share Tech Mono', monospace; font-size:9px; color:${changeColor}; font-weight:bold;">
+              ${changeArrow} ${Math.abs(change).toFixed(2)} (${changePercent.toFixed(2)}%)
+            </div>
+          </div>
+        `;
+        container.appendChild(stockRow);
+      });
+    }
+  } catch (err) {
+    console.warn("Stocks fetch error:", err);
+  }
+}
+
+function updateStockSymbols() {
+  const el = getEl("stocksSymbolsInput");
+  if (el && el.value.trim()) {
+    activeStockSymbols = el.value.trim();
+    refreshStocks();
+  }
+}
+
+async function refreshNews() {
+  const container = getEl("newsFeedContainer");
+  if (!container) return;
+  
+  try {
+    const res = await fetchApi("/api/live/news?limit=10");
+    if (res.status === "ok" && res.news) {
+      container.innerHTML = "";
+      if (res.news.length === 0) {
+        container.innerHTML = `<div class="empty-state">No news feeds currently populated in cache. Sir.</div>`;
+        return;
+      }
+      
+      res.news.forEach(art => {
+        const item = document.createElement("div");
+        item.style.padding = "8px";
+        item.style.background = "rgba(5,5,5,0.4)";
+        item.style.border = "1px solid rgba(255,255,255,0.03)";
+        item.style.borderRadius = "4px";
+        item.style.display = "flex";
+        item.style.flexDirection = "column";
+        item.style.gap = "4px";
+        
+        let sourceTag = art.source || "Feed";
+        let dateTag = art.published || "Recently";
+        if (dateTag.includes("T")) {
+          dateTag = dateTag.split("T")[0] + " " + dateTag.split("T")[1].substring(0, 5);
+        }
+        
+        item.innerHTML = `
+          <div style="display:flex; justify-content:space-between; font-size:8px; color:var(--text-dim); text-transform:uppercase;">
+            <span style="color:var(--accent-neon); font-weight:bold;">${sourceTag}</span>
+            <span>${dateTag}</span>
+          </div>
+          <a href="#" onclick="openUrlDirectly('${art.url}')" style="font-family:'Share Tech Mono', monospace; font-size:11px; font-weight:bold; color:var(--text-white); text-decoration:none; line-height:1.2; display:block; hover:color:var(--accent-neon);">${art.title}</a>
+          <p style="font-size:10px; color:var(--text-dim); line-height:1.3; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; margin:0;">${art.snippet || art.description || ""}</p>
+        `;
+        container.appendChild(item);
+      });
+    }
+  } catch (err) {
+    console.warn("News refresh error:", err);
+  }
+}
+
+function openUrlDirectly(url) {
+  fetchApi("/api/pc/open-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: url })
+  }).then(res => {
+    if (res.status === "ok") {
+      showNotification("Opened link in host browser.", "success");
+    }
+  });
+}
+
+async function triggerLiveSearch() {
+  const input = getEl("liveSearchInput");
+  const resultsDiv = getEl("liveSearchResults");
+  if (!input || !input.value.trim() || !resultsDiv) return;
+  
+  const query = input.value.trim();
+  resultsDiv.innerHTML = `<div class="loading-state" style="padding:10px; text-align:center; color:var(--text-dim); font-size:11px;">
+    <span class="blink">●</span> SCANNING DUCKDUGGO ALGORITHMS FOR "${query.toUpperCase()}"...
+  </div>`;
+  
+  try {
+    const res = await fetchApi("/api/live/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: query, max_results: 6 })
+    });
+    
+    if (res.status === "ok" && res.results) {
+      resultsDiv.innerHTML = "";
+      if (res.results.length === 0) {
+        resultsDiv.innerHTML = `<div class="empty-state" style="font-size:11px;">No web results returned.</div>`;
+        return;
+      }
+      
+      res.results.forEach(item => {
+        const row = document.createElement("div");
+        row.style.padding = "6px 8px";
+        row.style.borderBottom = "1px solid rgba(255, 255, 255, 0.02)";
+        row.style.background = "rgba(0,0,0,0.2)";
+        
+        row.innerHTML = `
+          <a href="#" onclick="openUrlDirectly('${item.url || item.link}')" style="font-size:11px; font-weight:bold; color:var(--accent-neon); text-decoration:none; display:block;">${item.title}</a>
+          <div style="font-size:8px; color:var(--success); margin:2px 0;">${item.url || item.link}</div>
+          <p style="font-size:10px; color:var(--text-dim); line-height:1.2; margin:0;">${item.snippet || item.body || ""}</p>
+        `;
+        resultsDiv.appendChild(row);
+      });
+      input.value = "";
+    } else {
+      resultsDiv.innerHTML = `<div class="error-state" style="font-size:11px; color:var(--danger);">${res.message || "Search failed."}</div>`;
+    }
+  } catch (err) {
+    resultsDiv.innerHTML = `<div class="error-state" style="font-size:11px; color:var(--danger);">${err.message}</div>`;
+  }
+}
+

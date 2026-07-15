@@ -12,7 +12,7 @@
     },
     {
       "path": "main.py",
-      "size_bytes": 26703,
+      "size_bytes": 27560,
       "suffix": ".py"
     },
     {
@@ -97,7 +97,7 @@
     },
     {
       "path": "backend/memory_sqlite.py",
-      "size_bytes": 62445,
+      "size_bytes": 63141,
       "suffix": ".py"
     },
     {
@@ -107,7 +107,7 @@
     },
     {
       "path": "backend/ollama_manager.py",
-      "size_bytes": 8316,
+      "size_bytes": 8871,
       "suffix": ".py"
     },
     {
@@ -192,7 +192,7 @@
     },
     {
       "path": "backend/providers/ollama_local.py",
-      "size_bytes": 12463,
+      "size_bytes": 13406,
       "suffix": ".py"
     },
     {
@@ -207,12 +207,12 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 5453,
+      "size_bytes": 5770,
       "suffix": ".json"
     },
     {
       "path": "data/project_memory.json",
-      "size_bytes": 9115,
+      "size_bytes": 12188,
       "suffix": ".json"
     },
     {
@@ -222,22 +222,37 @@
     },
     {
       "path": "routes/admin.py",
-      "size_bytes": 8837,
+      "size_bytes": 9410,
       "suffix": ".py"
     },
     {
       "path": "routes/automation.py",
-      "size_bytes": 12622,
+      "size_bytes": 13339,
       "suffix": ".py"
     },
     {
       "path": "routes/chat.py",
-      "size_bytes": 80639,
+      "size_bytes": 81082,
+      "suffix": ".py"
+    },
+    {
+      "path": "routes/code_intelligence.py",
+      "size_bytes": 13140,
+      "suffix": ".py"
+    },
+    {
+      "path": "routes/live_intel.py",
+      "size_bytes": 5667,
       "suffix": ".py"
     },
     {
       "path": "routes/memory.py",
       "size_bytes": 2646,
+      "suffix": ".py"
+    },
+    {
+      "path": "routes/pc_hub.py",
+      "size_bytes": 5127,
       "suffix": ".py"
     },
     {
@@ -247,7 +262,7 @@
     },
     {
       "path": "routes/voice.py",
-      "size_bytes": 18201,
+      "size_bytes": 19332,
       "suffix": ".py"
     }
   ]

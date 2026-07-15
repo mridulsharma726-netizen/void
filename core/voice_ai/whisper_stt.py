@@ -24,6 +24,9 @@ WHISPER_EXE_PATH = BIN_DIR / "whisper.exe"  # Can also be "whisper-cli.exe" or "
 # Cloud fallback configuration (default False for 100% offline security)
 ALLOW_CLOUD_STT_FALLBACK = False
  
+# Cache loaded Vosk model at the module level to optimize memory and response time
+_VOSK_MODEL_CACHE = None
+ 
 class WhisperSTT:
     """Manages whisper.cpp CLI compilation/execution and output parsing."""
     
@@ -243,7 +246,11 @@ class WhisperSTT:
                 if VOSK_MODEL_PATH.exists():
                     wf = wave.open(wav_path, "rb")
                     if wf.getnchannels() == 1:
-                        model = vosk.Model(str(VOSK_MODEL_PATH))
+                        global _VOSK_MODEL_CACHE
+                        if _VOSK_MODEL_CACHE is None:
+                            logger.info(f"[WHISPER STT] Loading Vosk Model from {VOSK_MODEL_PATH} into cache...")
+                            _VOSK_MODEL_CACHE = vosk.Model(str(VOSK_MODEL_PATH))
+                        model = _VOSK_MODEL_CACHE
                         rec = vosk.KaldiRecognizer(model, wf.getframerate())
                         res_text = ""
                         while True:

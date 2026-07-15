@@ -305,8 +305,10 @@ class VoiceSTT:
             self._audio_queue.put(raw_bytes)
             
         try:
+            mic_idx = get_best_microphone_index()
+            logger.info(f"[STT] sounddevice stream opening on device index: {mic_idx}")
             with sd.RawInputStream(samplerate=16000, blocksize=8000, dtype='int16', 
-                                   channels=1, callback=audio_callback):
+                                   channels=1, device=mic_idx, callback=audio_callback):
                 while self._running:
                     time.sleep(0.1)
         except Exception as e:
@@ -322,8 +324,10 @@ class VoiceSTT:
             
         try:
             p = pyaudio.PyAudio()
+            mic_idx = get_best_microphone_index()
+            logger.info(f"[STT] PyAudio stream opening on device index: {mic_idx}")
             stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000,
-                            input=True, frames_per_buffer=8000)
+                            input=True, input_device_index=mic_idx, frames_per_buffer=8000)
                             
             while self._running:
                 try:

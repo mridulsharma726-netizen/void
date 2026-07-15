@@ -29,6 +29,11 @@
       "suffix": ".py"
     },
     {
+      "path": "grafana_dashboard.json",
+      "size_bytes": 2498,
+      "suffix": ".json"
+    },
+    {
       "path": "launcher.py",
       "size_bytes": 3978,
       "suffix": ".py"
@@ -44,6 +49,11 @@
       "suffix": ".json"
     },
     {
+      "path": "prometheus.yml",
+      "size_bytes": 189,
+      "suffix": ".yml"
+    },
+    {
       "path": "pytest.ini",
       "size_bytes": 58,
       "suffix": ".ini"
@@ -55,7 +65,7 @@
     },
     {
       "path": "requirements.txt",
-      "size_bytes": 590,
+      "size_bytes": 877,
       "suffix": ".txt"
     },
     {
@@ -76,6 +86,11 @@
     {
       "path": "STARTUP_GUIDE.md",
       "size_bytes": 4970,
+      "suffix": ".md"
+    },
+    {
+      "path": "task.md",
+      "size_bytes": 1029,
       "suffix": ".md"
     },
     {
@@ -215,17 +230,57 @@
     },
     {
       "path": "app/ui/app.js",
-      "size_bytes": 181005,
+      "size_bytes": 218469,
       "suffix": ".js"
     },
     {
       "path": "app/ui/index.html",
-      "size_bytes": 114718,
+      "size_bytes": 135948,
       "suffix": ".html"
     },
     {
       "path": "app/ui/style.css",
-      "size_bytes": 59854,
+      "size_bytes": 64037,
+      "suffix": ".css"
+    },
+    {
+      "path": "app/ui/lib/codemirror/codemirror.min.css",
+      "size_bytes": 6037,
+      "suffix": ".css"
+    },
+    {
+      "path": "app/ui/lib/codemirror/codemirror.min.js",
+      "size_bytes": 170462,
+      "suffix": ".js"
+    },
+    {
+      "path": "app/ui/lib/codemirror/css.min.js",
+      "size_bytes": 27098,
+      "suffix": ".js"
+    },
+    {
+      "path": "app/ui/lib/codemirror/dracula.min.css",
+      "size_bytes": 1646,
+      "suffix": ".css"
+    },
+    {
+      "path": "app/ui/lib/codemirror/javascript.min.js",
+      "size_bytes": 17315,
+      "suffix": ".js"
+    },
+    {
+      "path": "app/ui/lib/codemirror/python.min.js",
+      "size_bytes": 6500,
+      "suffix": ".js"
+    },
+    {
+      "path": "app/ui/lib/codemirror/xml.min.js",
+      "size_bytes": 5981,
+      "suffix": ".js"
+    },
+    {
+      "path": "app/ui/lib/fonts/fonts.css",
+      "size_bytes": 17907,
       "suffix": ".css"
     },
     {
@@ -256,6 +311,16 @@
     {
       "path": "core/analytics/productivity_tracker.py",
       "size_bytes": 2616,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/automation/fs_watchdog.py",
+      "size_bytes": 5060,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/automation/gui_automation.py",
+      "size_bytes": 6563,
       "suffix": ".py"
     },
     {
@@ -339,6 +404,16 @@
       "suffix": ".py"
     },
     {
+      "path": "core/memory/vector_memory.py",
+      "size_bytes": 9200,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/observability/telemetry.py",
+      "size_bytes": 2932,
+      "suffix": ".py"
+    },
+    {
       "path": "core/tools/tool_orchestrator.py",
       "size_bytes": 3105,
       "suffix": ".py"
@@ -354,8 +429,28 @@
       "suffix": ".py"
     },
     {
+      "path": "core/voice_ai/piper_tts.py",
+      "size_bytes": 6550,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/voice_ai/voice_pipeline.py",
+      "size_bytes": 6224,
+      "suffix": ".py"
+    },
+    {
       "path": "core/voice_ai/voice_profile.py",
       "size_bytes": 4334,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/voice_ai/wakeword_detector.py",
+      "size_bytes": 6280,
+      "suffix": ".py"
+    },
+    {
+      "path": "core/voice_ai/whisper_stt.py",
+      "size_bytes": 13222,
       "suffix": ".py"
     },
     {
@@ -365,7 +460,7 @@
     },
     {
       "path": "data/project_map.json",
-      "size_bytes": 35028,
+      "size_bytes": 39238,
       "suffix": ".json"
     },
     {
@@ -395,7 +490,7 @@
     },
     {
       "path": "logs/agent_swarm.log",
-      "size_bytes": 21197,
+      "size_bytes": 22748,
       "suffix": ".log"
     },
     {
@@ -405,7 +500,7 @@
     },
     {
       "path": "logs/brain.log",
-      "size_bytes": 27935,
+      "size_bytes": 29762,
       "suffix": ".log"
     },
     {
@@ -425,7 +520,7 @@
     },
     {
       "path": "logs/terminal_history.log",
-      "size_bytes": 848,
+      "size_bytes": 1325,
       "suffix": ".log"
     },
     {
@@ -485,7 +580,7 @@
     },
     {
       "path": "memory/data/active_tasks.json",
-      "size_bytes": 90522,
+      "size_bytes": 96008,
       "suffix": ".json"
     },
     {
@@ -521,6 +616,56 @@
     {
       "path": "memory/data/data/memory.json",
       "size_bytes": 1660,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/lancedb/__manifest/_transactions/0-2132971c-fb4f-4c6c-8cf4-1ac334d44880.txn",
+      "size_bytes": 309,
+      "suffix": ".txn"
+    },
+    {
+      "path": "memory/data/lancedb/__manifest/_versions/latest_version_hint.json",
+      "size_bytes": 13,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/models/all-MiniLM-L6-v2/config.json",
+      "size_bytes": 775,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/models/all-MiniLM-L6-v2/config_sentence_transformers.json",
+      "size_bytes": 295,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/models/all-MiniLM-L6-v2/modules.json",
+      "size_bytes": 448,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/models/all-MiniLM-L6-v2/README.md",
+      "size_bytes": 10676,
+      "suffix": ".md"
+    },
+    {
+      "path": "memory/data/models/all-MiniLM-L6-v2/sentence_bert_config.json",
+      "size_bytes": 250,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/models/all-MiniLM-L6-v2/tokenizer.json",
+      "size_bytes": 711661,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/models/all-MiniLM-L6-v2/tokenizer_config.json",
+      "size_bytes": 618,
+      "suffix": ".json"
+    },
+    {
+      "path": "memory/data/models/all-MiniLM-L6-v2/1_Pooling/config.json",
+      "size_bytes": 94,
       "suffix": ".json"
     },
     {
@@ -945,7 +1090,7 @@
     },
     {
       "path": "server/main.py",
-      "size_bytes": 26703,
+      "size_bytes": 27270,
       "suffix": ".py"
     },
     {
@@ -1030,7 +1175,7 @@
     },
     {
       "path": "server/backend/memory_sqlite.py",
-      "size_bytes": 62445,
+      "size_bytes": 63141,
       "suffix": ".py"
     },
     {
@@ -1040,7 +1185,7 @@
     },
     {
       "path": "server/backend/ollama_manager.py",
-      "size_bytes": 8316,
+      "size_bytes": 8871,
       "suffix": ".py"
     },
     {
@@ -1125,7 +1270,7 @@
     },
     {
       "path": "server/backend/providers/ollama_local.py",
-      "size_bytes": 12463,
+      "size_bytes": 13406,
       "suffix": ".py"
     },
     {
@@ -1145,7 +1290,7 @@
     },
     {
       "path": "server/data/project_memory.json",
-      "size_bytes": 9116,
+      "size_bytes": 9113,
       "suffix": ".json"
     },
     {
@@ -1155,22 +1300,37 @@
     },
     {
       "path": "server/routes/admin.py",
-      "size_bytes": 8837,
+      "size_bytes": 9410,
       "suffix": ".py"
     },
     {
       "path": "server/routes/automation.py",
-      "size_bytes": 12622,
+      "size_bytes": 13339,
       "suffix": ".py"
     },
     {
       "path": "server/routes/chat.py",
-      "size_bytes": 80639,
+      "size_bytes": 81082,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/routes/code_intelligence.py",
+      "size_bytes": 11392,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/routes/live_intel.py",
+      "size_bytes": 5667,
       "suffix": ".py"
     },
     {
       "path": "server/routes/memory.py",
       "size_bytes": 2646,
+      "suffix": ".py"
+    },
+    {
+      "path": "server/routes/pc_hub.py",
+      "size_bytes": 5127,
       "suffix": ".py"
     },
     {
@@ -1184,8 +1344,28 @@
       "suffix": ".py"
     },
     {
+      "path": "tests/test_new_features.py",
+      "size_bytes": 10464,
+      "suffix": ".py"
+    },
+    {
       "path": "tests/test_permission_enforcement.py",
       "size_bytes": 1609,
+      "suffix": ".py"
+    },
+    {
+      "path": "tests/test_phase10_automation.py",
+      "size_bytes": 4201,
+      "suffix": ".py"
+    },
+    {
+      "path": "tests/test_phase11_observability.py",
+      "size_bytes": 1214,
+      "suffix": ".py"
+    },
+    {
+      "path": "tests/test_phase12_packaging.py",
+      "size_bytes": 3741,
       "suffix": ".py"
     },
     {
@@ -1216,6 +1396,16 @@
     {
       "path": "tests/test_phase7_ui_polish.py",
       "size_bytes": 2470,
+      "suffix": ".py"
+    },
+    {
+      "path": "tests/test_phase8_vector_memory.py",
+      "size_bytes": 5314,
+      "suffix": ".py"
+    },
+    {
+      "path": "tests/test_phase9_voice.py",
+      "size_bytes": 10488,
       "suffix": ".py"
     },
     {
@@ -1349,6 +1539,16 @@
       "suffix": ".py"
     },
     {
+      "path": "tools/human_code_1203.py",
+      "size_bytes": 7364,
+      "suffix": ".py"
+    },
+    {
+      "path": "tools/human_style_massive_stub.py",
+      "size_bytes": 8954,
+      "suffix": ".py"
+    },
+    {
       "path": "tools/intent_detector.py",
       "size_bytes": 5060,
       "suffix": ".py"
@@ -1376,6 +1576,11 @@
     {
       "path": "tools/news_control.py",
       "size_bytes": 2255,
+      "suffix": ".py"
+    },
+    {
+      "path": "tools/observability_logger_enhanced.py",
+      "size_bytes": 10078,
       "suffix": ".py"
     },
     {
@@ -1505,7 +1710,7 @@
     },
     {
       "path": "tools/voice_listener.py",
-      "size_bytes": 7991,
+      "size_bytes": 3841,
       "suffix": ".py"
     },
     {
@@ -1572,6 +1777,11 @@
       "path": "tools/voice/__init__.py",
       "size_bytes": 348,
       "suffix": ".py"
+    },
+    {
+      "path": "ui/app.js",
+      "size_bytes": 21761,
+      "suffix": ".js"
     },
     {
       "path": "workflows/workflow_engine.py",

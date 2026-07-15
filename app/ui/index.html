@@ -200,6 +200,9 @@
           <a href="#" class="nav-item" data-view="projects">
             <span class="nav-icon">◧</span> Projects
           </a>
+          <a href="#" class="nav-item" data-view="code-intel">
+            <span class="nav-icon">🔍</span> Code Intel
+          </a>
           <a href="#" class="nav-item" data-view="editor">
             <span class="nav-icon">📝</span> Editor
           </a>
@@ -215,14 +218,20 @@
           <a href="#" class="nav-item" data-view="meetings">
             <span class="nav-icon">◫</span> Meetings
           </a>
-           <a href="#" class="nav-item" data-view="automation">
+          <a href="#" class="nav-item" data-view="automation">
             <span class="nav-icon">⚡</span> Automation
+          </a>
+          <a href="#" class="nav-item" data-view="pc-control">
+            <span class="nav-icon">🖥️</span> PC Control
           </a>
           <a href="#" class="nav-item" data-view="tasks">
             <span class="nav-icon">☱</span> Tasks
           </a>
           <a href="#" class="nav-item" data-view="recordings">
             <span class="nav-icon">🎙️</span> Recordings
+          </a>
+          <a href="#" class="nav-item" data-view="live-intel">
+            <span class="nav-icon">📡</span> Live Intel
           </a>
           <a href="#" class="nav-item" data-view="settings">
             <span class="nav-icon">⊕</span> Settings
@@ -531,6 +540,107 @@
           </div>
         </div>
 
+        <!-- === CODE INTELLIGENCE VIEW === -->
+        <div id="view-code-intel" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>CODE INTELLIGENCE SYSTEMS</h2>
+            <p>Deep file-level scanning, health analytics, and dependency tree visualization</p>
+          </div>
+          
+          <div class="code-intel-layout">
+            <!-- Left panel: Path Scanner & File Tree -->
+            <div class="code-intel-left">
+              <div class="card path-scan-card">
+                <div class="card-title">Select Repository Path</div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                  <input type="text" id="codeIntelPathInput" placeholder="C:\path\to\your\project" class="hud-search-input" value="">
+                  <button id="codeIntelScanBtn" class="btn btn-search">DEEP SCAN</button>
+                </div>
+              </div>
+              
+              <div class="card file-tree-card" style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; margin-top: 12px;">
+                <div class="card-title">Repository File System Tree</div>
+                <div style="margin-top: 8px; margin-bottom: 8px;">
+                  <input type="text" id="fileTreeSearch" placeholder="Filter files by name..." class="hud-search-input" style="width: 100%;">
+                </div>
+                <div id="codeIntelTreeContainer" class="file-tree-container" style="flex-grow: 1; overflow-y: auto;">
+                  <div class="empty-state">Scan a repository path to render the directory tree.</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Right panel: Code Analytics & Graphs -->
+            <div class="code-intel-right">
+              <!-- Statistics Cards -->
+              <div class="code-stats-grid">
+                <div class="stat-card">
+                  <span class="stat-label">TOTAL LOC</span>
+                  <strong id="statTotalLoc">--</strong>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">TOTAL FILES</span>
+                  <strong id="statTotalFiles">--</strong>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">AVG HEALTH</span>
+                  <strong id="statAvgHealth" style="color: var(--success);">--</strong>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">TODOs / HACKs</span>
+                  <strong id="statTotalTodos">--</strong>
+                </div>
+              </div>
+              
+              <!-- Charts Row -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+                <div class="card chart-card">
+                  <div class="card-title">Code Health Diagnostics</div>
+                  <div style="position: relative; height: 180px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                    <canvas id="codeHealthRadarChart" width="250" height="180"></canvas>
+                  </div>
+                </div>
+                <div class="card chart-card">
+                  <div class="card-title">Language Distribution</div>
+                  <div style="position: relative; height: 180px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                    <canvas id="languageDistributionChart" width="250" height="180"></canvas>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Dependency Visualizer -->
+              <div class="card dep-graph-card" style="margin-top: 12px; flex-grow: 1; min-height: 250px; display: flex; flex-direction: column;">
+                <div class="card-title">Internal Dependency Relationships</div>
+                <div class="dep-graph-container" style="flex-grow: 1; position: relative;">
+                  <canvas id="depGraphCanvas" style="width: 100%; height: 100%; background: rgba(5,5,5,0.9); border: 1px solid var(--border-red); border-radius: 6px;"></canvas>
+                </div>
+              </div>
+              
+              <!-- Per-File Health Breakdown -->
+              <div class="card file-breakdown-card" style="margin-top: 12px; display: flex; flex-direction: column;">
+                <div class="card-title">File Integrity Directory</div>
+                <div class="file-table-wrapper" style="overflow-y: auto; max-height: 200px; margin-top: 8px;">
+                  <table class="file-health-table" style="width: 100%; border-collapse: collapse; font-family: 'Share Tech Mono', monospace; font-size: 11px;">
+                    <thead>
+                      <tr style="border-bottom: 1px solid var(--border-red); text-align: left; color: var(--text-dim);">
+                        <th style="padding: 6px;">File</th>
+                        <th style="padding: 6px;">Language</th>
+                        <th style="padding: 6px; text-align: right;">LOC</th>
+                        <th style="padding: 6px; text-align: right;">TODOs</th>
+                        <th style="padding: 6px; text-align: right;">Health</th>
+                      </tr>
+                    </thead>
+                    <tbody id="fileHealthTableBody">
+                      <tr>
+                        <td colspan="5" style="padding: 12px; text-align: center; color: var(--text-muted);">No scan data loaded</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- === 4D. MEMORY VIEW === -->
         <div id="view-memory" class="workspace-view hidden">
           <div class="view-header">
@@ -689,6 +799,145 @@
                 <div style="display: flex; gap: 10px; margin-top: 5px;">
                   <button id="submitSocialPostBtn" class="btn btn-primary" style="padding: 5px 12px; font-size: 11px;">Save Draft</button>
                   <button id="cancelSocialPostBtn" class="btn" style="padding: 5px 12px; font-size: 11px;">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === PC CONTROL VIEW === -->
+        <div id="view-pc-control" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>PC OPERATION PORTAL</h2>
+            <p>System command dispatch, application launcher, and hardware telemetry dashboard</p>
+          </div>
+          
+          <div class="pc-control-layout">
+            <!-- Left Panel: Launchers & Curated Actions -->
+            <div class="pc-control-left" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="card quick-actions-card">
+                <div class="card-title">Quick System Launcher</div>
+                <div class="quick-action-grid">
+                  <button class="action-btn" onclick="triggerPCAc('chrome')">
+                    <span class="action-icon">🌐</span>
+                    <span class="action-label">CHROME</span>
+                  </button>
+                  <button class="action-btn" onclick="triggerPCAc('explorer')">
+                    <span class="action-icon">📁</span>
+                    <span class="action-label">EXPLORER</span>
+                  </button>
+                  <button class="action-btn" onclick="triggerPCAc('vscode')">
+                    <span class="action-icon">💻</span>
+                    <span class="action-label">VS CODE</span>
+                  </button>
+                  <button class="action-btn" onclick="triggerPCAc('notepad')">
+                    <span class="action-icon">📝</span>
+                    <span class="action-label">NOTEPAD</span>
+                  </button>
+                  <button class="action-btn" onclick="triggerPCAc('calculator')">
+                    <span class="action-icon">🧮</span>
+                    <span class="action-label">CALCULATOR</span>
+                  </button>
+                  <button class="action-btn" onclick="triggerPCAc('cmd')">
+                    <span class="action-icon">🐚</span>
+                    <span class="action-label">TERMINAL</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="card system-maintenance-card">
+                <div class="card-title">System Utilities</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">
+                  <button class="btn btn-warning" onclick="triggerPCUtil('clean_temp')">🗑️ CLEAN TEMP FILES</button>
+                  <button class="btn btn-danger" onclick="triggerPCUtil('empty_recycle')">♻️ EMPTY RECYCLE BIN</button>
+                  <button class="btn btn-success" onclick="triggerPCUtil('screenshot')" style="grid-column: span 2;">📸 CAPTURE SYSTEM SCREENSHOT</button>
+                </div>
+              </div>
+              
+              <div class="card launch-form-card">
+                <div class="card-title">Custom Application Dispatcher</div>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                  <div style="display: flex; gap: 8px;">
+                    <input type="text" id="customAppInput" placeholder="Enter process name (e.g. spotify, mspaint)" class="hud-search-input" style="flex-grow: 1;">
+                    <button class="btn btn-primary" onclick="launchCustomApp()">LAUNCH</button>
+                  </div>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="text" id="customUrlInput" placeholder="Enter URL (e.g. github.com)" class="hud-search-input" style="flex-grow: 1;">
+                    <button class="btn btn-primary" onclick="launchCustomUrl()">OPEN WEB</button>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card youtube-search-card">
+                <div class="card-title">Stream YouTube Audio/Video</div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                  <input type="text" id="youtubeSearchInput" placeholder="Search song or artist name..." class="hud-search-input" style="flex-grow: 1;">
+                  <button class="btn btn-primary" onclick="launchYoutubeSearch()">PLAY</button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Right Panel: Telemetry & Process Management -->
+            <div class="pc-control-right" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="card hardware-telemetry-card">
+                <div class="card-title">Hardware Telemetry Gauges</div>
+                <div class="telemetry-gauges-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; text-align: center;">
+                  <div class="gauge-wrapper">
+                    <svg class="gauge-svg" viewBox="0 0 36 36" style="width: 60px; height: 60px;">
+                      <path class="gauge-bg-circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#222" stroke-width="2.5"></path>
+                      <path id="cpuGaugeCircle" class="gauge-val-circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--accent-neon)" stroke-width="2.5" stroke-dasharray="0, 100"></path>
+                    </svg>
+                    <div id="cpuGaugeLabel" style="font-family: 'Share Tech Mono', monospace; font-size: 11px; margin-top: 4px;">CPU: --</div>
+                  </div>
+                  <div class="gauge-wrapper">
+                    <svg class="gauge-svg" viewBox="0 0 36 36" style="width: 60px; height: 60px;">
+                      <path class="gauge-bg-circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#222" stroke-width="2.5"></path>
+                      <path id="ramGaugeCircle" class="gauge-val-circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--accent-neon)" stroke-width="2.5" stroke-dasharray="0, 100"></path>
+                    </svg>
+                    <div id="ramGaugeLabel" style="font-family: 'Share Tech Mono', monospace; font-size: 11px; margin-top: 4px;">RAM: --</div>
+                  </div>
+                  <div class="gauge-wrapper">
+                    <svg class="gauge-svg" viewBox="0 0 36 36" style="width: 60px; height: 60px;">
+                      <path class="gauge-bg-circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#222" stroke-width="2.5"></path>
+                      <path id="diskGaugeCircle" class="gauge-val-circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--accent-neon)" stroke-width="2.5" stroke-dasharray="0, 100"></path>
+                    </svg>
+                    <div id="diskGaugeLabel" style="font-family: 'Share Tech Mono', monospace; font-size: 11px; margin-top: 4px;">DISK: --</div>
+                  </div>
+                  <div class="gauge-wrapper">
+                    <svg class="gauge-svg" viewBox="0 0 36 36" style="width: 60px; height: 60px;">
+                      <path class="gauge-bg-circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#222" stroke-width="2.5"></path>
+                      <path id="batGaugeCircle" class="gauge-val-circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-dasharray="0, 100"></path>
+                    </svg>
+                    <div id="batGaugeLabel" style="font-family: 'Share Tech Mono', monospace; font-size: 11px; margin-top: 4px;">BATT: --</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card active-processes-card" style="flex-grow: 1; min-height: 250px; display: flex; flex-direction: column;">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>Active Tasks / Processes</span>
+                  <button class="btn" onclick="refreshPCApps()" style="padding: 2px 8px; font-size: 9px;">REFRESH</button>
+                </div>
+                <div style="margin-top: 8px; margin-bottom: 8px;">
+                  <input type="text" id="procSearchInput" placeholder="Filter active tasks..." class="hud-search-input" style="width: 100%;">
+                </div>
+                <div class="processes-list-wrapper" style="flex-grow: 1; overflow-y: auto;">
+                  <table class="processes-table" style="width: 100%; border-collapse: collapse; font-family: 'Share Tech Mono', monospace; font-size: 11px;">
+                    <thead>
+                      <tr style="border-bottom: 1px solid var(--border-red); text-align: left; color: var(--text-dim);">
+                        <th style="padding: 6px;">App Name</th>
+                        <th style="padding: 6px; text-align: right;">PID</th>
+                        <th style="padding: 6px; text-align: right;">CPU%</th>
+                        <th style="padding: 6px; text-align: right;">RAM (MB)</th>
+                        <th style="padding: 6px; text-align: center;">Control</th>
+                      </tr>
+                    </thead>
+                    <tbody id="pcAppsTableBody">
+                      <tr>
+                        <td colspan="5" style="padding: 12px; text-align: center; color: var(--text-muted);">No process stats loaded</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -1258,6 +1507,92 @@ System idle. Standing by for task sequence dispatch...</div>
             </div>
           </div>
         </div>
+
+        <!-- === LIVE INTELLIGENCE VIEW === -->
+        <div id="view-live-intel" class="workspace-view hidden">
+          <div class="view-header">
+            <h2>REAL-TIME INTELLIGENCE FEED</h2>
+            <p>Live meteorological conditions, financial markets, news agency updates, and web query engines</p>
+          </div>
+          
+          <div class="live-intel-layout">
+            <!-- Left Side: Weather, Time, Stocks -->
+            <div class="live-intel-left" style="display: flex; flex-direction: column; gap: 12px;">
+              
+              <!-- Weather Card -->
+              <div class="card weather-card" style="background: linear-gradient(135deg, rgba(13,13,13,0.9) 0%, rgba(20,5,5,0.9) 100%);">
+                <div class="card-title">Meteorological System</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                  <div>
+                    <h3 id="weatherCity" style="font-family: 'Orbitron', sans-serif; font-size: 20px; color: var(--text-white);">Delhi</h3>
+                    <p id="weatherTemp" style="font-family: 'Share Tech Mono', monospace; font-size: 28px; color: var(--accent-neon); font-weight: bold; margin-top: 4px;">--°C</p>
+                    <p id="weatherCond" style="font-size: 12px; color: var(--text-dim); text-transform: uppercase; margin-top: 2px;">Checking sky data...</p>
+                  </div>
+                  <div id="weatherIconContainer" style="font-size: 48px; text-shadow: 0 0 10px rgba(255, 0, 0, 0.4);">☁️</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; border-top: 1px solid rgba(255,0,0,0.1); padding-top: 8px; font-family: 'Share Tech Mono', monospace; font-size: 11px;">
+                  <div>HUMIDITY: <span id="weatherHumid" style="color: var(--success);">--</span></div>
+                  <div>WIND SPEED: <span id="weatherWind" style="color: var(--success);">--</span></div>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                  <input type="text" id="weatherCityInput" placeholder="Enter city name..." class="hud-search-input" style="font-size: 11px; padding: 4px 8px; flex-grow: 1;">
+                  <button class="btn btn-sm btn-primary" onclick="refreshWeather()">UPDATE</button>
+                </div>
+              </div>
+              
+              <!-- World Clocks -->
+              <div class="card clocks-card">
+                <div class="card-title">Synchronized Chronometers</div>
+                <div id="worldClocksContainer" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px; font-family: 'Share Tech Mono', monospace; font-size: 12px;">
+                  <!-- Dynamically populated -->
+                </div>
+              </div>
+              
+              <!-- Stock Market Core -->
+              <div class="card stocks-card" style="flex-grow: 1;">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>Financial Stock Tickers</span>
+                  <button class="btn btn-sm" onclick="refreshStocks()" style="font-size: 9px; padding: 2px 8px;">REFRESH</button>
+                </div>
+                <div id="stocksTickerContainer" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                  <!-- Dynamic stocks -->
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                  <input type="text" id="stocksSymbolsInput" placeholder="Symbols (e.g. AAPL,TSLA,NFLX)" class="hud-search-input" style="font-size: 11px; padding: 4px 8px; flex-grow: 1;" value="AAPL,GOOGL,MSFT">
+                  <button class="btn btn-sm btn-primary" onclick="updateStockSymbols()">SET</button>
+                </div>
+              </div>
+              
+            </div>
+            
+            <!-- Right Side: News and Web Search -->
+            <div class="live-intel-right" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Web Search Card -->
+              <div class="card ddg-search-card">
+                <div class="card-title">Zero-Cost Search Engine</div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                  <input type="text" id="liveSearchInput" placeholder="Enter search query..." class="hud-search-input" style="flex-grow: 1;">
+                  <button class="btn btn-primary" onclick="triggerLiveSearch()">SEARCH</button>
+                </div>
+                <div id="liveSearchResults" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                  <!-- Results populated here -->
+                </div>
+              </div>
+              
+              <!-- News Card -->
+              <div class="card news-feed-card" style="flex-grow: 1; display: flex; flex-direction: column;">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>Global News Stream</span>
+                  <button class="btn btn-sm" onclick="refreshNews()" style="font-size: 9px; padding: 2px 8px;">POLL NEWS</button>
+                </div>
+                <div id="newsFeedContainer" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-top: 10px; max-height: 380px;">
+                  <div class="empty-state">No news articles loaded.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </section>
 
       <!-- ── 5. RIGHT ANALYTICS & TOOLS PANEL ── -->

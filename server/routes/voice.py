@@ -95,9 +95,30 @@ async def set_voice_personality(req: PersonalityRequest):
 @router.get("/listen")
 async def listen():
     try:
-        res = await asyncio.to_thread(listen_once)
+        from tools.voice_listener import is_listening, stop_voice_loop, start_voice_loop_thread
+        was_wake_word_active = is_listening()
+        
+        # 1. Stop background wake word loop temporarily to release the microphone device
+        if was_wake_word_active:
+            logger.info("[VOICE ROUTE] Stopping background wake-word detector temporarily for manual listen.")
+            stop_voice_loop()
+            await asyncio.sleep(0.4) # Wait briefly for resources to free
+            
+        try:
+            res = await asyncio.to_thread(listen_once)
+        finally:
+            # 2. Restart background wake word loop if it was active
+            if was_wake_word_active:
+                logger.info("[VOICE ROUTE] Resuming background wake-word detector.")
+                from tools.voice_listener import set_command_callback, set_activation_phrase
+                from server.main import process_voice_command
+                set_activation_phrase("Yes?")
+                set_command_callback(process_voice_command)
+                start_voice_loop_thread()
+                
         return {"reply": res.get("text", ""), "meta": res}
     except Exception as e:
+        logger.error(f"[VOICE ROUTE] Manual listen failed: {e}")
         return {"reply": "STT error", "meta": {"error": str(e)}}
 
 
