@@ -1478,8 +1478,8 @@ Guidelines:
                 generated = await asyncio.wait_for(llm.chat([], prompt), timeout=600.0)
                 new_motd = generated.strip().strip('"').strip("'")
             
-            global MOTD
-            MOTD = new_motd
+            import server.routes.admin as admin_route
+            admin_route.MOTD = new_motd
             final_reply = f"Understood, Sir. I have updated the panel's Message of the Day to: \"{new_motd}\""
             
         elif intent and (intent.intent == "command" or (intent.intent == "system" and intent.action in ["repair", "diagnostics"])):

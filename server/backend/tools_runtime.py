@@ -193,6 +193,10 @@ class ToolRuntime:
                 output = await self._launch_terminal(data.get("command"))
             elif name == "weather":
                 output = await self._weather(data.get("city"))
+            elif name == "agent_refactor":
+                output = await self._agent_refactor(data.get("file_path"))
+            elif name == "change_motd":
+                output = await self._change_motd(data.get("motd"))
             else:
                 raise ValueError(f"Unknown tool: {name}")
                 
@@ -1089,4 +1093,32 @@ class ToolRuntime:
             "network_online": True,  # Simplify
             "gpu_usage": None,  # Future
         }
+
+    async def _agent_refactor(self, file_path: Optional[str]) -> str:
+        """Runs the AutonomousAgent refactoring logic on a target file."""
+        if not file_path:
+            return "Error: File path is required for refactoring, Sir."
+        try:
+            from core.autonomous_agent import AutonomousAgent
+            from pathlib import Path
+            root = Path(__file__).parent.parent.parent
+            agent = AutonomousAgent(str(root))
+            res = await agent.refactor_code(file_path)
+            if res.get("status") == "error":
+                return f"Error refactoring: {res.get('message')}"
+            return f"Refactored code successfully. Details: {res.get('message')}. Backup branch: {res.get('backup_branch')}."
+        except Exception as e:
+            return f"Failed to refactor file: {str(e)}"
+
+    async def _change_motd(self, motd: Optional[str]) -> str:
+        """Updates the global panel Message of the Day."""
+        new_motd = (motd or "").strip()
+        if not new_motd:
+            return "Error: MOTD message content cannot be empty, Sir."
+        try:
+            import server.routes.admin as admin_route
+            admin_route.MOTD = new_motd
+            return f"Updated panel Message of the Day to: \"{new_motd}\""
+        except Exception as e:
+            return f"Failed to update Message of the Day: {str(e)}"
 

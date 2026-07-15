@@ -256,6 +256,12 @@ class LaunchTerminalInput(ToolInput):
 class WeatherInput(ToolInput):
     city: str = Field("New York", description="City name to fetch weather for")
 
+class AgentRefactorInput(ToolInput):
+    file_path: str = Field(..., description="File path to refactor")
+
+class ChangeMOTDInput(ToolInput):
+    motd: str = Field(..., description="New Message of the Day text")
+
 # Tool Registry - name → (input_model, output_model, timeout_sec)
 # Registered with generous 25-second timeouts for Digital Employee operations
 TOOL_REGISTRY = {
@@ -331,6 +337,8 @@ TOOL_REGISTRY = {
     "launch_browser": (LaunchBrowserInput, ToolOutput, 10.0),
     "launch_terminal": (LaunchTerminalInput, ToolOutput, 10.0),
     "weather": (WeatherInput, ToolOutput, 10.0),
+    "agent_refactor": (AgentRefactorInput, ToolOutput, 95.0),
+    "change_motd": (ChangeMOTDInput, ToolOutput, 5.0),
 }
 
 def get_tool_spec(name: str):
